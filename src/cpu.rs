@@ -50,7 +50,7 @@ enum Interrupt {
 const STACK_BASE: u16 = 0x0100;
 
 /// A 6502 CPU.
-pub struct Cpu {
+pub struct Cpu<B> {
     pub a: u8,
     pub x: u8,
     pub y: u8,
@@ -67,12 +67,12 @@ pub struct Cpu {
     need_nmi: bool,
     rst: bool,
 
-    pub bus: Bus,
+    pub bus: B,
 }
 
-impl Cpu {
+impl<B: Bus> Cpu<B> {
     /// Constructs a new `Cpu` in a power-up state.
-    pub fn new(bus: Bus) -> Cpu {
+    pub fn new(bus: B) -> Cpu<B> {
         Cpu {
             a: 0,
             x: 0,
@@ -458,7 +458,7 @@ impl Cpu {
 }
 
 // Instruction helpers
-impl Cpu {
+impl<B: Bus> Cpu<B> {
     fn add(&mut self, value: u8) {
         let a = self.a;
         let result = (self.a as u16)
@@ -583,7 +583,7 @@ impl Cpu {
 }
 
 // Instructions
-impl Cpu {
+impl<B: Bus> Cpu<B> {
     fn adc(&mut self, mode: AddressingMode) {
         let effective_address = self.effective_address(mode, false);
 
@@ -1548,7 +1548,7 @@ const INSTRUCTIONS: [(&str, AddressingMode); 256] = [
     ("ISB", AddressingMode::AbsoluteX),
 ];
 
-impl Cpu {
+impl<B: Bus> Cpu<B> {
     pub fn disassemble(&self) -> BTreeMap<u16, String> {
         let mut disasm = BTreeMap::new();
 

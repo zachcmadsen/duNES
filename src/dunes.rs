@@ -5,7 +5,7 @@ use eframe::{
     App,
 };
 
-use crate::{bus::Bus, cartridge::NromCartridge, cpu::Cpu};
+use crate::{bus::DuNesBus, cartridge::NromCartridge, cpu::Cpu};
 
 /// The number of preceding instructions to show in the assembly panel.
 const INSTRUCTIONS_BEFORE: usize = 10;
@@ -13,7 +13,7 @@ const INSTRUCTIONS_BEFORE: usize = 10;
 const TOTAL_INSTRUCTIONS: usize = 21;
 
 pub struct DuNes {
-    cpu: Cpu,
+    cpu: Cpu<DuNesBus>,
     assembly: BTreeMap<u16, String>,
 }
 
@@ -33,7 +33,7 @@ impl App for DuNes {
 impl DuNes {
     pub fn new(rom: &[u8]) -> DuNes {
         let cartridge = NromCartridge::new(rom);
-        let bus = Bus::new(cartridge);
+        let bus = DuNesBus::new(cartridge);
         let cpu = Cpu::new(bus);
         // TODO: React to memory changes to have accurate assembly (or
         // disassemble on-the-fly?). Disassembling the entire CPU memory at
