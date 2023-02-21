@@ -4,5 +4,6 @@ mod cpu;
 mod dunes;
 
 pub use crate::dunes::DuNes;
-pub use bus::{Bus, Pins};
+pub use bus::{Bus, DuNesBus, Pins};
+pub use cartridge::NromCartridge;
 pub use cpu::Cpu;
