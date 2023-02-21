@@ -35,10 +35,10 @@ impl Bus for DuNesBus {
             0x0000..=0x1fff => {
                 self.ram[(pins.address & 0x07ff) as usize] = pins.data
             }
-            0x2000..=0x3fff => todo!(),
-            0x4000..=0x4013 => todo!(),
-            0x4014 => todo!(),
-            0x4015..=0x401f => todo!(),
+            0x2000..=0x3fff => (),
+            0x4000..=0x4013 => (),
+            0x4014 => (),
+            0x4015..=0x401f => (),
             0x4020..=0xffff => self
                 .cartridge
                 .borrow_mut()
@@ -55,7 +55,7 @@ impl DuNesBus {
         }
     }
 
-    pub(crate) fn read_unclocked(&self, address: u16) -> u8 {
+    pub fn read_unclocked(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1fff => self.ram[(address & 0x07ff) as usize],
             0x2000..=0x3fff => 0,
