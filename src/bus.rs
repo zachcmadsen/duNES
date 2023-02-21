@@ -58,8 +58,8 @@ impl DuNesBus {
     pub(crate) fn read_unclocked(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1fff => self.ram[(address & 0x07ff) as usize],
-            0x2000..=0x3fff => todo!(),
-            0x4000..=0x401f => todo!(),
+            0x2000..=0x3fff => 0,
+            0x4000..=0x401f => 0,
             0x4020..=0xffff => self.cartridge.borrow_mut().read_prg(address),
         }
     }
