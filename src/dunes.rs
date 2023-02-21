@@ -27,6 +27,8 @@ impl App for DuNes {
             self.draw_registers(ui);
             self.draw_assembly(ui);
         });
+
+        ctx.request_repaint();
     }
 }
 
