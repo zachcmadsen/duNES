@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use proc_bitfield::bitfield;
 
-use crate::bus::{Bus, Pins};
+use crate::bus::{Bus, DuNesBus, Pins};
 
 const NMI_VECTOR: u16 = 0xfffa;
 const RESET_VECTOR: u16 = 0xfffc;
@@ -1548,82 +1548,82 @@ const INSTRUCTIONS: [(&str, AddressingMode); 256] = [
     ("ISB", AddressingMode::AbsoluteX),
 ];
 
-impl<B: Bus> Cpu<B> {
+impl Cpu<DuNesBus> {
     pub fn disassemble(&self) -> BTreeMap<u16, String> {
         let mut disasm = BTreeMap::new();
 
         let mut pc = 0;
 
         while pc < 0xffff {
-            let opcode = self.bus.hidden_read(pc);
+            let opcode = self.bus.read_unclocked(pc);
             let (name, addresing_mode) = &INSTRUCTIONS[opcode as usize];
             let pc_to_insert = pc;
             pc += 1;
 
             let string_stuff = match addresing_mode {
                 AddressingMode::Absolute => {
-                    let low = self.bus.hidden_read(pc);
-                    let high = self.bus.hidden_read(pc + 1);
+                    let low = self.bus.read_unclocked(pc);
+                    let high = self.bus.read_unclocked(pc + 1);
                     pc = pc + 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}")
                 }
                 AddressingMode::AbsoluteX => {
-                    let low = self.bus.hidden_read(pc);
-                    let high = self.bus.hidden_read(pc + 1);
+                    let low = self.bus.read_unclocked(pc);
+                    let high = self.bus.read_unclocked(pc + 1);
                     pc = pc + 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}, X")
                 }
                 AddressingMode::AbsoluteY => {
-                    let low = self.bus.hidden_read(pc);
-                    let high = self.bus.hidden_read(pc + 1);
+                    let low = self.bus.read_unclocked(pc);
+                    let high = self.bus.read_unclocked(pc + 1);
                     pc = pc + 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}, Y")
                 }
                 AddressingMode::Accumulator => "A".to_string(),
                 AddressingMode::Immediate => {
-                    let value = self.bus.hidden_read(pc);
+                    let value = self.bus.read_unclocked(pc);
                     pc += 1;
                     format!("#${value:02X}")
                 }
                 AddressingMode::Indirect => {
-                    let low = self.bus.hidden_read(pc);
-                    let high = self.bus.hidden_read(pc + 1);
+                    let low = self.bus.read_unclocked(pc);
+                    let high = self.bus.read_unclocked(pc + 1);
                     pc = pc + 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("(${ea:04X})")
                 }
                 AddressingMode::Implied => "".to_string(),
                 AddressingMode::IndexedIndirect => {
-                    let value = self.bus.hidden_read(pc);
+                    let value = self.bus.read_unclocked(pc);
                     pc += 1;
                     format!("(${value:02X}, X)")
                 }
                 AddressingMode::IndirectIndexed => {
-                    let value = self.bus.hidden_read(pc);
+                    let value = self.bus.read_unclocked(pc);
                     pc += 1;
                     format!("(${value:02X}), Y")
                 }
                 AddressingMode::Relative => {
-                    let value = self.bus.hidden_read(pc) as i8 as u16;
+                    let value = self.bus.read_unclocked(pc) as i8 as u16;
                     pc += 1;
                     let target = pc.wrapping_add(value);
                     format!("${target:04X}")
                 }
                 AddressingMode::ZeroPage => {
-                    let value = self.bus.hidden_read(pc);
+                    let value = self.bus.read_unclocked(pc);
                     pc += 1;
                     format!("${value:02X}")
                 }
                 AddressingMode::ZeroPageX => {
-                    let value = self.bus.hidden_read(pc);
+                    let value = self.bus.read_unclocked(pc);
                     pc += 1;
                     format!("${value:02X}, X")
                 }
                 AddressingMode::ZeroPageY => {
-                    let value = self.bus.hidden_read(pc);
+                    let value = self.bus.read_unclocked(pc);
                     pc += 1;
                     format!("${value:02X}, Y")
                 }

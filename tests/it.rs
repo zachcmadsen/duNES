@@ -28,10 +28,6 @@ impl Bus for KlausBus {
         pins.data = self.memory[pins.address as usize];
     }
 
-    fn hidden_read(&self, _: u16) -> u8 {
-        todo!()
-    }
-
     fn write(&mut self, pins: &mut dunes::Pins) {
         if pins.address == INTERRUPT_FEEDBACK_REGISTER {
             let old_data = self.memory[pins.address as usize];
