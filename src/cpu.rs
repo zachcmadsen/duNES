@@ -22,7 +22,7 @@ bitfield! {
     }
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(PartialEq, Eq)]
 enum AddressingMode {
     Absolute,
     AbsoluteX,
@@ -39,7 +39,7 @@ enum AddressingMode {
     ZeroPageY,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 enum Interrupt {
     Brk,
     Irq,
@@ -92,23 +92,23 @@ impl<B: Bus> Cpu<B> {
 
     pub fn step(&mut self) {
         if self.rst || self.prev_need_nmi || self.prev_irq {
-            let kind = if self.rst {
+            let brk = if self.rst {
                 // TODO: Reset CPU struct fields?
                 self.rst = false;
-                Interrupt::Rst
+                Cpu::brk::<{ Interrupt::Rst }>
             } else if self.prev_need_nmi {
                 self.need_nmi = false;
-                Interrupt::Nmi
+                Cpu::brk::<{ Interrupt::Nmi }>
             } else {
-                Interrupt::Irq
+                Cpu::brk::<{ Interrupt::Irq }>
             };
 
             self.read_byte(self.pc);
-            self.brk(kind);
+            brk(self);
         } else {
             let opcode = self.consume_byte();
             match opcode {
-                0x00 => self.brk(Interrupt::Brk),
+                0x00 => self.brk::<{ Interrupt::Brk }>(),
                 0x01 => self.ora::<{ AddressingMode::IndexedIndirect }>(),
                 0x02 => self.jam(),
                 0x03 => self.slo::<{ AddressingMode::IndexedIndirect }>(),
@@ -691,13 +691,13 @@ impl<B: Bus> Cpu<B> {
         self.branch(!self.p.n());
     }
 
-    fn brk(&mut self, kind: Interrupt) {
+    fn brk<const KIND: Interrupt>(&mut self) {
         self.read_byte(self.pc);
-        if kind == Interrupt::Brk {
+        if KIND == Interrupt::Brk {
             self.pc += 1;
         }
 
-        if kind == Interrupt::Rst {
+        if KIND == Interrupt::Rst {
             self.peek();
             self.s = self.s.wrapping_sub(1);
             self.peek();
@@ -707,13 +707,13 @@ impl<B: Bus> Cpu<B> {
         } else {
             self.push((self.pc >> 8) as u8);
             self.push(self.pc as u8);
-            self.push(self.p.with_b(kind == Interrupt::Brk).into());
+            self.push(self.p.with_b(KIND == Interrupt::Brk).into());
         }
 
         // TODO: Implement interrupt hijacking.
         // TODO: Should NMI not set the I flag?
         self.p.set_i(true);
-        let vector = match kind {
+        let vector = match KIND {
             Interrupt::Brk | Interrupt::Irq => IRQ_VECTOR,
             Interrupt::Nmi => NMI_VECTOR,
             Interrupt::Rst => RESET_VECTOR,
