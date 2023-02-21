@@ -1,3 +1,6 @@
+#![allow(incomplete_features)]
+#![feature(adt_const_params)]
+
 mod bus;
 mod cartridge;
 mod cpu;
