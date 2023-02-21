@@ -1560,21 +1560,21 @@ impl Cpu<DuNesBus> {
                 AddressingMode::Absolute => {
                     let low = self.bus.read_unclocked(pc);
                     let high = self.bus.read_unclocked(pc + 1);
-                    pc = pc + 2;
+                    pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}")
                 }
                 AddressingMode::AbsoluteX => {
                     let low = self.bus.read_unclocked(pc);
                     let high = self.bus.read_unclocked(pc + 1);
-                    pc = pc + 2;
+                    pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}, X")
                 }
                 AddressingMode::AbsoluteY => {
                     let low = self.bus.read_unclocked(pc);
                     let high = self.bus.read_unclocked(pc + 1);
-                    pc = pc + 2;
+                    pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}, Y")
                 }
@@ -1587,7 +1587,7 @@ impl Cpu<DuNesBus> {
                 AddressingMode::Indirect => {
                     let low = self.bus.read_unclocked(pc);
                     let high = self.bus.read_unclocked(pc + 1);
-                    pc = pc + 2;
+                    pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("(${ea:04X})")
                 }
