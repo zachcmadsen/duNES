@@ -50,7 +50,7 @@ impl NromCartridge {
         }
     }
 
-    pub fn read_prg(&mut self, address: u16) -> u8 {
+    pub fn read_prg(&self, address: u16) -> u8 {
         match address {
             0x6000..=0x7fff => {
                 self.prg_ram[(address - 0x6000) as usize % self.prg_ram.len()]
@@ -72,7 +72,7 @@ impl NromCartridge {
         }
     }
 
-    pub fn read_chr(&mut self, address: u16) -> u8 {
+    pub fn read_chr(&self, address: u16) -> u8 {
         self.chr_rom[address as usize]
     }
 
