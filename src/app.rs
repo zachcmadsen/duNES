@@ -97,13 +97,13 @@ impl DuNes {
                 // TODO: Reuse this Vec between updates to save an allocation.
                 let mut instructions_before =
                     Vec::with_capacity(INSTRUCTIONS_BEFORE);
-                for thing in self
+                for instruction in self
                     .assembly
                     .range(..self.cpu.pc)
                     .rev()
                     .take(INSTRUCTIONS_BEFORE)
                 {
-                    instructions_before.push(thing);
+                    instructions_before.push(instruction);
                 }
                 let mut instructions_after = self
                     .assembly
