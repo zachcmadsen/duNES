@@ -16,11 +16,10 @@ fn main() {
         return;
     };
 
-    let dunes = DuNes::new(&rom);
     eframe::run_native(
         "duNES",
         eframe::NativeOptions::default(),
-        Box::new(|_| Box::new(dunes)),
+        Box::new(move |cc| Box::new(DuNes::new(&rom, cc))),
     )
     .unwrap();
 }

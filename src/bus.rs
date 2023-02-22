@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::cartridge::NromCartridge;
+use crate::{cartridge::NromCartridge, Ppu};
 
 const RAM_SIZE: usize = 0x800;
 
@@ -23,6 +23,7 @@ pub struct Pins {
 pub struct DuNesBus {
     ram: [u8; RAM_SIZE],
     cartridge: Rc<RefCell<NromCartridge>>,
+    pub ppu: Ppu,
 }
 
 impl Bus for DuNesBus {
@@ -49,9 +50,12 @@ impl Bus for DuNesBus {
 
 impl DuNesBus {
     pub fn new(cartridge: NromCartridge) -> DuNesBus {
+        let cartridge = Rc::new(RefCell::new(cartridge));
+
         DuNesBus {
             ram: [0; RAM_SIZE],
-            cartridge: Rc::new(RefCell::new(cartridge)),
+            cartridge: cartridge.clone(),
+            ppu: Ppu::new(cartridge),
         }
     }
 
