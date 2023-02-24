@@ -1543,13 +1543,18 @@ const INSTRUCTIONS: [(&str, AddressingMode); 256] = [
 ];
 
 impl Cpu<DuNesBus> {
-    pub fn disassemble(&self) -> BTreeMap<u16, String> {
+    pub fn disassemble(&mut self) -> BTreeMap<u16, String> {
         let mut disasm = BTreeMap::new();
 
         let mut pc = 0;
 
         while pc < 0xffff {
-            let opcode = self.bus.read_unclocked(pc);
+            // Only disassemble RAM and PRG RAM/ROM.
+            let opcode = if pc > 0x1fff || pc < 0x4020 {
+                0
+            } else {
+                self.bus.read_unclocked(pc)
+            };
             let (name, addresing_mode) = &INSTRUCTIONS[opcode as usize];
             let pc_to_insert = pc;
             pc += 1;
