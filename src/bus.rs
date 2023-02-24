@@ -29,6 +29,15 @@ pub struct DuNesBus {
 impl Bus for DuNesBus {
     fn read(&mut self, pins: &mut Pins) {
         pins.data = self.read_unclocked(pins.address);
+
+        self.ppu.tick();
+        self.ppu.tick();
+        self.ppu.tick();
+
+        if self.ppu.nmi {
+            pins.nmi = true;
+            self.ppu.nmi = false;
+        }
     }
 
     fn write(&mut self, pins: &mut Pins) {
@@ -36,7 +45,10 @@ impl Bus for DuNesBus {
             0x0000..=0x1fff => {
                 self.ram[(pins.address & 0x07ff) as usize] = pins.data
             }
-            0x2000..=0x3fff => (),
+            0x2000..=0x2007 => {
+                self.ppu.write_register(pins.address, pins.data)
+            }
+            0x2008..=0x3fff => (),
             0x4000..=0x4013 => (),
             0x4014 => (),
             0x4015..=0x401f => (),
@@ -44,6 +56,15 @@ impl Bus for DuNesBus {
                 .cartridge
                 .borrow_mut()
                 .write_prg(pins.address, pins.data),
+        }
+
+        self.ppu.tick();
+        self.ppu.tick();
+        self.ppu.tick();
+
+        if self.ppu.nmi {
+            pins.nmi = true;
+            self.ppu.nmi = false;
         }
     }
 }
@@ -59,10 +80,11 @@ impl DuNesBus {
         }
     }
 
-    pub fn read_unclocked(&self, address: u16) -> u8 {
+    pub fn read_unclocked(&mut self, address: u16) -> u8 {
         match address {
             0x0000..=0x1fff => self.ram[(address & 0x07ff) as usize],
-            0x2000..=0x3fff => 0,
+            0x2000..=0x2007 => self.ppu.read_register(address),
+            0x2008..=0x3fff => 0,
             0x4000..=0x401f => 0,
             0x4020..=0xffff => self.cartridge.borrow_mut().read_prg(address),
         }

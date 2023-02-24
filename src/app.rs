@@ -107,12 +107,23 @@ pub struct DuNes {
     assembly: BTreeMap<u16, String>,
 
     pattern_table_texture: TextureHandle,
+
+    paused: bool,
 }
 
 impl App for DuNes {
     fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
         CentralPanel::default().show(ctx, |ui| {
-            if ui.input(|i| i.key_pressed(Key::Space)) {
+            if ui.input(|i| i.key_pressed(Key::P)) {
+                self.paused = !self.paused;
+            }
+
+            if !self.paused {
+                while !self.cpu.bus.ppu.is_frame_done {
+                    self.cpu.step();
+                }
+                self.cpu.bus.ppu.is_frame_done = false
+            } else if ui.input(|i| i.key_pressed(Key::Space)) {
                 self.cpu.step();
             }
 
@@ -133,7 +144,7 @@ impl DuNes {
     pub fn new(rom: &[u8], cc: &CreationContext) -> DuNes {
         let cartridge = NromCartridge::new(rom);
         let bus = DuNesBus::new(cartridge);
-        let cpu = Cpu::new(bus);
+        let mut cpu = Cpu::new(bus);
         // TODO: React to memory changes to have accurate assembly (or
         // disassemble on-the-fly?). Disassembling the entire CPU memory at
         // startup is good enough for now, but it will become more innacurate
@@ -153,6 +164,7 @@ impl DuNes {
             cpu,
             assembly,
             pattern_table_texture,
+            paused: true,
         }
     }
 
