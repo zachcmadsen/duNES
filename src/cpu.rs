@@ -1546,14 +1546,14 @@ impl Cpu<DuNesBus> {
     pub fn disassemble(&mut self) -> BTreeMap<u16, String> {
         let mut disasm = BTreeMap::new();
 
-        let mut pc = 0;
+        let mut pc: u32 = 0;
 
         while pc < 0xffff {
             // Only disassemble RAM and PRG RAM/ROM.
-            let opcode = if pc > 0x1fff || pc < 0x4020 {
+            let opcode = if pc > 0x1fff && pc < 0x4020 {
                 0
             } else {
-                self.bus.read_unclocked(pc)
+                self.bus.read_unclocked(pc as u16)
             };
             let (name, addresing_mode) = &INSTRUCTIONS[opcode as usize];
             let pc_to_insert = pc;
@@ -1561,74 +1561,78 @@ impl Cpu<DuNesBus> {
 
             let string_stuff = match addresing_mode {
                 AddressingMode::Absolute => {
-                    let low = self.bus.read_unclocked(pc);
-                    let high = self.bus.read_unclocked(pc + 1);
+                    let low = self.bus.read_unclocked(pc as u16);
+                    let high = self.bus.read_unclocked((pc + 1) as u16);
                     pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}")
                 }
                 AddressingMode::AbsoluteX => {
-                    let low = self.bus.read_unclocked(pc);
-                    let high = self.bus.read_unclocked(pc + 1);
+                    let low = self.bus.read_unclocked(pc as u16);
+                    let high = self.bus.read_unclocked((pc + 1) as u16);
                     pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}, X")
                 }
                 AddressingMode::AbsoluteY => {
-                    let low = self.bus.read_unclocked(pc);
-                    let high = self.bus.read_unclocked(pc + 1);
+                    let low = self.bus.read_unclocked(pc as u16);
+                    let high = self.bus.read_unclocked((pc + 1) as u16);
                     pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("${ea:04X}, Y")
                 }
                 AddressingMode::Accumulator => "A".to_string(),
                 AddressingMode::Immediate => {
-                    let value = self.bus.read_unclocked(pc);
+                    let value = self.bus.read_unclocked(pc as u16);
                     pc += 1;
                     format!("#${value:02X}")
                 }
                 AddressingMode::Indirect => {
-                    let low = self.bus.read_unclocked(pc);
-                    let high = self.bus.read_unclocked(pc + 1);
+                    let low = self.bus.read_unclocked(pc as u16);
+                    let high = self.bus.read_unclocked((pc + 1) as u16);
                     pc += 2;
                     let ea = (high as u16) << 8 | low as u16;
                     format!("(${ea:04X})")
                 }
                 AddressingMode::Implied => "".to_string(),
                 AddressingMode::IndexedIndirect => {
-                    let value = self.bus.read_unclocked(pc);
+                    let value = self.bus.read_unclocked(pc as u16);
                     pc += 1;
                     format!("(${value:02X}, X)")
                 }
                 AddressingMode::IndirectIndexed => {
-                    let value = self.bus.read_unclocked(pc);
+                    let value = self.bus.read_unclocked(pc as u16);
                     pc += 1;
                     format!("(${value:02X}), Y")
                 }
                 AddressingMode::Relative => {
-                    let value = self.bus.read_unclocked(pc) as i8 as u16;
+                    let value =
+                        self.bus.read_unclocked(pc as u16) as i8 as u32;
                     pc += 1;
                     let target = pc.wrapping_add(value);
                     format!("${target:04X}")
                 }
                 AddressingMode::ZeroPage => {
-                    let value = self.bus.read_unclocked(pc);
+                    let value = self.bus.read_unclocked(pc as u16);
                     pc += 1;
                     format!("${value:02X}")
                 }
                 AddressingMode::ZeroPageX => {
-                    let value = self.bus.read_unclocked(pc);
+                    let value = self.bus.read_unclocked(pc as u16);
                     pc += 1;
                     format!("${value:02X}, X")
                 }
                 AddressingMode::ZeroPageY => {
-                    let value = self.bus.read_unclocked(pc);
+                    let value = self.bus.read_unclocked(pc as u16);
                     pc += 1;
                     format!("${value:02X}, Y")
                 }
             };
 
-            disasm.insert(pc_to_insert, format!("{} {}", name, string_stuff));
+            disasm.insert(
+                pc_to_insert as u16,
+                format!("{} {}", name, string_stuff),
+            );
         }
 
         disasm

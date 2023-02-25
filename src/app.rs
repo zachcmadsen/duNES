@@ -34,6 +34,11 @@ const PIXELS_PER_TILE_ROW: usize = 1024;
 /// The total number of tiles in the pattern table image.
 const TOTAL_TILES: usize = 512;
 
+/// The width of the screen image in pixels.
+const SCREEN_WIDTH: usize = 256;
+/// The height of the screen image in pixels.
+const SCREEN_HEIGHT: usize = 240;
+
 // TODO: Do more research into palettes. Use a .pal file?
 const PALLETE: [(u8, u8, u8); 64] = [
     (0x80, 0x80, 0x80),
@@ -107,6 +112,7 @@ pub struct DuNes {
     assembly: BTreeMap<u16, String>,
 
     pattern_table_texture: TextureHandle,
+    screen_texture: TextureHandle,
 
     paused: bool,
 }
@@ -128,11 +134,12 @@ impl App for DuNes {
             }
 
             ui.horizontal_top(|ui| {
+                self.draw_screen(ui);
+                self.draw_pattern_table(ui);
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
                     self.draw_assembly(ui);
                 });
-                self.draw_pattern_table(ui);
             });
         });
 
@@ -159,11 +166,17 @@ impl DuNes {
             ),
             TextureOptions::NEAREST,
         );
+        let screen_texture = cc.egui_ctx.load_texture(
+            "screen",
+            ColorImage::new([SCREEN_WIDTH, SCREEN_HEIGHT], Color32::BLACK),
+            TextureOptions::NEAREST,
+        );
 
         DuNes {
             cpu,
             assembly,
             pattern_table_texture,
+            screen_texture,
             paused: true,
         }
     }
@@ -275,6 +288,20 @@ impl DuNes {
             });
     }
 
+    fn draw_screen(&mut self, ui: &mut Ui) {
+        let image = self.generate_screen_image();
+        self.screen_texture.set(image, TextureOptions::NEAREST);
+
+        CollapsingHeader::new("Screen")
+            .default_open(true)
+            .show(ui, |ui| {
+                ui.image(
+                    self.screen_texture.id(),
+                    self.screen_texture.size_vec2() * 2.0,
+                );
+            });
+    }
+
     fn generate_pattern_table_image(&self) -> ColorImage {
         let mut pixels =
             vec![Color32::BLACK; PATTERN_TABLE_WIDTH * PATTERN_TABLE_HEIGHT];
@@ -303,7 +330,9 @@ impl DuNes {
                     high >>= 1;
 
                     let offset = row * PATTERN_TABLE_WIDTH + col;
-                    let color = self.get_color(pixel_value);
+                    // TODO: Support choosing different palettes instead of defaulting to
+                    // the first one.
+                    let color = self.get_color(pixel_value, 0);
                     pixels[base_pixel_index + offset] = color
                 }
             }
@@ -315,10 +344,30 @@ impl DuNes {
         }
     }
 
-    fn get_color(&self, pixel_value: u8) -> Color32 {
-        // TODO: Support choosing different palettes instead of defaulting to
-        // the first one.
-        let palette_index = self.cpu.bus.ppu.read(0x3f00 + pixel_value as u16);
+    fn generate_screen_image(&self) -> ColorImage {
+        let pixels = self
+            .cpu
+            .bus
+            .ppu
+            .done_frame
+            .iter()
+            .map(|(pixel_value, palette)| {
+                self.get_color(*pixel_value, *palette)
+            })
+            .collect();
+
+        ColorImage {
+            size: [SCREEN_WIDTH, SCREEN_HEIGHT],
+            pixels,
+        }
+    }
+
+    fn get_color(&self, pixel_value: u8, palette: u8) -> Color32 {
+        let palette_index = self
+            .cpu
+            .bus
+            .ppu
+            .read(0x3f00 + (palette * 4) as u16 + pixel_value as u16);
         let (r, g, b) = PALLETE[palette_index as usize];
         Color32::from_rgb(r, g, b)
     }

@@ -37,6 +37,8 @@ impl Bus for DuNesBus {
         if self.ppu.nmi {
             pins.nmi = true;
             self.ppu.nmi = false;
+        } else {
+            pins.nmi = false;
         }
     }
 
@@ -65,6 +67,8 @@ impl Bus for DuNesBus {
         if self.ppu.nmi {
             pins.nmi = true;
             self.ppu.nmi = false;
+        } else {
+            pins.nmi = false;
         }
     }
 }
