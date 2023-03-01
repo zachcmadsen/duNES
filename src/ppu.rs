@@ -12,13 +12,21 @@ const PALETTES_SIZE: usize = 32;
 bitfield! {
     struct Control(u8) {
         nametable: u8 @ 0..2,
-        nametable_x: bool @ 0,
-        nametable_y: bool @ 1,
-        address_increment: bool @ 2,
+        vram_address_increment: bool @ 2,
         sprite_pattern_table: bool @ 3,
         background_pattern_table: bool @ 4,
         sprite_size: bool @ 5,
         nmi: bool @ 7,
+    }
+}
+
+impl Control {
+    fn background_pattern_table_address(&self) -> u16 {
+        if self.background_pattern_table() {
+            0x1000
+        } else {
+            0x0000
+        }
     }
 }
 
@@ -206,7 +214,7 @@ impl Ppu {
                     data = self.read_buffer;
                 }
 
-                self.address.0 += if self.control.address_increment() {
+                self.address.0 += if self.control.vram_address_increment() {
                     32
                 } else {
                     1
@@ -224,10 +232,7 @@ impl Ppu {
         match address {
             0x2000 => {
                 self.control = Control(data);
-                self.temp_address
-                    .set_nametable_x(self.control.nametable_x());
-                self.temp_address
-                    .set_nametable_y(self.control.nametable_y());
+                self.temp_address.set_nametable(self.control.nametable());
             }
             0x2001 => self.mask = Mask(data),
             0x2005 => {
@@ -253,7 +258,7 @@ impl Ppu {
             }
             0x2007 => {
                 self.write(self.address.0, data);
-                self.address.0 += if self.control.address_increment() {
+                self.address.0 += if self.control.vram_address_increment() {
                     32
                 } else {
                     1
@@ -287,8 +292,7 @@ impl Ppu {
                     2 => {
                         self.attribute_byte = self.read(
                             0x23c0
-                                | ((self.address.nametable_y() as u16) << 11)
-                                | ((self.address.nametable_x() as u16) << 10)
+                                | ((self.address.nametable() as u16) << 10)
                                 | (((self.address.coarse_y_scroll() as u16)
                                     >> 2)
                                     << 3)
@@ -305,16 +309,14 @@ impl Ppu {
                     }
                     4 => {
                         self.tile_low = self.read(
-                            ((self.control.background_pattern_table() as u16)
-                                << 12)
+                            self.control.background_pattern_table_address()
                                 + ((self.nametable_byte as u16) << 4)
                                 + self.address.fine_y_scroll() as u16,
                         );
                     }
                     6 => {
                         self.tile_high = self.read(
-                            ((self.control.background_pattern_table() as u16)
-                                << 12)
+                            self.control.background_pattern_table_address()
                                 + ((self.nametable_byte as u16) << 4)
                                 + self.address.fine_y_scroll() as u16
                                 + 8,
