@@ -34,12 +34,7 @@ impl Bus for DuNesBus {
         self.ppu.tick();
         self.ppu.tick();
 
-        if self.ppu.nmi {
-            pins.nmi = true;
-            self.ppu.nmi = false;
-        } else {
-            pins.nmi = false;
-        }
+        pins.nmi = self.ppu.nmi;
     }
 
     fn write(&mut self, pins: &mut Pins) {
@@ -64,12 +59,7 @@ impl Bus for DuNesBus {
         self.ppu.tick();
         self.ppu.tick();
 
-        if self.ppu.nmi {
-            pins.nmi = true;
-            self.ppu.nmi = false;
-        } else {
-            pins.nmi = false;
-        }
+        pins.nmi = self.ppu.nmi;
     }
 }
 

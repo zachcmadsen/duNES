@@ -65,6 +65,54 @@ bitfield! {
     }
 }
 
+impl Address {
+    fn increment_coarse_x_scroll(&mut self) {
+        // 31 means we've reached the last tile in the nametable (the last col)
+        // so we switch to the other horizontal nametable
+        if self.coarse_x_scroll() == 31 {
+            self.set_coarse_x_scroll(0);
+            self.set_nametable_x(!self.nametable_x());
+        } else {
+            self.set_coarse_x_scroll(self.coarse_x_scroll() + 1);
+        }
+    }
+
+    fn increment_y_scroll(&mut self) {
+        if self.fine_y_scroll() < 7 {
+            // Haven't reached the last row of the tile yet so increment
+            self.set_fine_y_scroll(self.fine_y_scroll() + 1);
+        } else {
+            // it wraps back to 0
+            self.set_fine_y_scroll(0);
+
+            if self.coarse_y_scroll() == 29 {
+                // We've reached the last row of tiles so wrap to the next
+                // nametable
+                self.set_coarse_y_scroll(0);
+                self.set_nametable_y(!self.nametable_y());
+            } else if self.coarse_y_scroll() == 31 {
+                // If coarse y is out of bounds then the PPU will read the
+                // attribute data as tile data. When it reaches 31 (the last
+                // row of the nametable), it will wrap 0 and not switch
+                // nametables.
+                self.set_coarse_y_scroll(0);
+            } else {
+                self.set_coarse_y_scroll(self.coarse_y_scroll() + 1);
+            }
+        }
+    }
+
+    fn attribute_address(&self) -> u16 {
+        // Each attribute byte applies to a 4x4 group of tiles. To get the
+        // attribute byte for a 4x4 group we can divide the x and y offsets
+        // by four.
+        0x23c0
+            | ((self.nametable() as u16) << 10)
+            | (((self.coarse_y_scroll() as u16) / 4) << 3)
+            | ((self.coarse_x_scroll() as u16) / 4)
+    }
+}
+
 pub struct Ppu {
     cartridge: Rc<RefCell<NromCartridge>>,
     pub nametables: [u8; 2 * NAMETABLE_SIZE],
@@ -81,17 +129,17 @@ pub struct Ppu {
     read_buffer: u8,
 
     cycle: u16,
-    scanline: i16,
+    scanline: u16,
     pub nmi: bool,
-    pub is_frame_done: bool,
+    pub is_frame_ready: bool,
 
-    nametable_byte: u8,
+    nametable_latch: u8,
     attribute_byte: u8,
     tile_low: u8,
     tile_high: u8,
 
-    background_shifter_low: u16,
-    background_shifter_high: u16,
+    background_shift_low: u16,
+    background_shift_high: u16,
     palette_shifter_low: u8,
     palette_shifter_high: u8,
     attribute_latch_low: u8,
@@ -118,13 +166,13 @@ impl Ppu {
             cycle: 0,
             scanline: 0,
             nmi: false,
-            is_frame_done: false,
-            nametable_byte: 0,
+            is_frame_ready: false,
+            nametable_latch: 0,
             attribute_byte: 0,
             tile_low: 0,
             tile_high: 0,
-            background_shifter_low: 0,
-            background_shifter_high: 0,
+            background_shift_low: 0,
+            background_shift_high: 0,
             palette_shifter_low: 0,
             palette_shifter_high: 0,
             attribute_latch_low: 0,
@@ -268,218 +316,196 @@ impl Ppu {
         }
     }
 
-    pub fn tick(&mut self) {
-        if self.scanline >= -1 && self.scanline < 240 {
-            if self.scanline == 0 && self.cycle == 0 {
-                self.cycle = 1;
-            }
-
-            if self.scanline == -1 && self.cycle == 1 {
-                self.status.set_vblank(false);
-            }
-
-            if (self.cycle >= 2 && self.cycle < 258)
-                || (self.cycle >= 321 && self.cycle < 338)
-            {
-                self.update_shifters();
-
-                match (self.cycle - 1) % 8 {
-                    0 => {
-                        self.load_background_shifters();
-                        self.nametable_byte =
-                            self.read(0x2000 | (self.address.0 & 0x0fff));
-                    }
-                    2 => {
-                        self.attribute_byte = self.read(
-                            0x23c0
-                                | ((self.address.nametable() as u16) << 10)
-                                | (((self.address.coarse_y_scroll() as u16)
-                                    >> 2)
-                                    << 3)
-                                | ((self.address.coarse_x_scroll() as u16)
-                                    >> 2),
-                        );
-                        if (self.address.coarse_y_scroll() & 0x02) != 0 {
-                            self.attribute_byte >>= 4;
-                        }
-                        if (self.address.coarse_x_scroll() & 0x02) != 0 {
-                            self.attribute_byte >>= 2;
-                        }
-                        self.attribute_byte &= 0x03;
-                    }
-                    4 => {
-                        self.tile_low = self.read(
-                            self.control.background_pattern_table_address()
-                                + ((self.nametable_byte as u16) << 4)
-                                + self.address.fine_y_scroll() as u16,
-                        );
-                    }
-                    6 => {
-                        self.tile_high = self.read(
-                            self.control.background_pattern_table_address()
-                                + ((self.nametable_byte as u16) << 4)
-                                + self.address.fine_y_scroll() as u16
-                                + 8,
-                        )
-                    }
-                    7 => {
-                        self.increment_scroll_x();
-                    }
-                    _ => (),
-                }
-            }
-
-            if self.cycle == 256 {
-                self.increment_scroll_y();
-            }
-
-            if self.cycle == 257 {
-                self.load_background_shifters();
-                self.transfer_x_address();
-            }
-
-            if self.cycle == 338 || self.cycle == 340 {
-                self.nametable_byte =
+    fn fetch_tile_data(&mut self) {
+        match (self.cycle) % 8 {
+            1 => {
+                self.reload_background_shifters();
+                self.nametable_latch =
                     self.read(0x2000 | (self.address.0 & 0x0fff));
             }
+            3 => {
+                self.attribute_byte =
+                    self.read(self.address.attribute_address());
 
-            if self.scanline == -1 && self.cycle >= 280 && self.cycle < 305 {
-                self.transfer_y_address();
+                // Each attribute byte represents a 4x4 group of tiles,
+                // but we only need two bits to specify a palette. So,
+                // the attribute byte actually maps four palettes to the
+                // 4 2x2 tile groups in the 4x4 group. We can use the coarse coordinates
+                // to figure out which 2x2 group we're on.
+
+                if (self.address.coarse_y_scroll() & 0x02) != 0 {
+                    // We're in the bottom row of the 2x2 group which
+                    // is represented by the last 4 bits so shift the rest out.
+                    self.attribute_byte >>= 4;
+                }
+                if (self.address.coarse_x_scroll() & 0x02) != 0 {
+                    // We're in the right column of the 2x2 group so which
+                    // is represented by the two leftmost bits.
+                    self.attribute_byte >>= 2;
+                }
+
+                // self.attribute_byte >>=
+                //     (self.address.coarse_y_scroll() & 0x02) * 4
+                //         + (self.address.coarse_x_scroll() & 0x02) * 2;
+                // Mask off the rest of the bits.
+                self.attribute_byte &= 0x03;
+            }
+            5 => {
+                self.tile_low = self.read(
+                    self.control.background_pattern_table_address()
+                        + ((self.nametable_latch as u16) << 4)
+                        + self.address.fine_y_scroll() as u16,
+                );
+            }
+            7 => {
+                self.tile_high = self.read(
+                    self.control.background_pattern_table_address()
+                        + ((self.nametable_latch as u16) << 4)
+                        + self.address.fine_y_scroll() as u16
+                        + 8,
+                )
+            }
+            0 => {
+                if self.rendering_enabled() {
+                    self.address.increment_coarse_x_scroll();
+                }
+            }
+            _ => (),
+        }
+    }
+
+    fn on_visible_scanline(&self) -> bool {
+        self.scanline < 240
+    }
+
+    fn on_prerender_scanline(&self) -> bool {
+        self.scanline == 261
+    }
+
+    fn on_screen(&self) -> bool {
+        self.scanline < 240 && self.cycle < 256
+    }
+
+    fn start_of_vblank(&self) -> bool {
+        self.scanline == 241 && self.cycle == 1
+    }
+
+    fn rendering_enabled(&self) -> bool {
+        self.mask.show_background() || self.mask.show_sprites()
+    }
+
+    fn fetch_pixel(&self) -> (u8, u8) {
+        let pixel_offset = 0x8000 >> self.fine_x_scroll;
+        let pixel_low =
+            ((self.background_shift_low & pixel_offset) != 0) as u8;
+        let pixel_high =
+            ((self.background_shift_high & pixel_offset) != 0) as u8;
+        let pixel = (pixel_high << 1) | pixel_low;
+
+        let palette_offset = 0x80 >> self.fine_x_scroll;
+        let palette_low =
+            ((self.palette_shifter_low & palette_offset) != 0) as u8;
+        let palette_high =
+            ((self.palette_shifter_high & palette_offset) != 0) as u8;
+        let palette = (palette_high << 1) | palette_low;
+
+        (pixel, palette)
+    }
+
+    pub fn tick(&mut self) {
+        if self.on_prerender_scanline() {
+            if self.cycle == 1 {
+                self.status.set_sprite_overflow(false);
+                self.status.set_sprite_0_hit(false);
+                self.status.set_vblank(false);
+                self.nmi = false;
+            }
+
+            // The vertical scroll bits are reloaded during pixels 280 to 304,
+            // if rendering is enabled.
+            if self.cycle >= 280
+                && self.cycle <= 304
+                && self.rendering_enabled()
+            {
+                self.reload_y_scroll();
             }
         }
 
-        if self.scanline == 241 && self.cycle == 1 {
+        if self.on_visible_scanline() || self.on_prerender_scanline() {
+            if (self.cycle >= 1 && self.cycle <= 256)
+                || (self.cycle >= 321 && self.cycle <= 337)
+            {
+                self.shift_background_shifters();
+                self.fetch_tile_data();
+            }
+
+            if self.cycle == 256 && self.rendering_enabled() {
+                self.address.increment_y_scroll();
+            }
+
+            if self.cycle == 257 && self.rendering_enabled() {
+                self.reload_x_scroll();
+            }
+
+            if self.cycle == 339 {
+                self.nametable_latch =
+                    self.read(0x2000 | (self.address.0 & 0x0fff));
+            }
+        }
+
+        if self.start_of_vblank() {
             self.status.set_vblank(true);
             self.nmi = self.control.nmi();
         }
 
-        let mut pixel_value = 0;
-        let mut palette = 0;
-
-        if self.mask.show_background() {
-            let selected_bit = 0x8000 >> self.fine_x_scroll;
-
-            let pixel_low: u8 =
-                if (self.background_shifter_low & selected_bit) > 0 {
-                    1
-                } else {
-                    0
-                };
-            let pixel_high =
-                if (self.background_shifter_high & selected_bit) > 0 {
-                    1
-                } else {
-                    0
-                };
-            pixel_value = (pixel_high << 1) | pixel_low;
-
-            let pal_selected_bit = 0x80 >> self.fine_x_scroll;
-            let pal_low = if (self.palette_shifter_low & pal_selected_bit) > 0
-            {
-                1
-            } else {
-                0
-            };
-            let pal_high =
-                if (self.palette_shifter_high & pal_selected_bit) > 0 {
-                    1
-                } else {
-                    0
-                };
-            palette = (pal_high << 1) | pal_low;
-        }
-
-        if self.scanline != -1
-            && (self.scanline as usize * 256 + (self.cycle as usize))
-                < (256 * 240)
-        {
+        if self.rendering_enabled() && self.on_screen() {
+            let (pixel, palette) = self.fetch_pixel();
             self.frame[self.scanline as usize * 256 + self.cycle as usize] =
-                (pixel_value, palette);
+                (pixel, palette);
         }
 
-        self.cycle += 1;
-        if self.cycle >= 341 {
-            self.cycle = 0;
-            self.scanline += 1;
-            if self.scanline >= 261 {
-                self.scanline = -1;
-                self.is_frame_done = true;
+        self.cycle = (self.cycle + 1) % 341;
+        if self.cycle == 0 {
+            self.scanline = (self.scanline + 1) % 262;
+
+            if self.on_prerender_scanline() {
+                self.is_frame_ready = true;
                 self.done_frame = self.frame.clone();
             }
         }
     }
 
-    fn load_background_shifters(&mut self) {
-        self.background_shifter_low =
-            (self.background_shifter_low & 0xff00) | self.tile_low as u16;
-        self.background_shifter_high =
-            (self.background_shifter_high & 0xff00) | self.tile_high as u16;
+    fn reload_background_shifters(&mut self) {
+        self.background_shift_low =
+            (self.background_shift_low & 0xff00) | self.tile_low as u16;
+        self.background_shift_high =
+            (self.background_shift_high & 0xff00) | self.tile_high as u16;
         self.attribute_latch_low = self.attribute_byte & 1;
         self.attribute_latch_high = (self.attribute_byte & 0x2) >> 1;
     }
 
-    fn update_shifters(&mut self) {
-        if self.mask.show_background() {
-            self.background_shifter_low <<= 1;
-            self.background_shifter_high <<= 1;
-            self.palette_shifter_low =
-                (self.palette_shifter_low << 1) | self.attribute_latch_low;
-            self.palette_shifter_high =
-                (self.palette_shifter_high << 1) | self.attribute_latch_high;
-        }
+    fn shift_background_shifters(&mut self) {
+        self.background_shift_low <<= 1;
+        self.background_shift_high <<= 1;
+        self.palette_shifter_low =
+            (self.palette_shifter_low << 1) | self.attribute_latch_low;
+        self.palette_shifter_high =
+            (self.palette_shifter_high << 1) | self.attribute_latch_high;
     }
 
-    fn increment_scroll_x(&mut self) {
-        if self.mask.show_background() {
-            if self.address.coarse_x_scroll() == 31 {
-                self.address.set_coarse_x_scroll(0);
-                self.address.set_nametable_x(!self.address.nametable_x());
-            } else {
-                self.address
-                    .set_coarse_x_scroll(self.address.coarse_x_scroll() + 1);
-            }
-        }
+    fn reload_x_scroll(&mut self) {
+        self.address
+            .set_nametable_x(self.temp_address.nametable_x());
+        self.address
+            .set_coarse_x_scroll(self.temp_address.coarse_x_scroll());
     }
 
-    fn increment_scroll_y(&mut self) {
-        if self.mask.show_background() {
-            if self.address.fine_y_scroll() < 7 {
-                self.address
-                    .set_fine_y_scroll(self.address.fine_y_scroll() + 1);
-            } else {
-                self.address.set_fine_y_scroll(0);
-
-                if self.address.coarse_y_scroll() == 29 {
-                    self.address.set_coarse_y_scroll(0);
-                    self.address.set_nametable_y(!self.address.nametable_y());
-                } else if self.address.coarse_y_scroll() == 31 {
-                    self.address.set_coarse_y_scroll(0);
-                } else {
-                    self.address.set_coarse_y_scroll(
-                        self.address.coarse_y_scroll() + 1,
-                    );
-                }
-            }
-        }
-    }
-
-    fn transfer_x_address(&mut self) {
-        if self.mask.show_background() {
-            self.address
-                .set_nametable_x(self.temp_address.nametable_x());
-            self.address
-                .set_coarse_x_scroll(self.temp_address.coarse_x_scroll());
-        }
-    }
-
-    fn transfer_y_address(&mut self) {
-        if self.mask.show_background() {
-            self.address
-                .set_fine_y_scroll(self.temp_address.fine_y_scroll());
-            self.address
-                .set_nametable_y(self.temp_address.nametable_y());
-            self.address
-                .set_coarse_y_scroll(self.temp_address.coarse_y_scroll());
-        }
+    fn reload_y_scroll(&mut self) {
+        self.address
+            .set_fine_y_scroll(self.temp_address.fine_y_scroll());
+        self.address
+            .set_nametable_y(self.temp_address.nametable_y());
+        self.address
+            .set_coarse_y_scroll(self.temp_address.coarse_y_scroll());
     }
 }

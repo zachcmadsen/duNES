@@ -125,10 +125,10 @@ impl App for DuNes {
             }
 
             if !self.paused {
-                while !self.cpu.bus.ppu.is_frame_done {
+                while !self.cpu.bus.ppu.is_frame_ready {
                     self.cpu.step();
                 }
-                self.cpu.bus.ppu.is_frame_done = false
+                self.cpu.bus.ppu.is_frame_ready = false
             } else if ui.input(|i| i.key_pressed(Key::Space)) {
                 self.cpu.step();
             }
