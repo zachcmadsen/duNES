@@ -333,7 +333,7 @@ impl Ppu {
                 && self.cycle <= 304
                 && self.rendering_enabled()
             {
-                self.reload_y_scroll();
+                self.address.load_y_scroll(&self.temp_address);
             }
         }
 
@@ -350,7 +350,7 @@ impl Ppu {
             }
 
             if self.cycle == 257 && self.rendering_enabled() {
-                self.reload_x_scroll();
+                self.address.load_x_scroll(&self.temp_address);
             }
 
             if self.cycle == 339 {
@@ -397,21 +397,5 @@ impl Ppu {
             (self.palette_shifter_low << 1) | self.attribute_latch_low;
         self.palette_shifter_high =
             (self.palette_shifter_high << 1) | self.attribute_latch_high;
-    }
-
-    fn reload_x_scroll(&mut self) {
-        self.address
-            .set_nametable_x(self.temp_address.nametable_x());
-        self.address
-            .set_coarse_x_scroll(self.temp_address.coarse_x_scroll());
-    }
-
-    fn reload_y_scroll(&mut self) {
-        self.address
-            .set_fine_y_scroll(self.temp_address.fine_y_scroll());
-        self.address
-            .set_nametable_y(self.temp_address.nametable_y());
-        self.address
-            .set_coarse_y_scroll(self.temp_address.coarse_y_scroll());
     }
 }
