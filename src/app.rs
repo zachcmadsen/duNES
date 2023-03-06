@@ -349,7 +349,7 @@ impl DuNes {
             .cpu
             .bus
             .ppu
-            .done_frame
+            .frame
             .iter()
             .map(|(pixel_value, palette)| {
                 self.get_color(*pixel_value, *palette)
