@@ -383,7 +383,7 @@ impl Ppu {
 
             if self.on_prerender_scanline() {
                 self.is_frame_ready = true;
-                self.frame = self.scratch_frame.clone();
+                self.frame.copy_from_slice(&self.scratch_frame);
             }
         }
     }
