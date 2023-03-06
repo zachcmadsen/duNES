@@ -227,8 +227,14 @@ impl Ppu {
                     self.read(0x2000 | (self.address.0 & 0x0fff));
             }
             3 => {
-                self.attribute_byte =
-                    self.read(self.address.attribute_address());
+                // Each attribute byte applies to a 4x4 group of tiles. To get the
+                // attribute byte for a 4x4 group we can divide the x and y offsets
+                // by four.
+                let attribute_address = 0x23c0
+                    | ((self.address.nametable() as u16) << 10)
+                    | (((self.address.coarse_y_scroll() as u16) / 4) << 3)
+                    | ((self.address.coarse_x_scroll() as u16) / 4);
+                self.attribute_byte = self.read(attribute_address);
 
                 // Each attribute byte represents a 4x4 group of tiles,
                 // but we only need two bits to specify a palette. So,
@@ -247,9 +253,6 @@ impl Ppu {
                     self.attribute_byte >>= 2;
                 }
 
-                // self.attribute_byte >>=
-                //     (self.address.coarse_y_scroll() & 0x02) * 4
-                //         + (self.address.coarse_x_scroll() & 0x02) * 2;
                 // Mask off the rest of the bits.
                 self.attribute_byte &= 0x03;
             }

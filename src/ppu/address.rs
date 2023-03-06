@@ -51,14 +51,4 @@ impl Address {
             }
         }
     }
-
-    pub fn attribute_address(&self) -> u16 {
-        // Each attribute byte applies to a 4x4 group of tiles. To get the
-        // attribute byte for a 4x4 group we can divide the x and y offsets
-        // by four.
-        0x23c0
-            | ((self.nametable() as u16) << 10)
-            | (((self.coarse_y_scroll() as u16) / 4) << 3)
-            | ((self.coarse_x_scroll() as u16) / 4)
-    }
 }
