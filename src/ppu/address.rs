@@ -10,8 +10,8 @@ bitfield! {
         pub nametable_x: bool @ 10,
         pub nametable_y: bool @ 11,
 
-        pub low: u8 @ 0..8,
-        pub high: u8 @ 8..14,
+        pub low: u8 [write_only] @ 0..8,
+        pub high: u8 [write_only] @ 8..14,
     }
 }
 
