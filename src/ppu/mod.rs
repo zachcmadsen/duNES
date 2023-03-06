@@ -1,117 +1,20 @@
 use std::{cell::RefCell, rc::Rc};
 
-use proc_bitfield::bitfield;
+use crate::{
+    cartridge::Mirroring,
+    ppu::{address::Address, control::Control, mask::Mask, status::Status},
+    NromCartridge,
+};
 
-use crate::{cartridge::Mirroring, NromCartridge};
+mod address;
+mod control;
+mod mask;
+mod status;
 
 /// The size of a nametable in bytes.
 const NAMETABLE_SIZE: usize = 1024;
 /// The size of the palette memory in bytes.
 const PALETTES_SIZE: usize = 32;
-
-bitfield! {
-    struct Control(u8) {
-        nametable: u8 @ 0..2,
-        vram_address_increment: bool @ 2,
-        sprite_pattern_table: bool @ 3,
-        background_pattern_table: bool @ 4,
-        sprite_size: bool @ 5,
-        nmi: bool @ 7,
-    }
-}
-
-impl Control {
-    fn background_pattern_table_address(&self) -> u16 {
-        if self.background_pattern_table() {
-            0x1000
-        } else {
-            0x0000
-        }
-    }
-}
-
-bitfield! {
-    struct Mask(u8) {
-        greyscale: bool @ 0,
-        show_background_left: bool @ 1,
-        show_sprites_left: bool @ 2,
-        show_background: bool @ 3,
-        show_sprites: bool @ 4,
-        emphasize_red: bool @ 5,
-        emphasize_green: bool @ 6,
-        emphasize_blue: bool @ 7,
-    }
-}
-
-bitfield! {
-    struct Status(u8) {
-        sprite_overflow: bool @ 5,
-        sprite_0_hit: bool @ 6,
-        vblank: bool @ 7
-    }
-}
-
-bitfield! {
-    struct Address(u16) {
-        coarse_x_scroll: u8 @ 0..5,
-        coarse_y_scroll: u8 @ 5..10,
-        nametable: u8 @ 10..12,
-        nametable_x: bool @ 10,
-        nametable_y: bool @ 11,
-        fine_y_scroll: u8 @ 12..15,
-
-        low: u8 @ 0..8,
-        high: u8 @ 8..14,
-    }
-}
-
-impl Address {
-    fn increment_coarse_x_scroll(&mut self) {
-        // 31 means we've reached the last tile in the nametable (the last col)
-        // so we switch to the other horizontal nametable
-        if self.coarse_x_scroll() == 31 {
-            self.set_coarse_x_scroll(0);
-            self.set_nametable_x(!self.nametable_x());
-        } else {
-            self.set_coarse_x_scroll(self.coarse_x_scroll() + 1);
-        }
-    }
-
-    fn increment_y_scroll(&mut self) {
-        if self.fine_y_scroll() < 7 {
-            // Haven't reached the last row of the tile yet so increment
-            self.set_fine_y_scroll(self.fine_y_scroll() + 1);
-        } else {
-            // it wraps back to 0
-            self.set_fine_y_scroll(0);
-
-            if self.coarse_y_scroll() == 29 {
-                // We've reached the last row of tiles so wrap to the next
-                // nametable
-                self.set_coarse_y_scroll(0);
-                self.set_nametable_y(!self.nametable_y());
-            } else if self.coarse_y_scroll() == 31 {
-                // If coarse y is out of bounds then the PPU will read the
-                // attribute data as tile data. When it reaches 31 (the last
-                // row of the nametable), it will wrap 0 and not switch
-                // nametables.
-                self.set_coarse_y_scroll(0);
-            } else {
-                self.set_coarse_y_scroll(self.coarse_y_scroll() + 1);
-            }
-        }
-    }
-
-    fn attribute_address(&self) -> u16 {
-        // Each attribute byte applies to a 4x4 group of tiles. To get the
-        // attribute byte for a 4x4 group we can divide the x and y offsets
-        // by four.
-        0x23c0
-            | ((self.nametable() as u16) << 10)
-            | (((self.coarse_y_scroll() as u16) / 4) << 3)
-            | ((self.coarse_x_scroll() as u16) / 4)
-    }
-}
 
 pub struct Ppu {
     cartridge: Rc<RefCell<NromCartridge>>,
