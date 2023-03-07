@@ -138,31 +138,33 @@ impl Ppu {
     pub fn read_register(&mut self, address: u16) -> u8 {
         match address {
             0x2002 => {
+                // TODO: Using the read buffer here isn't accurate. It should
+                // be the data bus, which isn't emulated yet.
                 let data = self.status.0 | (self.read_buffer & 0x1f);
+                // TODO: Should self.nmi be set to false? Also, reading the
+                // status register within two cycles of vblank causes an NMI
+                // not to occur?
                 self.status.set_vblank(false);
                 self.w = false;
 
                 data
             }
             0x2007 => {
-                let mut data = self.read_buffer;
+                let data = if address < BASE_PALETTE_ADDRESS {
+                    self.read_buffer
+                } else {
+                    self.read_data(address)
+                };
+
+                // TODO: The data in the buffer should be different when
+                // reading palette data.
                 self.read_buffer = self.read_data(address);
 
-                if address > 0x3f00 {
-                    data = self.read_buffer;
-                }
+                self.v.increment(self.control.increment_mode());
 
-                self.v.0 += if self.control.vram_address_increment() {
-                    32
-                } else {
-                    1
-                };
                 data
             }
-            _ => unreachable!(
-                "tried to read from ppu register at {:04X}",
-                address
-            ),
+            _ => unimplemented!(),
         }
     }
 
@@ -195,12 +197,9 @@ impl Ppu {
                 self.w = !self.w;
             }
             0x2007 => {
+                // TODO: Should self.v.0 be mirrored down?
                 self.write_data(self.v.0, data);
-                self.v.0 += if self.control.vram_address_increment() {
-                    32
-                } else {
-                    1
-                };
+                self.v.increment(self.control.increment_mode());
             }
             _ => (),
         }

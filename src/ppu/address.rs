@@ -59,4 +59,9 @@ impl Address {
         self.set_nametable_y(other.nametable_y());
         self.set_fine_y_scroll(other.fine_y_scroll());
     }
+
+    pub fn increment(&mut self, increment_mode: bool) {
+        // TODO: Can this overflow or is it mirrored down past 0x3fff?
+        self.0 += if increment_mode { 32 } else { 1 };
+    }
 }
