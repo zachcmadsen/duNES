@@ -76,7 +76,7 @@ impl Ppu {
             v: Address(0),
             t: Address(0),
             fine_x_scroll: 0,
-            w: true,
+            w: false,
 
             cycle: 0,
             scanline: 0,
@@ -140,7 +140,7 @@ impl Ppu {
             0x2002 => {
                 let data = self.status.0 | (self.read_buffer & 0x1f);
                 self.status.set_vblank(false);
-                self.w = true;
+                self.w = false;
 
                 data
             }
@@ -174,7 +174,7 @@ impl Ppu {
             }
             0x2001 => self.mask = Mask(data),
             0x2005 => {
-                if self.w {
+                if !self.w {
                     self.fine_x_scroll = data & 0x7;
                     self.t.set_coarse_x_scroll(data >> 3);
                 } else {
@@ -185,7 +185,7 @@ impl Ppu {
                 self.w = !self.w;
             }
             0x2006 => {
-                if self.w {
+                if !self.w {
                     self.t.set_high(data & 0x3f);
                 } else {
                     self.t.set_low(data);
