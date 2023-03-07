@@ -314,12 +314,14 @@ impl DuNes {
                 tile_row * PIXELS_PER_TILE_ROW + preceding_cols_pixel_width;
 
             for row in 0..TILE_WIDTH {
-                let mut low =
-                    self.cpu.bus.ppu.read((tile * TILE_SIZE + row) as u16);
-                let mut high =
-                    self.cpu.bus.ppu.read(
-                        (tile * TILE_SIZE + TILE_PLANE_SIZE + row) as u16,
-                    );
+                let mut low = self
+                    .cpu
+                    .bus
+                    .ppu
+                    .read_data((tile * TILE_SIZE + row) as u16);
+                let mut high = self.cpu.bus.ppu.read_data(
+                    (tile * TILE_SIZE + TILE_PLANE_SIZE + row) as u16,
+                );
 
                 // The LSB of a tile plane refers to the rightmost pixel of the
                 // tile. Since we're drawing from the top-left of tile, we need
@@ -367,7 +369,7 @@ impl DuNes {
             .cpu
             .bus
             .ppu
-            .read(0x3f00 + (palette * 4) as u16 + pixel_value as u16);
+            .read_data(0x3f00 + (palette * 4) as u16 + pixel_value as u16);
         let (r, g, b) = PALLETE[palette_index as usize];
         Color32::from_rgb(r, g, b)
     }

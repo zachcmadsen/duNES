@@ -15,6 +15,10 @@ mod status;
 const NAMETABLE_SIZE: usize = 1024;
 /// The size of the palette memory in bytes.
 const PALETTES_SIZE: usize = 32;
+/// The base address of the nametable memory.
+const BASE_NAMETABLE_ADDRESS: u16 = 0x2000;
+/// The base address of the palette memory.
+const BASE_PALETTE_ADDRESS: u16 = 0x3f00;
 
 pub struct Ppu {
     // Data
@@ -95,64 +99,37 @@ impl Ppu {
         }
     }
 
-    pub fn read(&self, address: u16) -> u8 {
+    pub fn read_data(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1fff => self.cartridge.borrow().read_chr(address),
             0x2000..=0x3eff => {
-                let address = match self.cartridge.borrow().mirroring() {
-                    Mirroring::Horizontal => {
-                        let base = (address / 2) & NAMETABLE_SIZE as u16;
-                        let offset = address % NAMETABLE_SIZE as u16;
-                        base + offset
-                    }
-                    Mirroring::Vertical => {
-                        address % (2 * NAMETABLE_SIZE as u16)
-                    }
-                };
-
-                self.nametables[address as usize]
+                let mirrored_address = self.mirror_nametable_address(address);
+                self.nametables
+                    [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize]
             }
             0x3f00..=0x3fff => {
-                // 0x3f20 - 0x3fff is a mirror of 0x3f00 - 0x3f1f.
-                let address = address & 0x1f;
-                let address = match address {
-                    0x10 | 0x14 | 0x18 | 0x1c => address - 0x10,
-                    _ => address,
-                };
-
-                self.palettes[address as usize]
+                let mirrored_address = self.mirror_palette_address(address);
+                self.palettes
+                    [(mirrored_address - BASE_PALETTE_ADDRESS) as usize]
             }
             _ => unreachable!(),
         }
     }
 
-    pub fn write(&mut self, address: u16, data: u8) {
+    fn write_data(&mut self, address: u16, data: u8) {
         match address {
-            0x0000..=0x1fff => (),
+            0x0000..=0x1fff => unimplemented!(),
             0x2000..=0x3eff => {
-                let address = address & 0x0fff;
-                let address = match self.cartridge.borrow().mirroring() {
-                    Mirroring::Horizontal => {
-                        let base = (address / 2) & NAMETABLE_SIZE as u16;
-                        let offset = address % NAMETABLE_SIZE as u16;
-                        base + offset
-                    }
-                    Mirroring::Vertical => {
-                        address % (2 * NAMETABLE_SIZE as u16)
-                    }
-                };
-
-                self.nametables[address as usize] = data;
+                let mirrored_address = self.mirror_nametable_address(address);
+                self.nametables
+                    [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize] =
+                    data;
             }
             0x3f00..=0x3fff => {
-                // 0x3f20 - 0x3fff is a mirror of 0x3f00 - 0x3f1f.
-                let address = address & 0x1f;
-                let address = match address {
-                    0x10 | 0x14 | 0x18 | 0x1c => address - 0x10,
-                    _ => address,
-                };
-
-                self.palettes[address as usize] = data;
+                let mirrored_address = self.mirror_palette_address(address);
+                self.palettes
+                    [(mirrored_address - BASE_PALETTE_ADDRESS) as usize] =
+                    data;
             }
             _ => unreachable!(),
         }
@@ -169,7 +146,7 @@ impl Ppu {
             }
             0x2007 => {
                 let mut data = self.read_buffer;
-                self.read_buffer = self.read(address);
+                self.read_buffer = self.read_data(address);
 
                 if address > 0x3f00 {
                     data = self.read_buffer;
@@ -218,7 +195,7 @@ impl Ppu {
                 self.w = !self.w;
             }
             0x2007 => {
-                self.write(self.v.0, data);
+                self.write_data(self.v.0, data);
                 self.v.0 += if self.control.vram_address_increment() {
                     32
                 } else {
@@ -229,11 +206,42 @@ impl Ppu {
         }
     }
 
+    fn mirror_nametable_address(&self, address: u16) -> u16 {
+        match self.cartridge.borrow().mirroring() {
+            // The second and fourth nametables map to the first and second
+            // nametables, respectively.
+            Mirroring::Horizontal => match address {
+                0x2400..=0x27ff => address - 0x0400,
+                // We have to map the third and fourth logical nametables to
+                // the second physical nametable.
+                0x2800..=0x2bff => address - 0x0400,
+                0x2c00..=0x2fff => address - 0x0800,
+                _ => address,
+            },
+            // The third and fourth nametables map to the first and second
+            // nametables, respectively.
+            Mirroring::Vertical => match address {
+                0x2800..=0x2bff | 0x2c00..=0x2fff => address - 0x0800,
+                _ => address,
+            },
+        }
+    }
+
+    fn mirror_palette_address(&self, address: u16) -> u16 {
+        // 0x3f20 - 0x3fff is a mirror of 0x3f00 - 0x3f1f.
+        let address = address & 0x3f1f;
+        match address {
+            0x3f10 | 0x3f14 | 0x3f18 | 0x3f1c => address - 0x10,
+            _ => address,
+        }
+    }
+
     fn fetch_tile_data(&mut self) {
         match (self.cycle) % 8 {
             1 => {
                 self.reload_background_shifters();
-                self.nametable_latch = self.read(0x2000 | (self.v.0 & 0x0fff));
+                self.nametable_latch =
+                    self.read_data(0x2000 | (self.v.0 & 0x0fff));
             }
             3 => {
                 // Each attribute byte applies to a 4x4 group of tiles. To get the
@@ -243,7 +251,7 @@ impl Ppu {
                     | ((self.v.nametable() as u16) << 10)
                     | (((self.v.coarse_y_scroll() as u16) / 4) << 3)
                     | ((self.v.coarse_x_scroll() as u16) / 4);
-                self.attribute_byte = self.read(attribute_address);
+                self.attribute_byte = self.read_data(attribute_address);
 
                 // Each attribute byte represents a 4x4 group of tiles,
                 // but we only need two bits to specify a palette. So,
@@ -266,14 +274,14 @@ impl Ppu {
                 self.attribute_byte &= 0x03;
             }
             5 => {
-                self.tile_latch_low = self.read(
+                self.tile_latch_low = self.read_data(
                     self.control.background_pattern_table_address()
                         + ((self.nametable_latch as u16) << 4)
                         + self.v.fine_y_scroll() as u16,
                 );
             }
             7 => {
-                self.tile_latch_high = self.read(
+                self.tile_latch_high = self.read_data(
                     self.control.background_pattern_table_address()
                         + ((self.nametable_latch as u16) << 4)
                         + self.v.fine_y_scroll() as u16
@@ -361,7 +369,8 @@ impl Ppu {
             }
 
             if self.cycle == 339 {
-                self.nametable_latch = self.read(0x2000 | (self.v.0 & 0x0fff));
+                self.nametable_latch =
+                    self.read_data(0x2000 | (self.v.0 & 0x0fff));
             }
         }
 
