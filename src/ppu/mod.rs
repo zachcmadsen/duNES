@@ -105,42 +105,6 @@ impl Ppu {
         }
     }
 
-    pub fn read_data(&self, address: u16) -> u8 {
-        match address {
-            0x0000..=0x1fff => self.cartridge.borrow().read_chr(address),
-            0x2000..=0x3eff => {
-                let mirrored_address = self.mirror_nametable_address(address);
-                self.nametables
-                    [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize]
-            }
-            0x3f00..=0x3fff => {
-                let mirrored_address = self.mirror_palette_address(address);
-                self.palettes
-                    [(mirrored_address - BASE_PALETTE_ADDRESS) as usize]
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    fn write_data(&mut self, address: u16, data: u8) {
-        match address {
-            0x0000..=0x1fff => unimplemented!(),
-            0x2000..=0x3eff => {
-                let mirrored_address = self.mirror_nametable_address(address);
-                self.nametables
-                    [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize] =
-                    data;
-            }
-            0x3f00..=0x3fff => {
-                let mirrored_address = self.mirror_palette_address(address);
-                self.palettes
-                    [(mirrored_address - BASE_PALETTE_ADDRESS) as usize] =
-                    data;
-            }
-            _ => unreachable!(),
-        }
-    }
-
     pub fn read_register(&mut self, address: u16) -> u8 {
         match address {
             0x2002 => {
@@ -208,6 +172,108 @@ impl Ppu {
                 self.v.increment(self.control.increment_mode());
             }
             _ => (),
+        }
+    }
+
+    pub fn tick(&mut self) {
+        if self.on_prerender_scanline() {
+            if self.cycle == 1 {
+                self.status.set_sprite_overflow(false);
+                self.status.set_sprite_0_hit(false);
+                self.status.set_vblank(false);
+                self.nmi = false;
+            }
+
+            // The vertical scroll bits are reloaded during pixels 280 to 304,
+            // if rendering is enabled.
+            if self.cycle >= 280
+                && self.cycle <= 304
+                && self.rendering_enabled()
+            {
+                self.v.load_y_scroll(&self.t);
+            }
+        }
+
+        if self.on_visible_scanline() || self.on_prerender_scanline() {
+            if (self.cycle >= 1 && self.cycle <= 256)
+                || (self.cycle >= 321 && self.cycle <= 337)
+            {
+                self.shift_background_shifters();
+                self.fetch_tile_data();
+            }
+
+            if self.cycle == 256 && self.rendering_enabled() {
+                self.v.increment_y_scroll();
+            }
+
+            if self.cycle == 257 && self.rendering_enabled() {
+                self.v.load_x_scroll(&self.t);
+            }
+
+            if self.cycle == 339 {
+                self.nametable_latch = self.fetch_nametable_byte();
+            }
+        }
+
+        if self.start_of_vblank() {
+            self.status.set_vblank(true);
+            self.nmi = self.control.nmi();
+        }
+
+        if self.rendering_enabled() && self.on_screen() {
+            let (pixel, palette) = self.fetch_pixel();
+            self.scratch_frame
+                [self.scanline as usize * 256 + self.cycle as usize] =
+                (pixel, palette);
+        }
+
+        self.cycle = (self.cycle + 1) % 341;
+        if self.cycle == 0 {
+            self.scanline = (self.scanline + 1) % 262;
+
+            if self.on_prerender_scanline() {
+                self.is_frame_ready = true;
+                self.frame.copy_from_slice(&self.scratch_frame);
+            }
+        }
+    }
+
+    // TODO: Make this private, and provide other public functions for accessing
+    // sections of PPU memory all at once, e.g.,
+    // fn pattern_tables(&self) -> &[u8] { ... }
+    pub fn read_data(&self, address: u16) -> u8 {
+        match address {
+            0x0000..=0x1fff => self.cartridge.borrow().read_chr(address),
+            0x2000..=0x3eff => {
+                let mirrored_address = self.mirror_nametable_address(address);
+                self.nametables
+                    [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize]
+            }
+            0x3f00..=0x3fff => {
+                let mirrored_address = self.mirror_palette_address(address);
+                self.palettes
+                    [(mirrored_address - BASE_PALETTE_ADDRESS) as usize]
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn write_data(&mut self, address: u16, data: u8) {
+        match address {
+            0x0000..=0x1fff => unimplemented!(),
+            0x2000..=0x3eff => {
+                let mirrored_address = self.mirror_nametable_address(address);
+                self.nametables
+                    [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize] =
+                    data;
+            }
+            0x3f00..=0x3fff => {
+                let mirrored_address = self.mirror_palette_address(address);
+                self.palettes
+                    [(mirrored_address - BASE_PALETTE_ADDRESS) as usize] =
+                    data;
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -345,69 +411,6 @@ impl Ppu {
         let palette = (palette_high << 1) | palette_low;
 
         (pixel, palette)
-    }
-
-    pub fn tick(&mut self) {
-        if self.on_prerender_scanline() {
-            if self.cycle == 1 {
-                self.status.set_sprite_overflow(false);
-                self.status.set_sprite_0_hit(false);
-                self.status.set_vblank(false);
-                self.nmi = false;
-            }
-
-            // The vertical scroll bits are reloaded during pixels 280 to 304,
-            // if rendering is enabled.
-            if self.cycle >= 280
-                && self.cycle <= 304
-                && self.rendering_enabled()
-            {
-                self.v.load_y_scroll(&self.t);
-            }
-        }
-
-        if self.on_visible_scanline() || self.on_prerender_scanline() {
-            if (self.cycle >= 1 && self.cycle <= 256)
-                || (self.cycle >= 321 && self.cycle <= 337)
-            {
-                self.shift_background_shifters();
-                self.fetch_tile_data();
-            }
-
-            if self.cycle == 256 && self.rendering_enabled() {
-                self.v.increment_y_scroll();
-            }
-
-            if self.cycle == 257 && self.rendering_enabled() {
-                self.v.load_x_scroll(&self.t);
-            }
-
-            if self.cycle == 339 {
-                self.nametable_latch = self.fetch_nametable_byte();
-            }
-        }
-
-        if self.start_of_vblank() {
-            self.status.set_vblank(true);
-            self.nmi = self.control.nmi();
-        }
-
-        if self.rendering_enabled() && self.on_screen() {
-            let (pixel, palette) = self.fetch_pixel();
-            self.scratch_frame
-                [self.scanline as usize * 256 + self.cycle as usize] =
-                (pixel, palette);
-        }
-
-        self.cycle = (self.cycle + 1) % 341;
-        if self.cycle == 0 {
-            self.scanline = (self.scanline + 1) % 262;
-
-            if self.on_prerender_scanline() {
-                self.is_frame_ready = true;
-                self.frame.copy_from_slice(&self.scratch_frame);
-            }
-        }
     }
 
     fn reload_background_shifters(&mut self) {
