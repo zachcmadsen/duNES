@@ -17,8 +17,14 @@ const NAMETABLE_SIZE: usize = 1024;
 const PALETTES_SIZE: usize = 32;
 /// The base address of the nametable memory.
 const BASE_NAMETABLE_ADDRESS: u16 = 0x2000;
+/// The base address of the attribute tables.
+const BASE_ATTRIBUTE_ADDRESS: u16 = 0x23c0;
 /// The base address of the palette memory.
 const BASE_PALETTE_ADDRESS: u16 = 0x3f00;
+/// The size of a tile in bytes.
+const TILE_SIZE: usize = 16;
+/// The size of one plane of a tile in bytes.
+const TILE_PLANE_SIZE: usize = 8;
 
 pub struct Ppu {
     // Data
@@ -45,7 +51,7 @@ pub struct Ppu {
 
     // Background latches
     nametable_latch: u8,
-    attribute_byte: u8,
+    attribute_bits: u8,
     attribute_latch: u8,
     tile_latch_low: u8,
     tile_latch_high: u8,
@@ -83,7 +89,7 @@ impl Ppu {
             nmi: false,
 
             nametable_latch: 0,
-            attribute_byte: 0,
+            attribute_bits: 0,
             attribute_latch: 0,
             tile_latch_low: 0,
             tile_latch_high: 0,
@@ -235,56 +241,65 @@ impl Ppu {
         }
     }
 
+    fn fetch_nametable_byte(&self) -> u8 {
+        // The bottom 12 bits of v are the address of the next tile in
+        // nametable memory.
+        self.read_data(BASE_NAMETABLE_ADDRESS | (self.v.0 & 0x0fff))
+    }
+
+    fn fetch_attribute_bits(&self) -> u8 {
+        // Divide the coarse offsets by four since each attribute byte applies
+        // to a 4x4 group of tiles.
+        let attribute_address = BASE_ATTRIBUTE_ADDRESS
+            | ((self.v.nametable() as u16) << 10)
+            | (((self.v.coarse_y_scroll() as u16) / 4) << 3)
+            | ((self.v.coarse_x_scroll() as u16) / 4);
+        let mut attribute_byte = self.read_data(attribute_address);
+
+        // The attribute byte is divided into four 2-bit areas that specify the
+        // palettes for four 2x2 tile groups.
+        //
+        // The bottom row of a 2x2 group is covered by the four leftmost
+        // bits.
+        attribute_byte >>= ((self.v.coarse_y_scroll() & 0x02) != 0) as u8 * 4;
+        // The right column of a 2x2 group is covered by the two leftmost
+        // bits.
+        attribute_byte >>= ((self.v.coarse_x_scroll() & 0x02) != 0) as u8 * 2;
+
+        // Mask off the rest of the bits.
+        attribute_byte & 0x03
+    }
+
+    fn background_pattern_table_address(&self) -> u16 {
+        if self.control.background_pattern_table() {
+            0x1000
+        } else {
+            0x0000
+        }
+    }
+
     fn fetch_tile_data(&mut self) {
         match (self.cycle) % 8 {
             1 => {
                 self.reload_background_shifters();
-                self.nametable_latch =
-                    self.read_data(0x2000 | (self.v.0 & 0x0fff));
+                self.nametable_latch = self.fetch_nametable_byte();
             }
             3 => {
-                // Each attribute byte applies to a 4x4 group of tiles. To get the
-                // attribute byte for a 4x4 group we can divide the x and y offsets
-                // by four.
-                let attribute_address = 0x23c0
-                    | ((self.v.nametable() as u16) << 10)
-                    | (((self.v.coarse_y_scroll() as u16) / 4) << 3)
-                    | ((self.v.coarse_x_scroll() as u16) / 4);
-                self.attribute_byte = self.read_data(attribute_address);
-
-                // Each attribute byte represents a 4x4 group of tiles,
-                // but we only need two bits to specify a palette. So,
-                // the attribute byte actually maps four palettes to the
-                // 4 2x2 tile groups in the 4x4 group. We can use the coarse coordinates
-                // to figure out which 2x2 group we're on.
-
-                if (self.v.coarse_y_scroll() & 0x02) != 0 {
-                    // We're in the bottom row of the 2x2 group which
-                    // is represented by the last 4 bits so shift the rest out.
-                    self.attribute_byte >>= 4;
-                }
-                if (self.v.coarse_x_scroll() & 0x02) != 0 {
-                    // We're in the right column of the 2x2 group so which
-                    // is represented by the two leftmost bits.
-                    self.attribute_byte >>= 2;
-                }
-
-                // Mask off the rest of the bits.
-                self.attribute_byte &= 0x03;
+                self.attribute_bits = self.fetch_attribute_bits();
             }
             5 => {
                 self.tile_latch_low = self.read_data(
-                    self.control.background_pattern_table_address()
-                        + ((self.nametable_latch as u16) << 4)
+                    self.background_pattern_table_address()
+                        + (self.nametable_latch as u16 * TILE_SIZE as u16)
                         + self.v.fine_y_scroll() as u16,
                 );
             }
             7 => {
                 self.tile_latch_high = self.read_data(
-                    self.control.background_pattern_table_address()
+                    self.background_pattern_table_address()
                         + ((self.nametable_latch as u16) << 4)
                         + self.v.fine_y_scroll() as u16
-                        + 8,
+                        + TILE_PLANE_SIZE as u16,
                 )
             }
             0 => {
@@ -368,8 +383,7 @@ impl Ppu {
             }
 
             if self.cycle == 339 {
-                self.nametable_latch =
-                    self.read_data(0x2000 | (self.v.0 & 0x0fff));
+                self.nametable_latch = self.fetch_nametable_byte();
             }
         }
 
@@ -401,7 +415,7 @@ impl Ppu {
             (self.tile_shifter_low & 0xff00) | self.tile_latch_low as u16;
         self.tile_shifter_high =
             (self.tile_shifter_high & 0xff00) | self.tile_latch_high as u16;
-        self.attribute_latch = self.attribute_byte;
+        self.attribute_latch = self.attribute_bits;
     }
 
     fn shift_background_shifters(&mut self) {

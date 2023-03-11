@@ -10,13 +10,3 @@ bitfield! {
         pub nmi: bool [read_only] @ 7,
     }
 }
-
-impl Control {
-    pub fn background_pattern_table_address(&self) -> u16 {
-        if self.background_pattern_table() {
-            0x1000
-        } else {
-            0x0000
-        }
-    }
-}
