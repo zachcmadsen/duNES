@@ -107,11 +107,12 @@ pub struct DuNes {
     screen_texture: TextureHandle,
 
     paused: bool,
+    first_frame: bool,
 }
 
 impl App for DuNes {
-    fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
-        CentralPanel::default().show(ctx, |ui| {
+    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+        let container = CentralPanel::default().show(ctx, |ui| {
             if ui.input(|i| i.key_pressed(Key::P)) {
                 self.paused = !self.paused;
             }
@@ -126,14 +127,19 @@ impl App for DuNes {
             }
 
             ui.horizontal_top(|ui| {
-                self.draw_screen(ui);
-                self.draw_pattern_table(ui);
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
                     self.draw_disassembly(ui);
                 });
+                self.draw_screen(ui);
+                self.draw_pattern_table(ui);
             });
         });
+
+        if self.first_frame {
+            self.first_frame = false;
+            frame.set_window_size(container.response.rect.size());
+        }
 
         ctx.request_repaint();
     }
@@ -164,6 +170,7 @@ impl DuNes {
             pattern_table_texture,
             screen_texture,
             paused: true,
+            first_frame: true,
         }
     }
 
