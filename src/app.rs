@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use eframe::{
     egui::{
         CentralPanel, CollapsingHeader, Color32, ColorImage, Context, Key,
@@ -8,12 +6,7 @@ use eframe::{
     App, CreationContext,
 };
 
-use crate::{bus::DuNesBus, cartridge::NromCartridge, cpu::Cpu};
-
-/// The number of preceding instructions to show in the assembly panel.
-const INSTRUCTIONS_BEFORE: usize = 10;
-/// The total number of instructions to show in the assembly panel.
-const TOTAL_INSTRUCTIONS: usize = 21;
+use crate::{Cpu, DuNesBus, NromCartridge};
 
 /// The width of the pattern table image in pixels.
 const PATTERN_TABLE_WIDTH: usize = 128;
@@ -109,7 +102,6 @@ const PALLETE: [(u8, u8, u8); 64] = [
 
 pub struct DuNes {
     cpu: Cpu<DuNesBus>,
-    assembly: BTreeMap<u16, String>,
 
     pattern_table_texture: TextureHandle,
     screen_texture: TextureHandle,
@@ -138,7 +130,7 @@ impl App for DuNes {
                 self.draw_pattern_table(ui);
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
-                    self.draw_assembly(ui);
+                    self.draw_disassembly(ui);
                 });
             });
         });
@@ -151,12 +143,7 @@ impl DuNes {
     pub fn new(rom: &[u8], cc: &CreationContext) -> DuNes {
         let cartridge = NromCartridge::new(rom);
         let bus = DuNesBus::new(cartridge);
-        let mut cpu = Cpu::new(bus);
-        // TODO: React to memory changes to have accurate assembly (or
-        // disassemble on-the-fly?). Disassembling the entire CPU memory at
-        // startup is good enough for now, but it will become more innacurate
-        // as other mappers are added.
-        let assembly = cpu.disassemble();
+        let cpu = Cpu::new(bus);
 
         let pattern_table_texture = cc.egui_ctx.load_texture(
             "pattern-table",
@@ -174,7 +161,6 @@ impl DuNes {
 
         DuNes {
             cpu,
-            assembly,
             pattern_table_texture,
             screen_texture,
             paused: true,
@@ -221,54 +207,23 @@ impl DuNes {
                         u8::from(self.cpu.p),
                     ))
                     .monospace(),
-                )
+                );
             });
     }
 
-    fn draw_assembly(&self, ui: &mut Ui) {
-        CollapsingHeader::new("Assembly")
+    fn draw_disassembly(&self, ui: &mut Ui) {
+        CollapsingHeader::new("Disassembly")
             .default_open(true)
             .show(ui, |ui| {
-                // TODO: Reuse this Vec between updates to save an allocation.
-                let mut instructions_before =
-                    Vec::with_capacity(INSTRUCTIONS_BEFORE);
-                for instruction in self
-                    .assembly
-                    .range(..self.cpu.pc)
-                    .rev()
-                    .take(INSTRUCTIONS_BEFORE)
-                {
-                    instructions_before.push(instruction);
-                }
-                let mut instructions_after = self
-                    .assembly
-                    .range((self.cpu.pc)..)
-                    // There may not be INSTRUCTIONS_BEFORE instructions before
-                    // the current instruction, i.e., PC < INSTRUCTIONS_BEFORE.
-                    // We subtract the actual amount so that we always show
-                    // TOTAL_INSTRUCTIONS instructions.
-                    .take(TOTAL_INSTRUCTIONS - instructions_before.len());
+                let disasm = self.cpu.disassemble();
+                let mut disasm_iter = disasm.iter();
 
-                for (address, instruction) in instructions_before.iter().rev()
-                {
-                    ui.label(
-                        RichText::new(format!("{address:04X}: {instruction}"))
-                            .monospace(),
-                    );
+                // Use strong text for the current instruction.
+                if let Some(instruction) = disasm_iter.next() {
+                    ui.label(RichText::new(instruction).monospace().strong());
                 }
-                if let Some((address, instruction)) = instructions_after.next()
-                {
-                    ui.label(
-                        RichText::new(format!("{address:04X}: {instruction}"))
-                            .monospace()
-                            .strong(),
-                    );
-                }
-                for (address, instruction) in instructions_after {
-                    ui.label(
-                        RichText::new(format!("{address:04X}: {instruction}"))
-                            .monospace(),
-                    );
+                for instruction in disasm_iter {
+                    ui.label(RichText::new(instruction).monospace());
                 }
             });
     }

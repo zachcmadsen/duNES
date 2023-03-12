@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use proc_bitfield::bitfield;
 
 use crate::bus::{Bus, DuNesBus, Pins};
@@ -8,6 +6,268 @@ const NMI_VECTOR: u16 = 0xfffa;
 const RESET_VECTOR: u16 = 0xfffc;
 const IRQ_VECTOR: u16 = 0xfffe;
 const STACK_BASE: u16 = 0x0100;
+
+/// The number of instructions to disassemble per call to disassemble.
+const DISASSEMBLY_INSTRUCTIONS: usize = 15;
+/// A LUT for opcode names and addressing modes.
+const OPCODE_NAMES_AND_MODES: [(&str, AddressingMode); 256] = [
+    ("BRK", AddressingMode::Implied),
+    ("ORA", AddressingMode::IndexedIndirect),
+    ("JAM", AddressingMode::Implied),
+    ("SLO", AddressingMode::IndexedIndirect),
+    ("NOP", AddressingMode::ZeroPage),
+    ("ORA", AddressingMode::ZeroPage),
+    ("ASL", AddressingMode::ZeroPage),
+    ("SLO", AddressingMode::ZeroPage),
+    ("PHP", AddressingMode::Implied),
+    ("ORA", AddressingMode::Immediate),
+    ("ASL", AddressingMode::Accumulator),
+    ("ANC", AddressingMode::Immediate),
+    ("NOP", AddressingMode::Absolute),
+    ("ORA", AddressingMode::Absolute),
+    ("ASL", AddressingMode::Absolute),
+    ("SLO", AddressingMode::Absolute),
+    ("BPL", AddressingMode::Relative),
+    ("ORA", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("SLO", AddressingMode::IndirectIndexed),
+    ("NOP", AddressingMode::ZeroPageX),
+    ("ORA", AddressingMode::ZeroPageX),
+    ("ASL", AddressingMode::ZeroPageX),
+    ("SLO", AddressingMode::ZeroPageX),
+    ("CLC", AddressingMode::Implied),
+    ("ORA", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::Implied),
+    ("SLO", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::AbsoluteX),
+    ("ORA", AddressingMode::AbsoluteX),
+    ("ASL", AddressingMode::AbsoluteX),
+    ("SLO", AddressingMode::AbsoluteX),
+    ("JSR", AddressingMode::Absolute),
+    ("AND", AddressingMode::IndexedIndirect),
+    ("JAM", AddressingMode::Implied),
+    ("RLA", AddressingMode::IndexedIndirect),
+    ("BIT", AddressingMode::ZeroPage),
+    ("AND", AddressingMode::ZeroPage),
+    ("ROL", AddressingMode::ZeroPage),
+    ("RLA", AddressingMode::ZeroPage),
+    ("PLP", AddressingMode::Implied),
+    ("AND", AddressingMode::Immediate),
+    ("ROL", AddressingMode::Accumulator),
+    ("ANC", AddressingMode::Immediate),
+    ("BIT", AddressingMode::Absolute),
+    ("AND", AddressingMode::Absolute),
+    ("ROL", AddressingMode::Absolute),
+    ("RLA", AddressingMode::Absolute),
+    ("BMI", AddressingMode::Relative),
+    ("AND", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("RLA", AddressingMode::IndirectIndexed),
+    ("NOP", AddressingMode::ZeroPageX),
+    ("AND", AddressingMode::ZeroPageX),
+    ("ROL", AddressingMode::ZeroPageX),
+    ("RLA", AddressingMode::ZeroPageX),
+    ("SEC", AddressingMode::Implied),
+    ("AND", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::Implied),
+    ("RLA", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::AbsoluteX),
+    ("AND", AddressingMode::AbsoluteX),
+    ("ROL", AddressingMode::AbsoluteX),
+    ("RLA", AddressingMode::AbsoluteX),
+    ("RTI", AddressingMode::Implied),
+    ("EOR", AddressingMode::IndexedIndirect),
+    ("JAM", AddressingMode::Implied),
+    ("SRE", AddressingMode::IndexedIndirect),
+    ("NOP", AddressingMode::ZeroPage),
+    ("EOR", AddressingMode::ZeroPage),
+    ("LSR", AddressingMode::ZeroPage),
+    ("SRE", AddressingMode::ZeroPage),
+    ("PHA", AddressingMode::Implied),
+    ("EOR", AddressingMode::Immediate),
+    ("LSR", AddressingMode::Accumulator),
+    ("ALR", AddressingMode::Immediate),
+    ("JMP", AddressingMode::Absolute),
+    ("EOR", AddressingMode::Absolute),
+    ("LSR", AddressingMode::Absolute),
+    ("SRE", AddressingMode::Absolute),
+    ("BVC", AddressingMode::Relative),
+    ("EOR", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("SRE", AddressingMode::IndirectIndexed),
+    ("NOP", AddressingMode::ZeroPageX),
+    ("EOR", AddressingMode::ZeroPageX),
+    ("LSR", AddressingMode::ZeroPageX),
+    ("SRE", AddressingMode::ZeroPageX),
+    ("CLI", AddressingMode::Implied),
+    ("EOR", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::Implied),
+    ("SRE", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::AbsoluteX),
+    ("EOR", AddressingMode::AbsoluteX),
+    ("LSR", AddressingMode::AbsoluteX),
+    ("SRE", AddressingMode::AbsoluteX),
+    ("RTS", AddressingMode::Implied),
+    ("ADC", AddressingMode::IndexedIndirect),
+    ("JAM", AddressingMode::Implied),
+    ("RRA", AddressingMode::IndexedIndirect),
+    ("NOP", AddressingMode::ZeroPage),
+    ("ADC", AddressingMode::ZeroPage),
+    ("ROR", AddressingMode::ZeroPage),
+    ("RRA", AddressingMode::ZeroPage),
+    ("PLA", AddressingMode::Implied),
+    ("ADC", AddressingMode::Immediate),
+    ("ROR", AddressingMode::Accumulator),
+    ("ARR", AddressingMode::Immediate),
+    ("JMP", AddressingMode::Indirect),
+    ("ADC", AddressingMode::Absolute),
+    ("ROR", AddressingMode::Absolute),
+    ("RRA", AddressingMode::Absolute),
+    ("BVS", AddressingMode::Relative),
+    ("ADC", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("RRA", AddressingMode::IndirectIndexed),
+    ("NOP", AddressingMode::ZeroPageX),
+    ("ADC", AddressingMode::ZeroPageX),
+    ("ROR", AddressingMode::ZeroPageX),
+    ("RRA", AddressingMode::ZeroPageX),
+    ("SEI", AddressingMode::Implied),
+    ("ADC", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::Implied),
+    ("RRA", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::AbsoluteX),
+    ("ADC", AddressingMode::AbsoluteX),
+    ("ROR", AddressingMode::AbsoluteX),
+    ("RRA", AddressingMode::AbsoluteX),
+    ("NOP", AddressingMode::Immediate),
+    ("STA", AddressingMode::IndexedIndirect),
+    ("NOP", AddressingMode::Immediate),
+    ("SAX", AddressingMode::IndexedIndirect),
+    ("STY", AddressingMode::ZeroPage),
+    ("STA", AddressingMode::ZeroPage),
+    ("STX", AddressingMode::ZeroPage),
+    ("SAX", AddressingMode::ZeroPage),
+    ("DEY", AddressingMode::Implied),
+    ("NOP", AddressingMode::Immediate),
+    ("TXA", AddressingMode::Implied),
+    ("ANE", AddressingMode::Immediate),
+    ("STY", AddressingMode::Absolute),
+    ("STA", AddressingMode::Absolute),
+    ("STX", AddressingMode::Absolute),
+    ("SAX", AddressingMode::Absolute),
+    ("BCC", AddressingMode::Relative),
+    ("STA", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("SHA", AddressingMode::AbsoluteY),
+    ("STY", AddressingMode::ZeroPageX),
+    ("STA", AddressingMode::ZeroPageX),
+    ("STX", AddressingMode::ZeroPageY),
+    ("SAX", AddressingMode::ZeroPageY),
+    ("TYA", AddressingMode::Implied),
+    ("STA", AddressingMode::AbsoluteY),
+    ("TXS", AddressingMode::Implied),
+    ("TAS", AddressingMode::AbsoluteY),
+    ("SHY", AddressingMode::AbsoluteX),
+    ("STA", AddressingMode::AbsoluteX),
+    ("SHX", AddressingMode::AbsoluteY),
+    ("SHA", AddressingMode::IndirectIndexed),
+    ("LDY", AddressingMode::Immediate),
+    ("LDA", AddressingMode::IndexedIndirect),
+    ("LDX", AddressingMode::Immediate),
+    ("LAX", AddressingMode::IndexedIndirect),
+    ("LDY", AddressingMode::ZeroPage),
+    ("LDA", AddressingMode::ZeroPage),
+    ("LDX", AddressingMode::ZeroPage),
+    ("LAX", AddressingMode::ZeroPage),
+    ("TAY", AddressingMode::Implied),
+    ("LDA", AddressingMode::Immediate),
+    ("TAX", AddressingMode::Implied),
+    ("LXA", AddressingMode::Immediate),
+    ("LDY", AddressingMode::Absolute),
+    ("LDA", AddressingMode::Absolute),
+    ("LDX", AddressingMode::Absolute),
+    ("LAX", AddressingMode::Absolute),
+    ("BCS", AddressingMode::Relative),
+    ("LDA", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("LAX", AddressingMode::IndirectIndexed),
+    ("LDY", AddressingMode::ZeroPageX),
+    ("LDA", AddressingMode::ZeroPageX),
+    ("LDX", AddressingMode::ZeroPageY),
+    ("LAX", AddressingMode::ZeroPageY),
+    ("CLV", AddressingMode::Implied),
+    ("LDA", AddressingMode::AbsoluteY),
+    ("TSX", AddressingMode::Implied),
+    ("LAS", AddressingMode::AbsoluteY),
+    ("LDY", AddressingMode::AbsoluteX),
+    ("LDA", AddressingMode::AbsoluteX),
+    ("LDX", AddressingMode::AbsoluteY),
+    ("LAX", AddressingMode::AbsoluteY),
+    ("CPY", AddressingMode::Immediate),
+    ("CMP", AddressingMode::IndexedIndirect),
+    ("NOP", AddressingMode::Immediate),
+    ("DCP", AddressingMode::IndexedIndirect),
+    ("CPY", AddressingMode::ZeroPage),
+    ("CMP", AddressingMode::ZeroPage),
+    ("DEC", AddressingMode::ZeroPage),
+    ("DCP", AddressingMode::ZeroPage),
+    ("INY", AddressingMode::Implied),
+    ("CMP", AddressingMode::Immediate),
+    ("DEX", AddressingMode::Implied),
+    ("SBX", AddressingMode::Immediate),
+    ("CPY", AddressingMode::Absolute),
+    ("CMP", AddressingMode::Absolute),
+    ("DEC", AddressingMode::Absolute),
+    ("DCP", AddressingMode::Absolute),
+    ("BNE", AddressingMode::Relative),
+    ("CMP", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("DCP", AddressingMode::IndirectIndexed),
+    ("NOP", AddressingMode::ZeroPageX),
+    ("CMP", AddressingMode::ZeroPageX),
+    ("DEC", AddressingMode::ZeroPageX),
+    ("DCP", AddressingMode::ZeroPageX),
+    ("CLD", AddressingMode::Implied),
+    ("CMP", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::Implied),
+    ("DCP", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::AbsoluteX),
+    ("CMP", AddressingMode::AbsoluteX),
+    ("DEC", AddressingMode::AbsoluteX),
+    ("DCP", AddressingMode::AbsoluteX),
+    ("CPX", AddressingMode::Immediate),
+    ("SBC", AddressingMode::IndexedIndirect),
+    ("NOP", AddressingMode::Immediate),
+    ("ISB", AddressingMode::IndexedIndirect),
+    ("CPX", AddressingMode::ZeroPage),
+    ("SBC", AddressingMode::ZeroPage),
+    ("INC", AddressingMode::ZeroPage),
+    ("ISB", AddressingMode::ZeroPage),
+    ("INX", AddressingMode::Implied),
+    ("SBC", AddressingMode::Immediate),
+    ("NOP", AddressingMode::Implied),
+    ("SBC", AddressingMode::Immediate),
+    ("CPX", AddressingMode::Absolute),
+    ("SBC", AddressingMode::Absolute),
+    ("INC", AddressingMode::Absolute),
+    ("ISB", AddressingMode::Absolute),
+    ("BEQ", AddressingMode::Relative),
+    ("SBC", AddressingMode::IndirectIndexed),
+    ("JAM", AddressingMode::Implied),
+    ("ISB", AddressingMode::IndirectIndexed),
+    ("NOP", AddressingMode::ZeroPageX),
+    ("SBC", AddressingMode::ZeroPageX),
+    ("INC", AddressingMode::ZeroPageX),
+    ("ISB", AddressingMode::ZeroPageX),
+    ("SED", AddressingMode::Implied),
+    ("SBC", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::Implied),
+    ("ISB", AddressingMode::AbsoluteY),
+    ("NOP", AddressingMode::AbsoluteX),
+    ("SBC", AddressingMode::AbsoluteX),
+    ("INC", AddressingMode::AbsoluteX),
+    ("ISB", AddressingMode::AbsoluteX),
+];
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -24,7 +284,7 @@ bitfield! {
 }
 
 #[derive(PartialEq, Eq)]
-enum AddressingMode {
+pub enum AddressingMode {
     Absolute,
     AbsoluteX,
     AbsoluteY,
@@ -1283,356 +1543,80 @@ impl<B: Bus> Cpu<B> {
     }
 }
 
-const INSTRUCTIONS: [(&str, AddressingMode); 256] = [
-    ("BRK", AddressingMode::Implied),
-    ("ORA", AddressingMode::IndexedIndirect),
-    ("JAM", AddressingMode::Implied),
-    ("SLO", AddressingMode::IndexedIndirect),
-    ("NOP", AddressingMode::ZeroPage),
-    ("ORA", AddressingMode::ZeroPage),
-    ("ASL", AddressingMode::ZeroPage),
-    ("SLO", AddressingMode::ZeroPage),
-    ("PHP", AddressingMode::Implied),
-    ("ORA", AddressingMode::Immediate),
-    ("ASL", AddressingMode::Accumulator),
-    ("ANC", AddressingMode::Immediate),
-    ("NOP", AddressingMode::Absolute),
-    ("ORA", AddressingMode::Absolute),
-    ("ASL", AddressingMode::Absolute),
-    ("SLO", AddressingMode::Absolute),
-    ("BPL", AddressingMode::Relative),
-    ("ORA", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("SLO", AddressingMode::IndirectIndexed),
-    ("NOP", AddressingMode::ZeroPageX),
-    ("ORA", AddressingMode::ZeroPageX),
-    ("ASL", AddressingMode::ZeroPageX),
-    ("SLO", AddressingMode::ZeroPageX),
-    ("CLC", AddressingMode::Implied),
-    ("ORA", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::Implied),
-    ("SLO", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::AbsoluteX),
-    ("ORA", AddressingMode::AbsoluteX),
-    ("ASL", AddressingMode::AbsoluteX),
-    ("SLO", AddressingMode::AbsoluteX),
-    ("JSR", AddressingMode::Absolute),
-    ("AND", AddressingMode::IndexedIndirect),
-    ("JAM", AddressingMode::Implied),
-    ("RLA", AddressingMode::IndexedIndirect),
-    ("BIT", AddressingMode::ZeroPage),
-    ("AND", AddressingMode::ZeroPage),
-    ("ROL", AddressingMode::ZeroPage),
-    ("RLA", AddressingMode::ZeroPage),
-    ("PLP", AddressingMode::Implied),
-    ("AND", AddressingMode::Immediate),
-    ("ROL", AddressingMode::Accumulator),
-    ("ANC", AddressingMode::Immediate),
-    ("BIT", AddressingMode::Absolute),
-    ("AND", AddressingMode::Absolute),
-    ("ROL", AddressingMode::Absolute),
-    ("RLA", AddressingMode::Absolute),
-    ("BMI", AddressingMode::Relative),
-    ("AND", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("RLA", AddressingMode::IndirectIndexed),
-    ("NOP", AddressingMode::ZeroPageX),
-    ("AND", AddressingMode::ZeroPageX),
-    ("ROL", AddressingMode::ZeroPageX),
-    ("RLA", AddressingMode::ZeroPageX),
-    ("SEC", AddressingMode::Implied),
-    ("AND", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::Implied),
-    ("RLA", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::AbsoluteX),
-    ("AND", AddressingMode::AbsoluteX),
-    ("ROL", AddressingMode::AbsoluteX),
-    ("RLA", AddressingMode::AbsoluteX),
-    ("RTI", AddressingMode::Implied),
-    ("EOR", AddressingMode::IndexedIndirect),
-    ("JAM", AddressingMode::Implied),
-    ("SRE", AddressingMode::IndexedIndirect),
-    ("NOP", AddressingMode::ZeroPage),
-    ("EOR", AddressingMode::ZeroPage),
-    ("LSR", AddressingMode::ZeroPage),
-    ("SRE", AddressingMode::ZeroPage),
-    ("PHA", AddressingMode::Implied),
-    ("EOR", AddressingMode::Immediate),
-    ("LSR", AddressingMode::Accumulator),
-    ("ALR", AddressingMode::Immediate),
-    ("JMP", AddressingMode::Absolute),
-    ("EOR", AddressingMode::Absolute),
-    ("LSR", AddressingMode::Absolute),
-    ("SRE", AddressingMode::Absolute),
-    ("BVC", AddressingMode::Relative),
-    ("EOR", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("SRE", AddressingMode::IndirectIndexed),
-    ("NOP", AddressingMode::ZeroPageX),
-    ("EOR", AddressingMode::ZeroPageX),
-    ("LSR", AddressingMode::ZeroPageX),
-    ("SRE", AddressingMode::ZeroPageX),
-    ("CLI", AddressingMode::Implied),
-    ("EOR", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::Implied),
-    ("SRE", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::AbsoluteX),
-    ("EOR", AddressingMode::AbsoluteX),
-    ("LSR", AddressingMode::AbsoluteX),
-    ("SRE", AddressingMode::AbsoluteX),
-    ("RTS", AddressingMode::Implied),
-    ("ADC", AddressingMode::IndexedIndirect),
-    ("JAM", AddressingMode::Implied),
-    ("RRA", AddressingMode::IndexedIndirect),
-    ("NOP", AddressingMode::ZeroPage),
-    ("ADC", AddressingMode::ZeroPage),
-    ("ROR", AddressingMode::ZeroPage),
-    ("RRA", AddressingMode::ZeroPage),
-    ("PLA", AddressingMode::Implied),
-    ("ADC", AddressingMode::Immediate),
-    ("ROR", AddressingMode::Accumulator),
-    ("ARR", AddressingMode::Immediate),
-    ("JMP", AddressingMode::Indirect),
-    ("ADC", AddressingMode::Absolute),
-    ("ROR", AddressingMode::Absolute),
-    ("RRA", AddressingMode::Absolute),
-    ("BVS", AddressingMode::Relative),
-    ("ADC", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("RRA", AddressingMode::IndirectIndexed),
-    ("NOP", AddressingMode::ZeroPageX),
-    ("ADC", AddressingMode::ZeroPageX),
-    ("ROR", AddressingMode::ZeroPageX),
-    ("RRA", AddressingMode::ZeroPageX),
-    ("SEI", AddressingMode::Implied),
-    ("ADC", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::Implied),
-    ("RRA", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::AbsoluteX),
-    ("ADC", AddressingMode::AbsoluteX),
-    ("ROR", AddressingMode::AbsoluteX),
-    ("RRA", AddressingMode::AbsoluteX),
-    ("NOP", AddressingMode::Immediate),
-    ("STA", AddressingMode::IndexedIndirect),
-    ("NOP", AddressingMode::Immediate),
-    ("SAX", AddressingMode::IndexedIndirect),
-    ("STY", AddressingMode::ZeroPage),
-    ("STA", AddressingMode::ZeroPage),
-    ("STX", AddressingMode::ZeroPage),
-    ("SAX", AddressingMode::ZeroPage),
-    ("DEY", AddressingMode::Implied),
-    ("NOP", AddressingMode::Immediate),
-    ("TXA", AddressingMode::Implied),
-    ("ANE", AddressingMode::Immediate),
-    ("STY", AddressingMode::Absolute),
-    ("STA", AddressingMode::Absolute),
-    ("STX", AddressingMode::Absolute),
-    ("SAX", AddressingMode::Absolute),
-    ("BCC", AddressingMode::Relative),
-    ("STA", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("SHA", AddressingMode::AbsoluteY),
-    ("STY", AddressingMode::ZeroPageX),
-    ("STA", AddressingMode::ZeroPageX),
-    ("STX", AddressingMode::ZeroPageY),
-    ("SAX", AddressingMode::ZeroPageY),
-    ("TYA", AddressingMode::Implied),
-    ("STA", AddressingMode::AbsoluteY),
-    ("TXS", AddressingMode::Implied),
-    ("TAS", AddressingMode::AbsoluteY),
-    ("SHY", AddressingMode::AbsoluteX),
-    ("STA", AddressingMode::AbsoluteX),
-    ("SHX", AddressingMode::AbsoluteY),
-    ("SHA", AddressingMode::IndirectIndexed),
-    ("LDY", AddressingMode::Immediate),
-    ("LDA", AddressingMode::IndexedIndirect),
-    ("LDX", AddressingMode::Immediate),
-    ("LAX", AddressingMode::IndexedIndirect),
-    ("LDY", AddressingMode::ZeroPage),
-    ("LDA", AddressingMode::ZeroPage),
-    ("LDX", AddressingMode::ZeroPage),
-    ("LAX", AddressingMode::ZeroPage),
-    ("TAY", AddressingMode::Implied),
-    ("LDA", AddressingMode::Immediate),
-    ("TAX", AddressingMode::Implied),
-    ("LXA", AddressingMode::Immediate),
-    ("LDY", AddressingMode::Absolute),
-    ("LDA", AddressingMode::Absolute),
-    ("LDX", AddressingMode::Absolute),
-    ("LAX", AddressingMode::Absolute),
-    ("BCS", AddressingMode::Relative),
-    ("LDA", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("LAX", AddressingMode::IndirectIndexed),
-    ("LDY", AddressingMode::ZeroPageX),
-    ("LDA", AddressingMode::ZeroPageX),
-    ("LDX", AddressingMode::ZeroPageY),
-    ("LAX", AddressingMode::ZeroPageY),
-    ("CLV", AddressingMode::Implied),
-    ("LDA", AddressingMode::AbsoluteY),
-    ("TSX", AddressingMode::Implied),
-    ("LAS", AddressingMode::AbsoluteY),
-    ("LDY", AddressingMode::AbsoluteX),
-    ("LDA", AddressingMode::AbsoluteX),
-    ("LDX", AddressingMode::AbsoluteY),
-    ("LAX", AddressingMode::AbsoluteY),
-    ("CPY", AddressingMode::Immediate),
-    ("CMP", AddressingMode::IndexedIndirect),
-    ("NOP", AddressingMode::Immediate),
-    ("DCP", AddressingMode::IndexedIndirect),
-    ("CPY", AddressingMode::ZeroPage),
-    ("CMP", AddressingMode::ZeroPage),
-    ("DEC", AddressingMode::ZeroPage),
-    ("DCP", AddressingMode::ZeroPage),
-    ("INY", AddressingMode::Implied),
-    ("CMP", AddressingMode::Immediate),
-    ("DEX", AddressingMode::Implied),
-    ("SBX", AddressingMode::Immediate),
-    ("CPY", AddressingMode::Absolute),
-    ("CMP", AddressingMode::Absolute),
-    ("DEC", AddressingMode::Absolute),
-    ("DCP", AddressingMode::Absolute),
-    ("BNE", AddressingMode::Relative),
-    ("CMP", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("DCP", AddressingMode::IndirectIndexed),
-    ("NOP", AddressingMode::ZeroPageX),
-    ("CMP", AddressingMode::ZeroPageX),
-    ("DEC", AddressingMode::ZeroPageX),
-    ("DCP", AddressingMode::ZeroPageX),
-    ("CLD", AddressingMode::Implied),
-    ("CMP", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::Implied),
-    ("DCP", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::AbsoluteX),
-    ("CMP", AddressingMode::AbsoluteX),
-    ("DEC", AddressingMode::AbsoluteX),
-    ("DCP", AddressingMode::AbsoluteX),
-    ("CPX", AddressingMode::Immediate),
-    ("SBC", AddressingMode::IndexedIndirect),
-    ("NOP", AddressingMode::Immediate),
-    ("ISB", AddressingMode::IndexedIndirect),
-    ("CPX", AddressingMode::ZeroPage),
-    ("SBC", AddressingMode::ZeroPage),
-    ("INC", AddressingMode::ZeroPage),
-    ("ISB", AddressingMode::ZeroPage),
-    ("INX", AddressingMode::Implied),
-    ("SBC", AddressingMode::Immediate),
-    ("NOP", AddressingMode::Implied),
-    ("SBC", AddressingMode::Immediate),
-    ("CPX", AddressingMode::Absolute),
-    ("SBC", AddressingMode::Absolute),
-    ("INC", AddressingMode::Absolute),
-    ("ISB", AddressingMode::Absolute),
-    ("BEQ", AddressingMode::Relative),
-    ("SBC", AddressingMode::IndirectIndexed),
-    ("JAM", AddressingMode::Implied),
-    ("ISB", AddressingMode::IndirectIndexed),
-    ("NOP", AddressingMode::ZeroPageX),
-    ("SBC", AddressingMode::ZeroPageX),
-    ("INC", AddressingMode::ZeroPageX),
-    ("ISB", AddressingMode::ZeroPageX),
-    ("SED", AddressingMode::Implied),
-    ("SBC", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::Implied),
-    ("ISB", AddressingMode::AbsoluteY),
-    ("NOP", AddressingMode::AbsoluteX),
-    ("SBC", AddressingMode::AbsoluteX),
-    ("INC", AddressingMode::AbsoluteX),
-    ("ISB", AddressingMode::AbsoluteX),
-];
-
 impl Cpu<DuNesBus> {
-    pub fn disassemble(&mut self) -> BTreeMap<u16, String> {
-        let mut disasm = BTreeMap::new();
+    pub fn disassemble(&self) -> Vec<String> {
+        let bus = &self.bus;
+        let read_byte = |pc: &mut u16| -> u8 {
+            let byte = bus.read_unclocked(*pc);
+            *pc = pc.wrapping_add(1);
+            byte
+        };
+        let read_word = |pc: &mut u16| -> u16 {
+            let low = bus.read_unclocked(*pc);
+            let high = bus.read_unclocked(*pc + 1);
+            *pc = pc.wrapping_add(2);
+            (high as u16) << 8 | low as u16
+        };
 
-        let mut pc: u32 = 0;
-
-        while pc < 0xffff {
-            // Only disassemble RAM and PRG RAM/ROM.
-            let opcode = if pc > 0x1fff && pc < 0x4020 {
-                0
+        let mut pc = self.pc;
+        // TODO: Pass in a mutable Vec to avoid save an allocation.
+        let mut disasm = Vec::with_capacity(DISASSEMBLY_INSTRUCTIONS);
+        for _ in 0..DISASSEMBLY_INSTRUCTIONS {
+            // Only disassemble RAM and PRG RAM/ROM for now.
+            let opcode = if pc <= 0x1fff || 0x4020 <= pc {
+                bus.read_unclocked(pc)
             } else {
-                self.bus.read_unclocked(pc as u16)
+                0
             };
-            let (name, addresing_mode) = &INSTRUCTIONS[opcode as usize];
-            let pc_to_insert = pc;
-            pc += 1;
 
-            let string_stuff = match addresing_mode {
+            let address = pc;
+            pc = pc.wrapping_add(1);
+
+            let (name, mode) = &OPCODE_NAMES_AND_MODES[opcode as usize];
+            // TODO: Use a single format! instead of two.
+            let operand = match mode {
                 AddressingMode::Absolute => {
-                    let low = self.bus.read_unclocked(pc as u16);
-                    let high = self.bus.read_unclocked((pc + 1) as u16);
-                    pc += 2;
-                    let ea = (high as u16) << 8 | low as u16;
-                    format!("${ea:04X}")
+                    format!("${:04X}", read_word(&mut pc))
                 }
                 AddressingMode::AbsoluteX => {
-                    let low = self.bus.read_unclocked(pc as u16);
-                    let high = self.bus.read_unclocked((pc + 1) as u16);
-                    pc += 2;
-                    let ea = (high as u16) << 8 | low as u16;
-                    format!("${ea:04X}, X")
+                    format!("${:04X}, X", read_word(&mut pc))
                 }
                 AddressingMode::AbsoluteY => {
-                    let low = self.bus.read_unclocked(pc as u16);
-                    let high = self.bus.read_unclocked((pc + 1) as u16);
-                    pc += 2;
-                    let ea = (high as u16) << 8 | low as u16;
-                    format!("${ea:04X}, Y")
+                    format!("${:04X}, Y", read_word(&mut pc))
                 }
                 AddressingMode::Accumulator => "A".to_string(),
                 AddressingMode::Immediate => {
-                    let value = self.bus.read_unclocked(pc as u16);
-                    pc += 1;
-                    format!("#${value:02X}")
+                    format!("#${:02X}", read_byte(&mut pc))
                 }
                 AddressingMode::Indirect => {
-                    let low = self.bus.read_unclocked(pc as u16);
-                    let high = self.bus.read_unclocked((pc + 1) as u16);
-                    pc += 2;
-                    let ea = (high as u16) << 8 | low as u16;
-                    format!("(${ea:04X})")
+                    format!("(${:04X})", read_word(&mut pc))
                 }
                 AddressingMode::Implied => "".to_string(),
                 AddressingMode::IndexedIndirect => {
-                    let value = self.bus.read_unclocked(pc as u16);
-                    pc += 1;
-                    format!("(${value:02X}, X)")
+                    format!("(${:02X}, X)", read_byte(&mut pc))
                 }
                 AddressingMode::IndirectIndexed => {
-                    let value = self.bus.read_unclocked(pc as u16);
-                    pc += 1;
-                    format!("(${value:02X}), Y")
+                    format!("(${:02X}), Y", read_byte(&mut pc))
                 }
                 AddressingMode::Relative => {
-                    let value =
-                        self.bus.read_unclocked(pc as u16) as i8 as u32;
-                    pc += 1;
-                    let target = pc.wrapping_add(value);
-                    format!("${target:04X}")
+                    let byte = read_byte(&mut pc) as i8 as u16;
+                    let target = pc.wrapping_add(byte);
+                    format!("${:04X}", target)
                 }
                 AddressingMode::ZeroPage => {
-                    let value = self.bus.read_unclocked(pc as u16);
-                    pc += 1;
-                    format!("${value:02X}")
+                    format!("${:02X}", read_byte(&mut pc))
                 }
                 AddressingMode::ZeroPageX => {
-                    let value = self.bus.read_unclocked(pc as u16);
-                    pc += 1;
-                    format!("${value:02X}, X")
+                    format!("${:02X}, X", read_byte(&mut pc))
                 }
                 AddressingMode::ZeroPageY => {
-                    let value = self.bus.read_unclocked(pc as u16);
-                    pc += 1;
-                    format!("${value:02X}, Y")
+                    format!("${:02X}, Y", read_byte(&mut pc))
                 }
             };
 
-            disasm.insert(
-                pc_to_insert as u16,
-                format!("{} {}", name, string_stuff),
-            );
+            // Pad the operand with enough spaces to make all lines have the
+            // same length.
+            disasm.push(format!("{:04X}: {} {:10}", address, name, operand));
         }
 
         disasm
