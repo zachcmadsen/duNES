@@ -1,6 +1,7 @@
-use std::fs;
+use std::{fs, io};
 
-use dunes::{Bus, Cpu, DuNesBus, NromCartridge};
+use dunes::{Bus, Cpu, DuNesBus, NromCartridge, Status};
+use serde::Deserialize;
 
 const ZERO_PAGE_START: usize = 0xa;
 const CODE_SEGMENT_START: u16 = 0x400;
@@ -44,6 +45,17 @@ impl Bus for KlausBus {
 
         self.memory[pins.address as usize] = pins.data;
     }
+}
+
+#[derive(Deserialize)]
+struct NestestLog {
+    pc: u16,
+    a: u8,
+    x: u8,
+    y: u8,
+    p: u8,
+    sp: u8,
+    cycles: u64,
 }
 
 fn run_klaus(filepath: &str, success_address: u16) {
@@ -173,4 +185,37 @@ fn brk() {
 #[test]
 fn special() {
     run_instr("tests/roms/16-special.nes");
+}
+
+#[test]
+fn nestest() {
+    let rom = fs::read("tests/roms/nestest.nes")
+        .expect("tests/roms/nestest.nes should exist");
+    let cartridge = NromCartridge::new(&rom);
+    let bus = DuNesBus::new(cartridge);
+    let mut cpu = Cpu::new(bus);
+
+    let log_file = fs::File::open("tests/roms/nestest.log.json")
+        .expect("tests/roms/nestest.log.json should exist");
+    let buf_reader = io::BufReader::new(log_file);
+    let logs: Vec<NestestLog> = serde_json::from_reader(buf_reader).unwrap();
+
+    // The nestest log has different initial values for the program counter,
+    // status register, and stack pointer.
+    cpu.step();
+    cpu.pc = 0xc000;
+    cpu.p = Status::from(0x24);
+    cpu.s = 0xfd;
+
+    for log in logs {
+        assert_eq!(cpu.pc, log.pc);
+        assert_eq!(cpu.a, log.a);
+        assert_eq!(cpu.x, log.x);
+        assert_eq!(cpu.y, log.y);
+        assert_eq!(u8::from(cpu.p), log.p);
+        assert_eq!(cpu.s, log.sp);
+        assert_eq!(cpu.cycles, log.cycles);
+
+        cpu.step();
+    }
 }
