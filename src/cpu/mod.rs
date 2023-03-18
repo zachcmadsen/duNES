@@ -331,6 +331,7 @@ pub struct Cpu<B> {
     need_nmi: bool,
     rst: bool,
 
+    // TODO: Try boxing the bus once there's a benchmark with DuNesBus.
     pub bus: B,
 }
 
