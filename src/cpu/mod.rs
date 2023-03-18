@@ -306,14 +306,6 @@ pub enum AddressingMode {
     ZeroPageY,
 }
 
-#[derive(PartialEq, Eq)]
-enum Interrupt {
-    Brk,
-    Irq,
-    Nmi,
-    Rst,
-}
-
 pub struct Cpu<B> {
     pub a: u8,
     pub x: u8,
@@ -337,7 +329,7 @@ pub struct Cpu<B> {
 
 impl<B: Bus> Cpu<B> {
     const OPCODE_LUT: [fn(&mut Cpu<B>); 256] = [
-        Cpu::brk::<{ Interrupt::Brk }>,
+        Cpu::brk,
         Cpu::ora_indexed_indirect,
         Cpu::jam,
         Cpu::slo_indexed_indirect,
@@ -620,12 +612,12 @@ impl<B: Bus> Cpu<B> {
             let brk = if self.rst {
                 // TODO: Reset CPU struct fields?
                 self.rst = false;
-                Cpu::brk::<{ Interrupt::Rst }>
+                Cpu::rst
             } else if self.prev_need_nmi {
                 self.need_nmi = false;
-                Cpu::brk::<{ Interrupt::Nmi }>
+                Cpu::nmi
             } else {
-                Cpu::brk::<{ Interrupt::Irq }>
+                Cpu::irq
             };
 
             self.read_byte(self.pc);
@@ -757,6 +749,37 @@ impl<B: Bus> Cpu<B> {
         self.p.set_c(register >= value);
         self.p.set_z(result == 0);
         self.p.set_n(result & 0x80 != 0);
+    }
+
+    fn irq(&mut self) {
+        self.read_byte(self.pc);
+        self.push((self.pc >> 8) as u8);
+        self.push(self.pc as u8);
+        self.push(self.p.into());
+        self.p.set_i(true);
+        self.pc = self.read_word(IRQ_VECTOR);
+    }
+
+    fn nmi(&mut self) {
+        self.read_byte(self.pc);
+        self.push((self.pc >> 8) as u8);
+        self.push(self.pc as u8);
+        self.push(self.p.into());
+        // TODO: Should NMI not set the I flag?
+        self.p.set_i(true);
+        self.pc = self.read_word(NMI_VECTOR);
+    }
+
+    fn rst(&mut self) {
+        self.read_byte(self.pc);
+        self.peek();
+        self.s = self.s.wrapping_sub(1);
+        self.peek();
+        self.s = self.s.wrapping_sub(1);
+        self.peek();
+        self.s = self.s.wrapping_sub(1);
+        self.p.set_i(true);
+        self.pc = self.read_word(RESET_VECTOR);
     }
 
     fn adc_absolute(&mut self) {
@@ -897,34 +920,13 @@ impl<B: Bus> Cpu<B> {
         self.branch(!self.p.n());
     }
 
-    fn brk<const KIND: Interrupt>(&mut self) {
-        self.read_byte(self.pc);
-        if KIND == Interrupt::Brk {
-            self.pc += 1;
-        }
-
-        if KIND == Interrupt::Rst {
-            self.peek();
-            self.s = self.s.wrapping_sub(1);
-            self.peek();
-            self.s = self.s.wrapping_sub(1);
-            self.peek();
-            self.s = self.s.wrapping_sub(1);
-        } else {
-            self.push((self.pc >> 8) as u8);
-            self.push(self.pc as u8);
-            self.push(self.p.with_b(KIND == Interrupt::Brk).into());
-        }
-
-        // TODO: Implement interrupt hijacking.
-        // TODO: Should NMI not set the I flag?
+    fn brk(&mut self) {
+        self.consume_byte();
+        self.push((self.pc >> 8) as u8);
+        self.push(self.pc as u8);
+        self.push(self.p.with_b(true).into());
         self.p.set_i(true);
-        let vector = match KIND {
-            Interrupt::Brk | Interrupt::Irq => IRQ_VECTOR,
-            Interrupt::Nmi => NMI_VECTOR,
-            Interrupt::Rst => RESET_VECTOR,
-        };
-        self.pc = self.read_word(vector);
+        self.pc = self.read_word(IRQ_VECTOR);
     }
 
     fn bvc(&mut self) {
