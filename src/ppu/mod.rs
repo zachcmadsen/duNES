@@ -29,8 +29,8 @@ const TILE_PLANE_SIZE: usize = 8;
 pub struct Ppu {
     // Data
     cartridge: Rc<RefCell<NromCartridge>>,
-    nametables: [u8; 2 * NAMETABLE_SIZE],
-    palettes: [u8; PALETTES_SIZE],
+    nametables: Box<[u8; 2 * NAMETABLE_SIZE]>,
+    palettes: Box<[u8; PALETTES_SIZE]>,
     read_buffer: u8,
 
     // Registers
@@ -71,8 +71,8 @@ impl Ppu {
     pub fn new(cartridge: Rc<RefCell<NromCartridge>>) -> Ppu {
         Ppu {
             cartridge,
-            nametables: [0; 2 * NAMETABLE_SIZE],
-            palettes: [0; PALETTES_SIZE],
+            nametables: vec![0; 2 * NAMETABLE_SIZE].try_into().unwrap(),
+            palettes: vec![0; PALETTES_SIZE].try_into().unwrap(),
             read_buffer: 0,
 
             control: Control(0),

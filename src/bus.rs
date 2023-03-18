@@ -21,7 +21,7 @@ pub struct Pins {
 }
 
 pub struct DuNesBus {
-    ram: [u8; RAM_SIZE],
+    ram: Box<[u8; RAM_SIZE]>,
     cartridge: Rc<RefCell<NromCartridge>>,
     pub ppu: Ppu,
 }
@@ -76,7 +76,7 @@ impl DuNesBus {
         let cartridge = Rc::new(RefCell::new(cartridge));
 
         DuNesBus {
-            ram: [0; RAM_SIZE],
+            ram: vec![0; RAM_SIZE].try_into().unwrap(),
             cartridge: cartridge.clone(),
             ppu: Ppu::new(cartridge),
         }
