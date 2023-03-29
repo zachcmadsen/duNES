@@ -18,12 +18,16 @@ pub struct Pins {
     pub irq: bool,
     pub nmi: bool,
     pub rst: bool,
+    pub oam_dma: Option<u8>,
 }
 
 pub struct DuNesBus {
     ram: Box<[u8; RAM_SIZE]>,
     cartridge: Rc<RefCell<NromCartridge>>,
     pub ppu: Ppu,
+
+    pub controller: u8,
+    pub controller_state: u8,
 }
 
 impl Bus for DuNesBus {
@@ -32,6 +36,11 @@ impl Bus for DuNesBus {
             0x0000..=0x1fff => self.ram[(pins.address & 0x07ff) as usize],
             0x2000..=0x2007 => self.ppu.read_register(pins.address),
             0x2008..=0x3fff => 0,
+            0x4016 => {
+                let data = ((self.controller_state & 0x80) != 0) as u8;
+                self.controller_state <<= 1;
+                data
+            }
             0x4000..=0x401f => 0,
             0x4020..=0xffff => {
                 self.cartridge.borrow_mut().read_prg(pins.address)
@@ -55,7 +64,10 @@ impl Bus for DuNesBus {
             }
             0x2008..=0x3fff => (),
             0x4000..=0x4013 => (),
-            0x4014 => (),
+            0x4014 => pins.oam_dma = Some(pins.data),
+            0x4016 => {
+                self.controller_state = self.controller;
+            }
             0x4015..=0x401f => (),
             0x4020..=0xffff => self
                 .cartridge
@@ -79,6 +91,8 @@ impl DuNesBus {
             ram: vec![0; RAM_SIZE].try_into().unwrap(),
             cartridge: cartridge.clone(),
             ppu: Ppu::new(cartridge),
+            controller: 0,
+            controller_state: 0,
         }
     }
 

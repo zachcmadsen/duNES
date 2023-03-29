@@ -629,6 +629,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn read_byte(&mut self, address: u16) -> u8 {
+        if let Some(page) = self.pins.oam_dma {
+            self.pins.oam_dma = None;
+            self.oam_dma(page);
+        }
+
         self.cycles += 1;
 
         self.pins.address = address;
@@ -656,6 +661,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
+        if let Some(page) = self.pins.oam_dma {
+            self.pins.oam_dma = None;
+            self.oam_dma(page);
+        }
+
         self.cycles += 1;
 
         self.pins.address = address;
@@ -710,6 +720,20 @@ impl<B: Bus> Cpu<B> {
 
         if !self.rst && self.pins.rst {
             self.rst = self.pins.rst;
+        }
+    }
+
+    fn oam_dma(&mut self, page: u8) {
+        // OAM DMA should take an extra cycle if we're on an odd CPU
+        // cycle.
+        if self.cycles % 2 == 1 {
+            // TODO: Find out what the actual contents of the bus is.
+            self.read_byte(page as u16 * 0x100);
+        }
+
+        for offset in 0..=0xff {
+            let data = self.read_byte(page as u16 * 0x100 + offset);
+            self.write_byte(0x2004, data);
         }
     }
 

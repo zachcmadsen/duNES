@@ -113,6 +113,49 @@ pub struct DuNes {
 impl App for DuNes {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         let container = CentralPanel::default().show(ctx, |ui| {
+            self.cpu.bus.controller = 0;
+
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::J)) {
+                0x80
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::K)) {
+                0x40
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::U)) {
+                0x20
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::Y)) {
+                0x10
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::W)) {
+                0x08
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::S)) {
+                0x04
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::A)) {
+                0x02
+            } else {
+                0
+            };
+            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::D)) {
+                0x01
+            } else {
+                0
+            };
+
             if ui.input(|i| i.key_pressed(Key::P)) {
                 self.paused = !self.paused;
             }

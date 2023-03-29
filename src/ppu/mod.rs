@@ -25,6 +25,8 @@ const BASE_PALETTE_ADDRESS: u16 = 0x3f00;
 const TILE_SIZE: usize = 16;
 /// The size of one plane of a tile in bytes.
 const TILE_PLANE_SIZE: usize = 8;
+/// The size of OAM in bytes.
+const OAM_SIZE: usize = 256;
 
 pub struct Ppu {
     // Data
@@ -32,6 +34,7 @@ pub struct Ppu {
     nametables: Box<[u8; 2 * NAMETABLE_SIZE]>,
     palettes: Box<[u8; PALETTES_SIZE]>,
     read_buffer: u8,
+    oam: Box<[u8; OAM_SIZE]>,
 
     // Registers
     control: Control,
@@ -62,6 +65,8 @@ pub struct Ppu {
     attribute_shifter_low: u8,
     attribute_shifter_high: u8,
 
+    oam_address: u8,
+
     scratch_frame: Vec<(u8, u8)>,
     pub frame: Vec<(u8, u8)>,
     pub is_frame_ready: bool,
@@ -74,6 +79,7 @@ impl Ppu {
             nametables: vec![0; 2 * NAMETABLE_SIZE].try_into().unwrap(),
             palettes: vec![0; PALETTES_SIZE].try_into().unwrap(),
             read_buffer: 0,
+            oam: vec![0; OAM_SIZE].try_into().unwrap(),
 
             control: Control(0),
             mask: Mask(0),
@@ -99,6 +105,8 @@ impl Ppu {
             attribute_shifter_low: 0,
             attribute_shifter_high: 0,
 
+            oam_address: 0,
+
             scratch_frame: vec![(0, 0); 240 * 256],
             frame: vec![(0, 0); 240 * 256],
             is_frame_ready: false,
@@ -119,6 +127,7 @@ impl Ppu {
 
                 data
             }
+            0x2004 => self.oam[self.oam_address as usize],
             0x2007 => {
                 let data = if address < BASE_PALETTE_ADDRESS {
                     self.read_buffer
@@ -145,6 +154,11 @@ impl Ppu {
                 self.t.set_nametable(self.control.nametable());
             }
             0x2001 => self.mask = Mask(data),
+            0x2003 => self.oam_address = data,
+            0x2004 => {
+                self.oam[self.oam_address as usize] = data;
+                self.oam_address = self.oam_address.wrapping_add(1);
+            }
             0x2005 => {
                 if !self.w {
                     self.fine_x_scroll = data & 0x7;
