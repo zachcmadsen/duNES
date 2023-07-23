@@ -38,81 +38,81 @@ fn run_instr(filepath: &str) {
 }
 
 #[test]
-fn instr_basics() {
-    run_instr("tests/roms/01-basics.nes");
+fn basics() {
+    run_instr("roms/instr_test-v5/01-basics.nes");
 }
 
 #[test]
 fn implied() {
-    run_instr("tests/roms/02-implied.nes");
+    run_instr("roms/instr_test-v5/02-implied.nes");
 }
 
 #[test]
 fn immediate() {
-    run_instr("tests/roms/03-immediate.nes");
+    run_instr("roms/instr_test-v5/03-immediate.nes");
 }
 
 #[test]
 fn zero_page() {
-    run_instr("tests/roms/04-zero_page.nes");
+    run_instr("roms/instr_test-v5/04-zero_page.nes");
 }
 
 #[test]
 fn zp_xy() {
-    run_instr("tests/roms/05-zp_xy.nes");
+    run_instr("roms/instr_test-v5/05-zp_xy.nes");
 }
 
 #[test]
 fn absolute() {
-    run_instr("tests/roms/06-absolute.nes");
+    run_instr("roms/instr_test-v5/06-absolute.nes");
 }
 
 #[test]
 fn abs_xy() {
-    run_instr("tests/roms/07-abs_xy.nes");
+    run_instr("roms/instr_test-v5/07-abs_xy.nes");
 }
 
 #[test]
 fn ind_x() {
-    run_instr("tests/roms/08-ind_x.nes");
+    run_instr("roms/instr_test-v5/08-ind_x.nes");
 }
 
 #[test]
 fn ind_y() {
-    run_instr("tests/roms/09-ind_y.nes");
+    run_instr("roms/instr_test-v5/09-ind_y.nes");
 }
 
 #[test]
 fn branches() {
-    run_instr("tests/roms/10-branches.nes");
+    run_instr("roms/instr_test-v5/10-branches.nes");
 }
 
 #[test]
 fn stack() {
-    run_instr("tests/roms/11-stack.nes");
+    run_instr("roms/instr_test-v5/11-stack.nes");
 }
 
 #[test]
 fn jmp_jsr() {
-    run_instr("tests/roms/12-jmp_jsr.nes");
+    run_instr("roms/instr_test-v5/12-jmp_jsr.nes");
 }
 
 #[test]
 fn rts() {
-    run_instr("tests/roms/13-rts.nes");
+    run_instr("roms/instr_test-v5/13-rts.nes");
 }
 
 #[test]
 fn rti() {
-    run_instr("tests/roms/14-rti.nes");
+    run_instr("roms/instr_test-v5/14-rti.nes");
 }
 
 #[test]
 fn brk() {
-    run_instr("tests/roms/15-brk.nes");
+    run_instr("roms/instr_test-v5/15-brk.nes");
 }
 
 #[test]
 fn special() {
-    run_instr("tests/roms/16-special.nes");
+    run_instr("roms/instr_test-v5/16-special.nes");
 }
