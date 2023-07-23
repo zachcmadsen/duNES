@@ -328,265 +328,6 @@ pub struct Cpu<B> {
 }
 
 impl<B: Bus> Cpu<B> {
-    const OPCODE_LUT: [fn(&mut Cpu<B>); 256] = [
-        Cpu::brk,
-        Cpu::ora_indexed_indirect,
-        Cpu::jam,
-        Cpu::slo_indexed_indirect,
-        Cpu::nop_zero_page,
-        Cpu::ora_zero_page,
-        Cpu::asl_zero_page,
-        Cpu::slo_zero_page,
-        Cpu::php,
-        Cpu::ora_immediate,
-        Cpu::asl_accumulator,
-        Cpu::anc_immediate,
-        Cpu::nop_absolute,
-        Cpu::ora_absolute,
-        Cpu::asl_absolute,
-        Cpu::slo_absolute,
-        Cpu::bpl,
-        Cpu::ora_indirect_indexed,
-        Cpu::jam,
-        Cpu::slo_indirect_indexed,
-        Cpu::nop_zero_page_x,
-        Cpu::ora_zero_page_x,
-        Cpu::asl_zero_page_x,
-        Cpu::slo_zero_page_x,
-        Cpu::clc,
-        Cpu::ora_absolute_y,
-        Cpu::nop_implied,
-        Cpu::slo_absolute_y,
-        Cpu::nop_absolute_x,
-        Cpu::ora_absolute_x,
-        Cpu::asl_absolute_x,
-        Cpu::slo_absolute_x,
-        Cpu::jsr,
-        Cpu::and_indexed_indirect,
-        Cpu::jam,
-        Cpu::rla_indexed_indirect,
-        Cpu::bit_zero_page,
-        Cpu::and_zero_page,
-        Cpu::rol_zero_page,
-        Cpu::rla_zero_page,
-        Cpu::plp,
-        Cpu::and_immediate,
-        Cpu::rol_accumulator,
-        Cpu::anc_immediate,
-        Cpu::bit_absolute,
-        Cpu::and_absolute,
-        Cpu::rol_absolute,
-        Cpu::rla_absolute,
-        Cpu::bmi,
-        Cpu::and_indirect_indexed,
-        Cpu::jam,
-        Cpu::rla_indirect_indexed,
-        Cpu::nop_zero_page_x,
-        Cpu::and_zero_page_x,
-        Cpu::rol_zero_page_x,
-        Cpu::rla_zero_page_x,
-        Cpu::sec,
-        Cpu::and_absolute_y,
-        Cpu::nop_implied,
-        Cpu::rla_absolute_y,
-        Cpu::nop_absolute_x,
-        Cpu::and_absolute_x,
-        Cpu::rol_absolute_x,
-        Cpu::rla_absolute_x,
-        Cpu::rti,
-        Cpu::eor_indexed_indirect,
-        Cpu::jam,
-        Cpu::sre_indexed_indirect,
-        Cpu::nop_zero_page,
-        Cpu::eor_zero_page,
-        Cpu::lsr_zero_page,
-        Cpu::sre_zero_page,
-        Cpu::pha,
-        Cpu::eor_immediate,
-        Cpu::lsr_accumulator,
-        Cpu::alr_immediate,
-        Cpu::jmp_absolute,
-        Cpu::eor_absolute,
-        Cpu::lsr_absolute,
-        Cpu::sre_absolute,
-        Cpu::bvc,
-        Cpu::eor_indirect_indexed,
-        Cpu::jam,
-        Cpu::sre_indirect_indexed,
-        Cpu::nop_zero_page_x,
-        Cpu::eor_zero_page_x,
-        Cpu::lsr_zero_page_x,
-        Cpu::sre_zero_page_x,
-        Cpu::cli,
-        Cpu::eor_absolute_y,
-        Cpu::nop_implied,
-        Cpu::sre_absolute_y,
-        Cpu::nop_absolute_x,
-        Cpu::eor_absolute_x,
-        Cpu::lsr_absolute_x,
-        Cpu::sre_absolute_x,
-        Cpu::rts,
-        Cpu::adc_indexed_indirect,
-        Cpu::jam,
-        Cpu::rra_indexed_indirect,
-        Cpu::nop_zero_page,
-        Cpu::adc_zero_page,
-        Cpu::ror_zero_page,
-        Cpu::rra_zero_page,
-        Cpu::pla,
-        Cpu::adc_immediate,
-        Cpu::ror_accumulator,
-        Cpu::arr_immediate,
-        Cpu::jmp_indirect,
-        Cpu::adc_absolute,
-        Cpu::ror_absolute,
-        Cpu::rra_absolute,
-        Cpu::bvs,
-        Cpu::adc_indirect_indexed,
-        Cpu::jam,
-        Cpu::rra_indirect_indexed,
-        Cpu::nop_zero_page_x,
-        Cpu::adc_zero_page_x,
-        Cpu::ror_zero_page_x,
-        Cpu::rra_zero_page_x,
-        Cpu::sei,
-        Cpu::adc_absolute_y,
-        Cpu::nop_implied,
-        Cpu::rra_absolute_y,
-        Cpu::nop_absolute_x,
-        Cpu::adc_absolute_x,
-        Cpu::ror_absolute_x,
-        Cpu::rra_absolute_x,
-        Cpu::nop_immediate,
-        Cpu::sta_indexed_indirect,
-        Cpu::nop_immediate,
-        Cpu::sax_indexed_indirect,
-        Cpu::sty_zero_page,
-        Cpu::sta_zero_page,
-        Cpu::stx_zero_page,
-        Cpu::sax_zero_page,
-        Cpu::dey,
-        Cpu::nop_immediate,
-        Cpu::txa,
-        Cpu::ane_immediate,
-        Cpu::sty_absolute,
-        Cpu::sta_absolute,
-        Cpu::stx_absolute,
-        Cpu::sax_absolute,
-        Cpu::bcc,
-        Cpu::sta_indirect_indexed,
-        Cpu::jam,
-        Cpu::sha_absolute_y,
-        Cpu::sty_zero_page_x,
-        Cpu::sta_zero_page_x,
-        Cpu::stx_zero_page_y,
-        Cpu::sax_zero_page_y,
-        Cpu::tya,
-        Cpu::sta_absolute_y,
-        Cpu::txs,
-        Cpu::tas_absolute_y,
-        Cpu::shy_absolute_x,
-        Cpu::sta_absolute_x,
-        Cpu::shx_absolute_y,
-        Cpu::sha_indirect_indexed,
-        Cpu::ldy_immediate,
-        Cpu::lda_indexed_indirect,
-        Cpu::ldx_immediate,
-        Cpu::lax_indexed_indirect,
-        Cpu::ldy_zero_page,
-        Cpu::lda_zero_page,
-        Cpu::ldx_zero_page,
-        Cpu::lax_zero_page,
-        Cpu::tay,
-        Cpu::lda_immediate,
-        Cpu::tax,
-        Cpu::lxa_immediate,
-        Cpu::ldy_absolute,
-        Cpu::lda_absolute,
-        Cpu::ldx_absolute,
-        Cpu::lax_absolute,
-        Cpu::bcs,
-        Cpu::lda_indirect_indexed,
-        Cpu::jam,
-        Cpu::lax_indirect_indexed,
-        Cpu::ldy_zero_page_x,
-        Cpu::lda_zero_page_x,
-        Cpu::ldx_zero_page_y,
-        Cpu::lax_zero_page_y,
-        Cpu::clv,
-        Cpu::lda_absolute_y,
-        Cpu::tsx,
-        Cpu::las_absolute_y,
-        Cpu::ldy_absolute_x,
-        Cpu::lda_absolute_x,
-        Cpu::ldx_absolute_y,
-        Cpu::lax_absolute_y,
-        Cpu::cpy_immediate,
-        Cpu::cmp_indexed_indirect,
-        Cpu::nop_immediate,
-        Cpu::dcp_indexed_indirect,
-        Cpu::cpy_zero_page,
-        Cpu::cmp_zero_page,
-        Cpu::dec_zero_page,
-        Cpu::dcp_zero_page,
-        Cpu::iny,
-        Cpu::cmp_immediate,
-        Cpu::dex,
-        Cpu::sbx_immediate,
-        Cpu::cpy_absolute,
-        Cpu::cmp_absolute,
-        Cpu::dec_absolute,
-        Cpu::dcp_absolute,
-        Cpu::bne,
-        Cpu::cmp_indirect_indexed,
-        Cpu::jam,
-        Cpu::dcp_indirect_indexed,
-        Cpu::nop_zero_page_x,
-        Cpu::cmp_zero_page_x,
-        Cpu::dec_zero_page_x,
-        Cpu::dcp_zero_page_x,
-        Cpu::cld,
-        Cpu::cmp_absolute_y,
-        Cpu::nop_implied,
-        Cpu::dcp_absolute_y,
-        Cpu::nop_absolute_x,
-        Cpu::cmp_absolute_x,
-        Cpu::dec_absolute_x,
-        Cpu::dcp_absolute_x,
-        Cpu::cpx_immediate,
-        Cpu::sbc_indexed_indirect,
-        Cpu::nop_immediate,
-        Cpu::isb_indexed_indirect,
-        Cpu::cpx_zero_page,
-        Cpu::sbc_zero_page,
-        Cpu::inc_zero_page,
-        Cpu::isb_zero_page,
-        Cpu::inx,
-        Cpu::sbc_immediate,
-        Cpu::nop_implied,
-        Cpu::sbc_immediate,
-        Cpu::cpx_absolute,
-        Cpu::sbc_absolute,
-        Cpu::inc_absolute,
-        Cpu::isb_absolute,
-        Cpu::beq,
-        Cpu::sbc_indirect_indexed,
-        Cpu::jam,
-        Cpu::isb_indirect_indexed,
-        Cpu::nop_zero_page_x,
-        Cpu::sbc_zero_page_x,
-        Cpu::inc_zero_page_x,
-        Cpu::isb_zero_page_x,
-        Cpu::sed,
-        Cpu::sbc_absolute_y,
-        Cpu::nop_implied,
-        Cpu::isb_absolute_y,
-        Cpu::nop_absolute_x,
-        Cpu::sbc_absolute_x,
-        Cpu::inc_absolute_x,
-        Cpu::isb_absolute_x,
-    ];
-
     pub fn new(bus: B) -> Cpu<B> {
         Cpu {
             a: 0,
@@ -624,7 +365,264 @@ impl<B: Bus> Cpu<B> {
             brk(self);
         } else {
             let opcode = self.consume_byte();
-            Cpu::OPCODE_LUT[opcode as usize](self);
+            match opcode {
+                0x00 => self.brk(),
+                0x01 => self.ora(Cpu::indexed_indirect),
+                0x02 => self.jam(),
+                0x03 => self.slo_indexed_indirect(),
+                0x04 => self.nop(Cpu::zero_page),
+                0x05 => self.ora(Cpu::zero_page),
+                0x06 => self.asl(Cpu::zero_page),
+                0x07 => self.slo_zero_page(),
+                0x08 => self.php(),
+                0x09 => self.ora(Cpu::immediate),
+                0x0a => self.asl_accumulator(),
+                0x0b => self.anc_immediate(),
+                0x0c => self.nop(Cpu::absolute),
+                0x0d => self.ora(Cpu::absolute),
+                0x0e => self.asl(Cpu::absolute),
+                0x0f => self.slo_absolute(),
+                0x10 => self.bpl(),
+                0x11 => self.ora(Cpu::indirect_indexed_read),
+                0x12 => self.jam(),
+                0x13 => self.slo_indirect_indexed(),
+                0x14 => self.nop(Cpu::zero_page_x),
+                0x15 => self.ora(Cpu::zero_page_x),
+                0x16 => self.asl(Cpu::zero_page_x),
+                0x17 => self.slo_zero_page_x(),
+                0x18 => self.clc(),
+                0x19 => self.ora(Cpu::absolute_y_read),
+                0x1a => self.nop_implied(),
+                0x1b => self.slo_absolute_y(),
+                0x1c => self.nop(Cpu::absolute_x_read),
+                0x1d => self.ora(Cpu::absolute_x_read),
+                0x1e => self.asl(Cpu::absolute_x_write),
+                0x1f => self.slo_absolute_x(),
+                0x20 => self.jsr(),
+                0x21 => self.and(Cpu::indexed_indirect),
+                0x22 => self.jam(),
+                0x23 => self.rla(Cpu::indexed_indirect),
+                0x24 => self.bit(Cpu::zero_page),
+                0x25 => self.and(Cpu::zero_page),
+                0x26 => self.rol(Cpu::zero_page),
+                0x27 => self.rla(Cpu::zero_page),
+                0x28 => self.plp(),
+                0x29 => self.and(Cpu::immediate),
+                0x2a => self.rol_accumulator(),
+                0x2b => self.anc_immediate(),
+                0x2c => self.bit(Cpu::absolute),
+                0x2d => self.and(Cpu::absolute),
+                0x2e => self.rol(Cpu::absolute),
+                0x2f => self.rla(Cpu::absolute),
+                0x30 => self.bmi(),
+                0x31 => self.and(Cpu::indirect_indexed_read),
+                0x32 => self.jam(),
+                0x33 => self.rla(Cpu::indirect_indexed_write),
+                0x34 => self.nop(Cpu::zero_page_x),
+                0x35 => self.and(Cpu::zero_page_x),
+                0x36 => self.rol(Cpu::zero_page_x),
+                0x37 => self.rla(Cpu::zero_page_x),
+                0x38 => self.sec(),
+                0x39 => self.and(Cpu::absolute_y_read),
+                0x3a => self.nop_implied(),
+                0x3b => self.rla(Cpu::absolute_y_write),
+                0x3c => self.nop(Cpu::absolute_x_read),
+                0x3d => self.and(Cpu::absolute_x_read),
+                0x3e => self.rol(Cpu::absolute_x_write),
+                0x3f => self.rla(Cpu::absolute_x_write),
+                0x40 => self.rti(),
+                0x41 => self.eor(Cpu::indexed_indirect),
+                0x42 => self.jam(),
+                0x43 => self.sre_indexed_indirect(),
+                0x44 => self.nop(Cpu::zero_page),
+                0x45 => self.eor(Cpu::zero_page),
+                0x46 => self.lsr(Cpu::zero_page),
+                0x47 => self.sre_zero_page(),
+                0x48 => self.pha(),
+                0x49 => self.eor(Cpu::immediate),
+                0x4a => self.lsr_accumulator(),
+                0x4b => self.alr_immediate(),
+                0x4c => self.jmp(Cpu::absolute),
+                0x4d => self.eor(Cpu::absolute),
+                0x4e => self.lsr(Cpu::absolute),
+                0x4f => self.sre_absolute(),
+                0x50 => self.bvc(),
+                0x51 => self.eor(Cpu::indirect_indexed_read),
+                0x52 => self.jam(),
+                0x53 => self.sre_indirect_indexed(),
+                0x54 => self.nop(Cpu::zero_page_x),
+                0x55 => self.eor(Cpu::zero_page_x),
+                0x56 => self.lsr(Cpu::zero_page_x),
+                0x57 => self.sre_zero_page_x(),
+                0x58 => self.cli(),
+                0x59 => self.eor(Cpu::absolute_y_read),
+                0x5a => self.nop_implied(),
+                0x5b => self.sre_absolute_y(),
+                0x5c => self.nop(Cpu::absolute_x_read),
+                0x5d => self.eor(Cpu::absolute_x_read),
+                0x5e => self.lsr(Cpu::absolute_x_write),
+                0x5f => self.sre_absolute_x(),
+                0x60 => self.rts(),
+                0x61 => self.adc(Cpu::indexed_indirect),
+                0x62 => self.jam(),
+                0x63 => self.rra(Cpu::indexed_indirect),
+                0x64 => self.nop(Cpu::zero_page),
+                0x65 => self.adc(Cpu::zero_page),
+                0x66 => self.ror(Cpu::zero_page),
+                0x67 => self.rra(Cpu::zero_page),
+                0x68 => self.pla(),
+                0x69 => self.adc(Cpu::immediate),
+                0x6a => self.ror_accumulator(),
+                0x6b => self.arr_immediate(),
+                0x6c => self.jmp(Cpu::indirect),
+                0x6d => self.adc(Cpu::absolute),
+                0x6e => self.ror(Cpu::absolute),
+                0x6f => self.rra(Cpu::absolute),
+                0x70 => self.bvs(),
+                0x71 => self.adc(Cpu::indirect_indexed_read),
+                0x72 => self.jam(),
+                0x73 => self.rra(Cpu::indirect_indexed_write),
+                0x74 => self.nop(Cpu::zero_page_x),
+                0x75 => self.adc(Cpu::zero_page_x),
+                0x76 => self.ror(Cpu::zero_page_x),
+                0x77 => self.rra(Cpu::zero_page_x),
+                0x78 => self.sei(),
+                0x79 => self.adc(Cpu::absolute_y_read),
+                0x7a => self.nop_implied(),
+                0x7b => self.rra(Cpu::absolute_y_write),
+                0x7c => self.nop(Cpu::absolute_x_read),
+                0x7d => self.adc(Cpu::absolute_x_read),
+                0x7e => self.ror(Cpu::absolute_x_write),
+                0x7f => self.rra(Cpu::absolute_x_write),
+                0x80 => self.nop(Cpu::immediate),
+                0x81 => self.sta_indexed_indirect(),
+                0x82 => self.nop(Cpu::immediate),
+                0x83 => self.sax(Cpu::indexed_indirect),
+                0x84 => self.sty_zero_page(),
+                0x85 => self.sta_zero_page(),
+                0x86 => self.stx_zero_page(),
+                0x87 => self.sax(Cpu::zero_page),
+                0x88 => self.dey(),
+                0x89 => self.nop(Cpu::immediate),
+                0x8a => self.txa(),
+                0x8b => self.ane_immediate(),
+                0x8c => self.sty_absolute(),
+                0x8d => self.sta_absolute(),
+                0x8e => self.stx_absolute(),
+                0x8f => self.sax(Cpu::absolute),
+                0x90 => self.bcc(),
+                0x91 => self.sta_indirect_indexed(),
+                0x92 => self.jam(),
+                0x93 => self.sha_absolute_y(),
+                0x94 => self.sty_zero_page_x(),
+                0x95 => self.sta_zero_page_x(),
+                0x96 => self.stx_zero_page_y(),
+                0x97 => self.sax(Cpu::zero_page_y),
+                0x98 => self.tya(),
+                0x99 => self.sta_absolute_y(),
+                0x9a => self.txs(),
+                0x9b => self.tas_absolute_y(),
+                0x9c => self.shy_absolute_x(),
+                0x9d => self.sta_absolute_x(),
+                0x9e => self.shx_absolute_y(),
+                0x9f => self.sha_indirect_indexed(),
+                0xa0 => self.ldy(Cpu::immediate),
+                0xa1 => self.lda(Cpu::indexed_indirect),
+                0xa2 => self.ldx(Cpu::immediate),
+                0xa3 => self.lax(Cpu::indexed_indirect),
+                0xa4 => self.ldy(Cpu::zero_page),
+                0xa5 => self.lda(Cpu::zero_page),
+                0xa6 => self.ldx(Cpu::zero_page),
+                0xa7 => self.lax(Cpu::zero_page),
+                0xa8 => self.tay(),
+                0xa9 => self.lda(Cpu::immediate),
+                0xaa => self.tax(),
+                0xab => self.lxa(),
+                0xac => self.ldy(Cpu::absolute),
+                0xad => self.lda(Cpu::absolute),
+                0xae => self.ldx(Cpu::absolute),
+                0xaf => self.lax(Cpu::absolute),
+                0xb0 => self.bcs(),
+                0xb1 => self.lda(Cpu::indirect_indexed_read),
+                0xb2 => self.jam(),
+                0xb3 => self.lax(Cpu::indirect_indexed_read),
+                0xb4 => self.ldy(Cpu::zero_page_x),
+                0xb5 => self.lda(Cpu::zero_page_x),
+                0xb6 => self.ldx(Cpu::zero_page_y),
+                0xb7 => self.lax(Cpu::zero_page_y),
+                0xb8 => self.clv(),
+                0xb9 => self.lda(Cpu::absolute_y_read),
+                0xba => self.tsx(),
+                0xbb => self.las(),
+                0xbc => self.ldy(Cpu::absolute_x_read),
+                0xbd => self.lda(Cpu::absolute_x_read),
+                0xbe => self.ldx(Cpu::absolute_y_read),
+                0xbf => self.lax(Cpu::absolute_y_read),
+                0xc0 => self.cpy(Cpu::immediate),
+                0xc1 => self.cmp(Cpu::indexed_indirect),
+                0xc2 => self.nop(Cpu::immediate),
+                0xc3 => self.dcp(Cpu::indexed_indirect),
+                0xc4 => self.cpy(Cpu::zero_page),
+                0xc5 => self.cmp(Cpu::zero_page),
+                0xc6 => self.dec(Cpu::zero_page),
+                0xc7 => self.dcp(Cpu::zero_page),
+                0xc8 => self.iny(),
+                0xc9 => self.cmp(Cpu::immediate),
+                0xca => self.dex(),
+                0xcb => self.sbx(),
+                0xcc => self.cpy(Cpu::absolute),
+                0xcd => self.cmp(Cpu::absolute),
+                0xce => self.dec(Cpu::absolute),
+                0xcf => self.dcp(Cpu::absolute),
+                0xd0 => self.bne(),
+                0xd1 => self.cmp(Cpu::indirect_indexed_read),
+                0xd2 => self.jam(),
+                0xd3 => self.dcp(Cpu::indirect_indexed_write),
+                0xd4 => self.nop(Cpu::zero_page_x),
+                0xd5 => self.cmp(Cpu::zero_page_x),
+                0xd6 => self.dec(Cpu::zero_page_x),
+                0xd7 => self.dcp(Cpu::zero_page_x),
+                0xd8 => self.cld(),
+                0xd9 => self.cmp(Cpu::absolute_y_read),
+                0xda => self.nop_implied(),
+                0xdb => self.dcp(Cpu::absolute_y_write),
+                0xdc => self.nop(Cpu::absolute_x_read),
+                0xdd => self.cmp(Cpu::absolute_x_read),
+                0xde => self.dec(Cpu::absolute_x_write),
+                0xdf => self.dcp(Cpu::absolute_x_write),
+                0xe0 => self.cpx(Cpu::immediate),
+                0xe1 => self.sbc(Cpu::indexed_indirect),
+                0xe2 => self.nop(Cpu::immediate),
+                0xe3 => self.isb(Cpu::indexed_indirect),
+                0xe4 => self.cpx(Cpu::zero_page),
+                0xe5 => self.sbc(Cpu::zero_page),
+                0xe6 => self.inc(Cpu::zero_page),
+                0xe7 => self.isb(Cpu::zero_page),
+                0xe8 => self.inx(),
+                0xe9 => self.sbc(Cpu::immediate),
+                0xea => self.nop_implied(),
+                0xeb => self.sbc(Cpu::immediate),
+                0xec => self.cpx(Cpu::absolute),
+                0xed => self.sbc(Cpu::absolute),
+                0xee => self.inc(Cpu::absolute),
+                0xef => self.isb(Cpu::absolute),
+                0xf0 => self.beq(),
+                0xf1 => self.sbc(Cpu::indirect_indexed_read),
+                0xf2 => self.jam(),
+                0xf3 => self.isb(Cpu::indirect_indexed_write),
+                0xf4 => self.nop(Cpu::zero_page_x),
+                0xf5 => self.sbc(Cpu::zero_page_x),
+                0xf6 => self.inc(Cpu::zero_page_x),
+                0xf7 => self.isb(Cpu::zero_page_x),
+                0xf8 => self.sed(),
+                0xf9 => self.sbc(Cpu::absolute_y_read),
+                0xfa => self.nop_implied(),
+                0xfb => self.isb(Cpu::absolute_y_write),
+                0xfc => self.nop(Cpu::absolute_x_read),
+                0xfd => self.sbc(Cpu::absolute_x_read),
+                0xfe => self.inc(Cpu::absolute_x_write),
+                0xff => self.isb(Cpu::absolute_x_write),
+            }
         }
     }
 
@@ -806,92 +804,172 @@ impl<B: Bus> Cpu<B> {
         self.pc = self.read_word(RESET_VECTOR);
     }
 
-    fn adc_absolute(&mut self) {
-        adc!(self, absolute);
+    #[inline]
+    fn absolute(&mut self) -> u16 {
+        self.consume_word()
     }
 
-    fn adc_absolute_x(&mut self) {
-        adc!(self, absolute_x_read);
+    #[inline]
+    fn absolute_x_read(&mut self) -> u16 {
+        let (low, page_cross) = self.consume_byte().overflowing_add(self.x);
+        let high = self.consume_byte();
+        let addr =
+            (high.wrapping_add(page_cross as u8) as u16) << 8 | (low as u16);
+
+        // If the effective address is invalid, i.e., it crossed a page, then
+        // it takes an extra read cycle to fix it.
+        if page_cross {
+            self.read_byte((high as u16) << 8 | low as u16);
+        }
+
+        addr
     }
 
-    fn adc_absolute_y(&mut self) {
-        adc!(self, absolute_y_read);
+    #[inline]
+    fn absolute_x_write(&mut self) -> u16 {
+        let (low, page_cross) = self.consume_byte().overflowing_add(self.x);
+        let high = self.consume_byte();
+        let addr =
+            (high.wrapping_add(page_cross as u8) as u16) << 8 | (low as u16);
+
+        self.read_byte((high as u16) << 8 | low as u16);
+
+        addr
     }
 
-    fn adc_immediate(&mut self) {
-        adc!(self, immediate);
+    #[inline]
+    fn absolute_y_read(&mut self) -> u16 {
+        let (low, page_cross) = self.consume_byte().overflowing_add(self.y);
+        let high = self.consume_byte();
+        let addr =
+            (high.wrapping_add(page_cross as u8) as u16) << 8 | (low as u16);
+
+        // If the effective address is invalid, i.e., it crossed a page, then
+        // it takes an extra read cycle to fix it.
+        if page_cross {
+            self.read_byte((high as u16) << 8 | low as u16);
+        }
+
+        addr
     }
 
-    fn adc_indexed_indirect(&mut self) {
-        adc!(self, indexed_indirect);
+    #[inline]
+    fn absolute_y_write(&mut self) -> u16 {
+        let (low, page_cross) = self.consume_byte().overflowing_add(self.y);
+        let high = self.consume_byte();
+        let addr =
+            (high.wrapping_add(page_cross as u8) as u16) << 8 | (low as u16);
+
+        self.read_byte((high as u16) << 8 | low as u16);
+
+        addr
     }
 
-    fn adc_indirect_indexed(&mut self) {
-        adc!(self, indirect_indexed_read);
+    #[inline]
+    fn immediate(&mut self) -> u16 {
+        let addr = self.pc;
+        self.pc = self.pc.wrapping_add(1);
+        addr
     }
 
-    fn adc_zero_page(&mut self) {
-        adc!(self, zero_page);
+    #[inline]
+    fn indexed_indirect(&mut self) -> u16 {
+        let ptr = self.consume_byte();
+        self.read_byte(ptr as u16);
+        self.read_word_bugged(ptr.wrapping_add(self.x) as u16)
     }
 
-    fn adc_zero_page_x(&mut self) {
-        adc!(self, zero_page_x);
+    #[inline]
+    fn indirect_indexed_read(&mut self) -> u16 {
+        let ptr = self.consume_byte();
+        let (low, did_cross_page) =
+            self.read_byte(ptr as u16).overflowing_add(self.y);
+        let high = self.read_byte(ptr.wrapping_add(1) as u16);
+        let addr = (high.wrapping_add(did_cross_page as u8) as u16) << 8
+            | (low as u16);
+
+        // If the effective address is invalid, i.e., it crossed a page, then
+        // it takes an extra read cycle to fix it.
+        if did_cross_page {
+            self.read_byte((high as u16) << 8 | low as u16);
+        }
+
+        addr
     }
 
-    fn alr_immediate(&mut self) {
-        alr!(self, immediate);
+    #[inline]
+    fn indirect_indexed_write(&mut self) -> u16 {
+        let ptr = self.consume_byte();
+        let (low, did_cross_page) =
+            self.read_byte(ptr as u16).overflowing_add(self.y);
+        let high = self.read_byte(ptr.wrapping_add(1) as u16);
+        let addr = (high.wrapping_add(did_cross_page as u8) as u16) << 8
+            | (low as u16);
+
+        self.read_byte((high as u16) << 8 | low as u16);
+
+        addr
     }
 
-    fn anc_immediate(&mut self) {
-        anc!(self, immediate);
+    #[inline]
+    fn indirect(&mut self) -> u16 {
+        let ptr = self.consume_word();
+        self.read_word_bugged(ptr)
     }
 
-    fn and_absolute(&mut self) {
-        and!(self, absolute);
+    #[inline]
+    fn zero_page(&mut self) -> u16 {
+        self.consume_byte() as u16
     }
 
-    fn and_absolute_x(&mut self) {
-        and!(self, absolute_x_read);
+    #[inline]
+    fn zero_page_x(&mut self) -> u16 {
+        let addr = self.consume_byte();
+        self.read_byte(addr as u16);
+        addr.wrapping_add(self.x) as u16
     }
 
-    fn and_absolute_y(&mut self) {
-        and!(self, absolute_y_read);
+    #[inline]
+    fn zero_page_y(&mut self) -> u16 {
+        let addr = self.consume_byte();
+        self.read_byte(addr as u16);
+        addr.wrapping_add(self.y) as u16
     }
 
-    fn and_immediate(&mut self) {
-        and!(self, immediate);
+    fn adc<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let value = self.read_byte(addr);
+        self.add(value);
     }
 
-    fn and_indexed_indirect(&mut self) {
-        and!(self, indexed_indirect);
+    fn and<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.a &= self.read_byte(addr);
+
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn and_indirect_indexed(&mut self) {
-        and!(self, indirect_indexed_read);
-    }
+    fn asl<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        let carry = value & 0x80 != 0;
+        value <<= 1;
+        self.write_byte(addr, value);
 
-    fn and_zero_page(&mut self) {
-        and!(self, zero_page);
-    }
-
-    fn and_zero_page_x(&mut self) {
-        and!(self, zero_page_x);
-    }
-
-    fn ane_immediate(&mut self) {
-        ane!(self, immediate);
-    }
-
-    fn arr_immediate(&mut self) {
-        arr!(self, immediate);
-    }
-
-    fn asl_absolute(&mut self) {
-        asl!(self, absolute);
-    }
-
-    fn asl_absolute_x(&mut self) {
-        asl!(self, absolute_x_write);
+        self.p.set_c(carry);
+        self.p.set_z(value == 0);
+        self.p.set_n(value & 0x80 != 0);
     }
 
     fn asl_accumulator(&mut self) {
@@ -902,14 +980,6 @@ impl<B: Bus> Cpu<B> {
         self.p.set_c(carry);
         self.p.set_z(self.a == 0);
         self.p.set_n(self.a & 0x80 != 0);
-    }
-
-    fn asl_zero_page(&mut self) {
-        asl!(self, zero_page);
-    }
-
-    fn asl_zero_page_x(&mut self) {
-        asl!(self, zero_page_x);
     }
 
     fn bcc(&mut self) {
@@ -924,12 +994,16 @@ impl<B: Bus> Cpu<B> {
         self.branch(self.p.z());
     }
 
-    fn bit_absolute(&mut self) {
-        bit!(self, absolute);
-    }
+    fn bit<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let value = self.read_byte(addr);
 
-    fn bit_zero_page(&mut self) {
-        bit!(self, zero_page);
+        self.p.set_z(self.a & value == 0);
+        self.p.set_v(Status::from(value).v());
+        self.p.set_n(Status::from(value).n());
     }
 
     fn bmi(&mut self) {
@@ -981,104 +1055,57 @@ impl<B: Bus> Cpu<B> {
         self.p.set_v(false);
     }
 
-    fn cmp_absolute(&mut self) {
-        cmp!(self, absolute);
+    fn cmp<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let value = self.read_byte(addr);
+        self.compare(self.a, value);
     }
 
-    fn cmp_absolute_x(&mut self) {
-        cmp!(self, absolute_x_read);
+    fn cpx<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let value = self.read_byte(addr);
+        self.compare(self.x, value);
     }
 
-    fn cmp_absolute_y(&mut self) {
-        cmp!(self, absolute_y_read);
+    fn cpy<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let value = self.read_byte(addr);
+        self.compare(self.y, value);
     }
 
-    fn cmp_immediate(&mut self) {
-        cmp!(self, immediate);
+    fn dcp<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        value = value.wrapping_sub(1);
+        self.write_byte(addr, value);
+        self.compare(self.a, value);
     }
 
-    fn cmp_indexed_indirect(&mut self) {
-        cmp!(self, indexed_indirect);
-    }
+    fn dec<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        value = value.wrapping_sub(1);
+        self.write_byte(addr, value);
 
-    fn cmp_indirect_indexed(&mut self) {
-        cmp!(self, indirect_indexed_read);
-    }
-
-    fn cmp_zero_page(&mut self) {
-        cmp!(self, zero_page);
-    }
-
-    fn cmp_zero_page_x(&mut self) {
-        cmp!(self, zero_page_x);
-    }
-
-    fn cpx_absolute(&mut self) {
-        cpx!(self, absolute);
-    }
-
-    fn cpx_immediate(&mut self) {
-        cpx!(self, immediate);
-    }
-
-    fn cpx_zero_page(&mut self) {
-        cpx!(self, zero_page);
-    }
-
-    fn cpy_absolute(&mut self) {
-        cpy!(self, absolute);
-    }
-
-    fn cpy_immediate(&mut self) {
-        cpy!(self, immediate);
-    }
-
-    fn cpy_zero_page(&mut self) {
-        cpy!(self, zero_page);
-    }
-
-    fn dcp_absolute(&mut self) {
-        dcp!(self, absolute);
-    }
-
-    fn dcp_absolute_x(&mut self) {
-        dcp!(self, absolute_x_write);
-    }
-
-    fn dcp_absolute_y(&mut self) {
-        dcp!(self, absolute_y_write);
-    }
-
-    fn dcp_indexed_indirect(&mut self) {
-        dcp!(self, indexed_indirect);
-    }
-
-    fn dcp_indirect_indexed(&mut self) {
-        dcp!(self, indirect_indexed_write);
-    }
-
-    fn dcp_zero_page(&mut self) {
-        dcp!(self, zero_page);
-    }
-
-    fn dcp_zero_page_x(&mut self) {
-        dcp!(self, zero_page_x);
-    }
-
-    fn dec_absolute(&mut self) {
-        dec!(self, absolute);
-    }
-
-    fn dec_absolute_x(&mut self) {
-        dec!(self, absolute_x_write);
-    }
-
-    fn dec_zero_page(&mut self) {
-        dec!(self, zero_page);
-    }
-
-    fn dec_zero_page_x(&mut self) {
-        dec!(self, zero_page_x);
+        self.p.set_z(value == 0);
+        self.p.set_n(value & 0x80 != 0);
     }
 
     fn dex(&mut self) {
@@ -1097,52 +1124,37 @@ impl<B: Bus> Cpu<B> {
         self.p.set_n(self.y & 0x80 != 0);
     }
 
-    fn eor_absolute(&mut self) {
-        eor!(self, absolute);
+    fn eor<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.a ^= self.read_byte(addr);
+
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn eor_absolute_x(&mut self) {
-        eor!(self, absolute_x_read);
+    fn jmp<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.pc = addr;
     }
 
-    fn eor_absolute_y(&mut self) {
-        eor!(self, absolute_y_read);
-    }
+    fn inc<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        value = value.wrapping_add(1);
+        self.write_byte(addr, value);
 
-    fn eor_immediate(&mut self) {
-        eor!(self, immediate);
-    }
-
-    fn eor_indexed_indirect(&mut self) {
-        eor!(self, indexed_indirect);
-    }
-
-    fn eor_indirect_indexed(&mut self) {
-        eor!(self, indirect_indexed_read);
-    }
-
-    fn eor_zero_page(&mut self) {
-        eor!(self, zero_page);
-    }
-
-    fn eor_zero_page_x(&mut self) {
-        eor!(self, zero_page_x);
-    }
-
-    fn inc_absolute(&mut self) {
-        inc!(self, absolute);
-    }
-
-    fn inc_absolute_x(&mut self) {
-        inc!(self, absolute_x_write);
-    }
-
-    fn inc_zero_page(&mut self) {
-        inc!(self, zero_page);
-    }
-
-    fn inc_zero_page_x(&mut self) {
-        inc!(self, zero_page_x);
+        self.p.set_z(value == 0);
+        self.p.set_n(value & 0x80 != 0);
     }
 
     fn inx(&mut self) {
@@ -1161,45 +1173,21 @@ impl<B: Bus> Cpu<B> {
         self.p.set_n(self.y & 0x80 != 0);
     }
 
-    fn isb_absolute(&mut self) {
-        isb!(self, absolute);
-    }
-
-    fn isb_absolute_x(&mut self) {
-        isb!(self, absolute_x_write);
-    }
-
-    fn isb_absolute_y(&mut self) {
-        isb!(self, absolute_y_write);
-    }
-
-    fn isb_indexed_indirect(&mut self) {
-        isb!(self, indexed_indirect);
-    }
-
-    fn isb_indirect_indexed(&mut self) {
-        isb!(self, indirect_indexed_write);
-    }
-
-    fn isb_zero_page(&mut self) {
-        isb!(self, zero_page);
-    }
-
-    fn isb_zero_page_x(&mut self) {
-        isb!(self, zero_page_x);
+    fn isb<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        value = value.wrapping_add(1);
+        self.write_byte(addr, value);
+        self.add(value ^ 0xff);
     }
 
     fn jam(&mut self) {
         // Treat JAM as a one byte NOP.
         self.read_byte(self.pc);
-    }
-
-    fn jmp_absolute(&mut self) {
-        jmp!(self, absolute);
-    }
-
-    fn jmp_indirect(&mut self) {
-        jmp!(self, indirect);
     }
 
     fn jsr(&mut self) {
@@ -1211,112 +1199,76 @@ impl<B: Bus> Cpu<B> {
         self.pc = (pch as u16) << 8 | pcl as u16;
     }
 
-    fn las_absolute_y(&mut self) {
-        las!(self, absolute_y_read);
+    fn las(&mut self) {
+        let addr = self.absolute_y_read();
+        self.a = self.read_byte(addr) & self.s;
+        self.x = self.a;
+        self.s = self.a;
+
+        self.p.set_z(self.x == 0);
+        self.p.set_n(self.x & 0x80 != 0);
     }
 
-    fn lax_absolute(&mut self) {
-        lax!(self, absolute);
+    fn lax<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let value = self.read_byte(addr);
+        self.a = value;
+        self.x = value;
+
+        self.p.set_z(self.x == 0);
+        self.p.set_n(self.x & 0x80 != 0);
     }
 
-    fn lax_absolute_y(&mut self) {
-        lax!(self, absolute_y_read);
+    fn lda<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.a = self.read_byte(addr);
+
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn lax_indexed_indirect(&mut self) {
-        lax!(self, indexed_indirect);
+    fn ldx<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.x = self.read_byte(addr);
+
+        self.p.set_z(self.x == 0);
+        self.p.set_n(self.x & 0x80 != 0);
     }
 
-    fn lax_indirect_indexed(&mut self) {
-        lax!(self, indirect_indexed_read);
+    fn ldy<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.y = self.read_byte(addr);
+
+        self.p.set_z(self.y == 0);
+        self.p.set_n(self.y & 0x80 != 0);
     }
 
-    fn lax_zero_page(&mut self) {
-        lax!(self, zero_page);
-    }
+    fn lsr<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        let carry = value & 0x01 != 0;
+        value >>= 1;
+        self.write_byte(addr, value);
 
-    fn lax_zero_page_y(&mut self) {
-        lax!(self, zero_page_y);
-    }
-
-    fn lda_absolute(&mut self) {
-        lda!(self, absolute);
-    }
-
-    fn lda_absolute_x(&mut self) {
-        lda!(self, absolute_x_read);
-    }
-
-    fn lda_absolute_y(&mut self) {
-        lda!(self, absolute_y_read);
-    }
-
-    fn lda_immediate(&mut self) {
-        lda!(self, immediate);
-    }
-
-    fn lda_indexed_indirect(&mut self) {
-        lda!(self, indexed_indirect);
-    }
-
-    fn lda_indirect_indexed(&mut self) {
-        lda!(self, indirect_indexed_read);
-    }
-
-    fn lda_zero_page(&mut self) {
-        lda!(self, zero_page);
-    }
-
-    fn lda_zero_page_x(&mut self) {
-        lda!(self, zero_page_x);
-    }
-
-    fn ldx_absolute(&mut self) {
-        ldx!(self, absolute);
-    }
-
-    fn ldx_absolute_y(&mut self) {
-        ldx!(self, absolute_y_read);
-    }
-
-    fn ldx_immediate(&mut self) {
-        ldx!(self, immediate);
-    }
-
-    fn ldx_zero_page(&mut self) {
-        ldx!(self, zero_page);
-    }
-
-    fn ldx_zero_page_y(&mut self) {
-        ldx!(self, zero_page_y);
-    }
-
-    fn ldy_absolute(&mut self) {
-        ldy!(self, absolute);
-    }
-
-    fn ldy_absolute_x(&mut self) {
-        ldy!(self, absolute_x_read);
-    }
-
-    fn ldy_immediate(&mut self) {
-        ldy!(self, immediate);
-    }
-
-    fn ldy_zero_page(&mut self) {
-        ldy!(self, zero_page);
-    }
-
-    fn ldy_zero_page_x(&mut self) {
-        ldy!(self, zero_page_x);
-    }
-
-    fn lsr_absolute(&mut self) {
-        lsr!(self, absolute);
-    }
-
-    fn lsr_absolute_x(&mut self) {
-        lsr!(self, absolute_x_write);
+        self.p.set_c(carry);
+        self.p.set_z(value == 0);
+        self.p.set_n(value & 0x80 != 0);
     }
 
     fn lsr_accumulator(&mut self) {
@@ -1329,72 +1281,40 @@ impl<B: Bus> Cpu<B> {
         self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn lsr_zero_page(&mut self) {
-        lsr!(self, zero_page);
+    fn lxa(&mut self) {
+        let addr = self.immediate();
+        // This instruction should perform a bitwise AND between a constant and
+        // the operand before storing the result. The constant is unreliable
+        // though. To remove uncertainty, we have the constant always be 0xff,
+        // removing the need for the bitwise AND.
+        self.a = self.read_byte(addr);
+        self.x = self.a;
+
+        self.p.set_z(self.x == 0);
+        self.p.set_n(self.x & 0x80 != 0);
     }
 
-    fn lsr_zero_page_x(&mut self) {
-        lsr!(self, zero_page_x);
-    }
-
-    fn lxa_immediate(&mut self) {
-        lxa!(self, immediate);
-    }
-
-    fn nop_absolute(&mut self) {
-        nop!(self, absolute);
-    }
-
-    fn nop_absolute_x(&mut self) {
-        nop!(self, absolute_x_read);
-    }
-
-    fn nop_immediate(&mut self) {
-        nop!(self, immediate);
+    fn nop<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.read_byte(addr);
     }
 
     fn nop_implied(&mut self) {
         self.read_byte(self.pc);
     }
 
-    fn nop_zero_page(&mut self) {
-        nop!(self, zero_page);
-    }
+    fn ora<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.a |= self.read_byte(addr);
 
-    fn nop_zero_page_x(&mut self) {
-        nop!(self, zero_page_x);
-    }
-
-    fn ora_absolute(&mut self) {
-        ora!(self, absolute);
-    }
-
-    fn ora_absolute_x(&mut self) {
-        ora!(self, absolute_x_read);
-    }
-
-    fn ora_absolute_y(&mut self) {
-        ora!(self, absolute_y_read);
-    }
-
-    fn ora_immediate(&mut self) {
-        ora!(self, immediate);
-    }
-
-    fn ora_indexed_indirect(&mut self) {
-        ora!(self, indexed_indirect);
-    }
-
-    fn ora_indirect_indexed(&mut self) {
-        ora!(self, indirect_indexed_read);
-    }
-
-    fn ora_zero_page(&mut self) {
-        ora!(self, zero_page);
-    }
-
-    fn ora_zero_page_x(&mut self) {
-        ora!(self, zero_page_x);
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
     }
 
     fn pha(&mut self) {
@@ -1424,40 +1344,37 @@ impl<B: Bus> Cpu<B> {
             .with_u(self.p.u());
     }
 
-    fn rla_absolute(&mut self) {
-        rla!(self, absolute);
+    fn rla<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        let carry = value & 0x80 != 0;
+        value = ((value << 1) & 0xfe) | self.p.c() as u8;
+        self.write_byte(addr, value);
+        self.a &= value;
+
+        self.p.set_c(carry);
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn rla_absolute_x(&mut self) {
-        rla!(self, absolute_x_write);
-    }
+    fn rol<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        let carry = value & 0x80 != 0;
+        value = ((value << 1) & 0xfe) | self.p.c() as u8;
+        self.write_byte(addr, value);
 
-    fn rla_absolute_y(&mut self) {
-        rla!(self, absolute_y_write);
-    }
-
-    fn rla_indexed_indirect(&mut self) {
-        rla!(self, indexed_indirect);
-    }
-
-    fn rla_indirect_indexed(&mut self) {
-        rla!(self, indirect_indexed_write);
-    }
-
-    fn rla_zero_page(&mut self) {
-        rla!(self, zero_page);
-    }
-
-    fn rla_zero_page_x(&mut self) {
-        rla!(self, zero_page_x);
-    }
-
-    fn rol_absolute(&mut self) {
-        rol!(self, absolute);
-    }
-
-    fn rol_absolute_x(&mut self) {
-        rol!(self, absolute_x_write);
+        self.p.set_c(carry);
+        self.p.set_z(value == 0);
+        self.p.set_n(value & 0x80 != 0);
     }
 
     fn rol_accumulator(&mut self) {
@@ -1470,20 +1387,20 @@ impl<B: Bus> Cpu<B> {
         self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn rol_zero_page(&mut self) {
-        rol!(self, zero_page);
-    }
+    fn ror<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        let carry = value & 0x01 != 0;
+        value = (self.p.c() as u8) << 7 | ((value >> 1) & 0x7f);
+        self.write_byte(addr, value);
 
-    fn rol_zero_page_x(&mut self) {
-        rol!(self, zero_page_x);
-    }
-
-    fn ror_absolute(&mut self) {
-        ror!(self, absolute);
-    }
-
-    fn ror_absolute_x(&mut self) {
-        ror!(self, absolute_x_write);
+        self.p.set_c(carry);
+        self.p.set_z(value == 0);
+        self.p.set_n(value & 0x80 != 0);
     }
 
     fn ror_accumulator(&mut self) {
@@ -1496,40 +1413,18 @@ impl<B: Bus> Cpu<B> {
         self.p.set_n(self.a & 0x80 != 0);
     }
 
-    fn ror_zero_page(&mut self) {
-        ror!(self, zero_page);
-    }
-
-    fn ror_zero_page_x(&mut self) {
-        ror!(self, zero_page_x);
-    }
-
-    fn rra_absolute(&mut self) {
-        rra!(self, absolute);
-    }
-
-    fn rra_absolute_x(&mut self) {
-        rra!(self, absolute_x_write);
-    }
-
-    fn rra_absolute_y(&mut self) {
-        rra!(self, absolute_y_write);
-    }
-
-    fn rra_indexed_indirect(&mut self) {
-        rra!(self, indexed_indirect);
-    }
-
-    fn rra_indirect_indexed(&mut self) {
-        rra!(self, indirect_indexed_write);
-    }
-
-    fn rra_zero_page(&mut self) {
-        rra!(self, zero_page);
-    }
-
-    fn rra_zero_page_x(&mut self) {
-        rra!(self, zero_page_x);
+    fn rra<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        let mut value = self.read_byte(addr);
+        self.write_byte(addr, value);
+        let carry = value & 0x01 != 0;
+        value = (self.p.c() as u8) << 7 | ((value >> 1) & 0x7f);
+        self.write_byte(addr, value);
+        self.p.set_c(carry);
+        self.add(value);
     }
 
     fn rti(&mut self) {
@@ -1553,56 +1448,35 @@ impl<B: Bus> Cpu<B> {
         self.pc = self.pc.wrapping_add(1);
     }
 
-    fn sax_absolute(&mut self) {
-        sax!(self, absolute);
+    fn sax<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        self.write_byte(addr, self.a & self.x);
     }
 
-    fn sax_indexed_indirect(&mut self) {
-        sax!(self, indexed_indirect);
+    fn sbc<F>(&mut self, mode: F)
+    where
+        F: FnOnce(&mut Cpu<B>) -> u16,
+    {
+        let addr = mode(self);
+        // If we reformulate subtraction as addition, then we can use the same
+        // logic for ADC and SBC. All we need to do is make our value from
+        // memory negative, i.e., invert it.
+        let value = self.read_byte(addr) ^ 0xff;
+        self.add(value);
     }
 
-    fn sax_zero_page(&mut self) {
-        sax!(self, zero_page);
-    }
+    fn sbx(&mut self) {
+        let addr = self.immediate();
+        let value = self.read_byte(addr);
+        let carry = (self.a & self.x) >= value;
+        self.x = (self.a & self.x).wrapping_sub(value);
 
-    fn sax_zero_page_y(&mut self) {
-        sax!(self, zero_page_y);
-    }
-
-    fn sbc_absolute(&mut self) {
-        sbc!(self, absolute);
-    }
-
-    fn sbc_absolute_x(&mut self) {
-        sbc!(self, absolute_x_read);
-    }
-
-    fn sbc_absolute_y(&mut self) {
-        sbc!(self, absolute_y_read);
-    }
-
-    fn sbc_immediate(&mut self) {
-        sbc!(self, immediate);
-    }
-
-    fn sbc_indexed_indirect(&mut self) {
-        sbc!(self, indexed_indirect);
-    }
-
-    fn sbc_indirect_indexed(&mut self) {
-        sbc!(self, indirect_indexed_read);
-    }
-
-    fn sbc_zero_page(&mut self) {
-        sbc!(self, zero_page);
-    }
-
-    fn sbc_zero_page_x(&mut self) {
-        sbc!(self, zero_page_x);
-    }
-
-    fn sbx_immediate(&mut self) {
-        sbx!(self, immediate);
+        self.p.set_c(carry);
+        self.p.set_z(self.x == 0);
+        self.p.set_n(self.x & 0x80 != 0);
     }
 
     fn sec(&mut self) {
@@ -1618,6 +1492,46 @@ impl<B: Bus> Cpu<B> {
     fn sei(&mut self) {
         self.read_byte(self.pc);
         self.p.set_i(true);
+    }
+
+    // fn absolute(&mut self) -> u16 {
+    //     self.consume_word()
+    // }
+
+    // fn asl<F>(&mut self, mode: F)
+    // where
+    //     F: FnOnce(&mut Cpu<B>) -> u16,
+    // {
+    //     let addr = mode(self);
+    //     self.asl_inner(addr);
+    // }
+
+    // fn asl_inner(&mut self, addr: u16) {
+    //     let mut value = self.read_byte(addr);
+    //     self.write_byte(addr, value);
+    //     let carry = value & 0x80 != 0;
+    //     value <<= 1;
+    //     self.write_byte(addr, value);
+
+    //     self.p.set_c(carry);
+    //     self.p.set_z(value == 0);
+    //     self.p.set_n(value & 0x80 != 0);
+    // }
+
+    fn alr_immediate(&mut self) {
+        alr!(self, immediate);
+    }
+
+    fn anc_immediate(&mut self) {
+        anc!(self, immediate);
+    }
+
+    fn ane_immediate(&mut self) {
+        ane!(self, immediate);
+    }
+
+    fn arr_immediate(&mut self) {
+        arr!(self, immediate);
     }
 
     fn sha_absolute_y(&mut self) {
@@ -1824,6 +1738,7 @@ impl Cpu<DuNesBus> {
             pc = pc.wrapping_add(1);
 
             let (name, mode) = &OPCODE_NAMES_AND_MODES[opcode as usize];
+
             // TODO: Use a single format! instead of two.
             let operand = match mode {
                 AddressingMode::Absolute => {
