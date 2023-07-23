@@ -8,9 +8,7 @@ eframe = "0.21.3"
 proc-bitfield = "0.2.2"
 
 [dev-dependencies]
-criterion = { version = "0.4.0" }
-serde = { version = "1.0.156", features = ["derive"] }
-serde_json = "1.0.94"
+bincode = "2.0.0-rc.3"
 
 [[bench]]
 name = "cpu"

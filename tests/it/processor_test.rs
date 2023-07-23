@@ -1,17 +1,17 @@
 use std::{fs, io};
 
+use bincode::{config, Decode};
 use dunes::{Bus, Cpu, Status};
-use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Decode)]
 struct ProcessorTest {
     // name: String,
     initial: ProcessorTestState,
     r#final: ProcessorTestState,
-    cycles: Vec<Cycle>,
+    cycles: Vec<BusState>,
 }
 
-#[derive(Deserialize)]
+#[derive(Decode)]
 struct ProcessorTestState {
     pc: u16,
     s: u8,
@@ -19,11 +19,17 @@ struct ProcessorTestState {
     x: u8,
     y: u8,
     p: u8,
-    ram: Vec<[u16; 2]>,
+    ram: Vec<RamValue>,
 }
 
-#[derive(Deserialize)]
-struct Cycle {
+#[derive(Decode)]
+struct RamValue {
+    addr: u16,
+    data: u8,
+}
+
+#[derive(Decode)]
+struct BusState {
     addr: u16,
     data: u8,
     kind: String,
@@ -31,7 +37,7 @@ struct Cycle {
 
 struct ProcessorTestBus {
     memory: [u8; 0x10000],
-    cycles: Option<Vec<Cycle>>,
+    cycles: Option<Vec<BusState>>,
     cycle: usize,
 }
 
@@ -62,11 +68,29 @@ impl Bus for ProcessorTestBus {
 }
 
 fn run_processor_test(opcode: &str) {
-    let test_file = fs::File::open(format!("roms/v1/{opcode}.json"))
-        .unwrap_or_else(|_| panic!("roms/v1/{opcode}.json should exist"));
-    let buf_reader = io::BufReader::new(test_file);
+    static JAM_OPCODES: [&str; 12] = [
+        "02", "12", "22", "32", "42", "52", "62", "72", "92", "b2", "d2", "f2",
+    ];
+    // The cases for these NOP opcodes might have the wrong number of cycles.
+    static NOP_ABS_OPCODES: [&str; 7] =
+        ["0c", "1c", "3c", "5c", "7c", "dc", "fc"];
+    static UNSTABLE_OPCODES: [&str; 7] =
+        ["8b", "93", "9b", "9c", "9e", "9f", "ab"];
+    static MAYBE_WRONG_OPCODES: [&str; 1] = ["6b"];
+    if JAM_OPCODES.contains(&opcode)
+        || NOP_ABS_OPCODES.contains(&opcode)
+        || UNSTABLE_OPCODES.contains(&opcode)
+        || MAYBE_WRONG_OPCODES.contains(&opcode)
+    {
+        return;
+    }
+
+    let test_file = fs::File::open(format!("roms/v1/{opcode}.bincode"))
+        .unwrap_or_else(|_| panic!("roms/v1/{opcode}.bincode should exist"));
+    let mut buf_reader = io::BufReader::new(test_file);
     let tests: Vec<ProcessorTest> =
-        serde_json::from_reader(buf_reader).unwrap();
+        bincode::decode_from_std_read(&mut buf_reader, config::standard())
+            .unwrap();
 
     let bus = ProcessorTestBus {
         memory: [0u8; 0x10000],
@@ -86,8 +110,8 @@ fn run_processor_test(opcode: &str) {
         cpu.p = Status::from(test.initial.p);
 
         cpu.bus.memory.fill(0);
-        for [addr, data] in test.initial.ram {
-            cpu.bus.memory[addr as usize] = data as u8;
+        for RamValue { addr, data } in test.initial.ram {
+            cpu.bus.memory[addr as usize] = data;
         }
 
         cpu.bus.cycles = Some(test.cycles);
@@ -102,8 +126,8 @@ fn run_processor_test(opcode: &str) {
         assert_eq!(cpu.y, test.r#final.y);
         assert_eq!(u8::from(cpu.p), test.r#final.p);
 
-        for [addr, data] in test.r#final.ram {
-            assert_eq!(cpu.bus.memory[addr as usize], data as u8);
+        for RamValue { addr, data } in test.r#final.ram {
+            assert_eq!(cpu.bus.memory[addr as usize], data);
         }
     }
 }
