@@ -85,8 +85,11 @@ fn run_processor_test(opcode: &str) {
         return;
     }
 
-    let test_file = fs::File::open(format!("roms/v1/{opcode}.bincode"))
-        .unwrap_or_else(|_| panic!("roms/v1/{opcode}.bincode should exist"));
+    let test_file =
+        fs::File::open(format!("roms/processor_tests/{opcode}.bincode"))
+            .unwrap_or_else(|_| {
+                panic!("roms/processor_tests/{opcode}.bincode should exist")
+            });
     let mut buf_reader = io::BufReader::new(test_file);
     let tests: Vec<ProcessorTest> =
         bincode::decode_from_std_read(&mut buf_reader, config::standard())

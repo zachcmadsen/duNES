@@ -68,9 +68,9 @@ fn run_klaus(filepath: &str, success_address: u16) {
 
 #[test]
 fn klaus_functional() {
-    run_klaus("tests/roms/6502_functional_test.bin", FUNCTIONAL_SUCCESS);
+    run_klaus("roms/klaus/6502_functional_test.bin", FUNCTIONAL_SUCCESS);
 }
 #[test]
 fn klaus_interrupt() {
-    run_klaus("tests/roms/6502_interrupt_test.bin", INTERRUPT_SUCCESS);
+    run_klaus("roms/klaus/6502_interrupt_test.bin", INTERRUPT_SUCCESS);
 }

@@ -14,10 +14,10 @@ struct NestestLog {
 
 #[test]
 fn nestest() {
-    let rom =
-        fs::read("roms/nestest.nes").expect("roms/nestest.nes should exist");
-    let logs: Vec<NestestLog> = fs::read_to_string("roms/nestest.log")
-        .expect("roms/nestest.log should exist")
+    let rom = fs::read("roms/nestest/nestest.nes")
+        .expect("roms/nestest/nestest.nes should exist");
+    let logs: Vec<NestestLog> = fs::read_to_string("roms/nestest/nestest.log")
+        .expect("roms/nestest/nestest.log should exist")
         .lines()
         .map(|line| {
             let pc = u16::from_str_radix(&line[0..4], 16).unwrap();
