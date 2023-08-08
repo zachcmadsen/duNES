@@ -390,7 +390,7 @@ impl<B: Bus> Cpu<B> {
                 0x17 => { self.zero_page_x(); self.slo(); }
                 0x18 => self.clc(),
                 0x19 => { self.absolute_y::<false>(); self.ora(); }
-                0x1a => self.nop_implied(),
+                0x1a => { self.addr = self.pc; self.nop(); },
                 0x1b => { self.absolute_y::<true>(); self.slo(); }
                 0x1c => { self.absolute_x::<false>(); self.nop(); }
                 0x1d => { self.absolute_x::<false>(); self.ora(); }
@@ -422,7 +422,7 @@ impl<B: Bus> Cpu<B> {
                 0x37 => { self.zero_page_x(); self.rla(); }
                 0x38 => self.sec(),
                 0x39 => { self.absolute_y::<false>(); self.and(); }
-                0x3a => self.nop_implied(),
+                0x3a => { self.addr = self.pc; self.nop(); },
                 0x3b => { self.absolute_y::<true>(); self.rla(); }
                 0x3c => { self.absolute_x::<false>(); self.nop(); }
                 0x3d => { self.absolute_x::<false>(); self.and(); }
@@ -454,7 +454,7 @@ impl<B: Bus> Cpu<B> {
                 0x57 => { self.zero_page_x(); self.sre(); }
                 0x58 => self.cli(),
                 0x59 => { self.absolute_y::<false>(); self.eor(); }
-                0x5a => self.nop_implied(),
+                0x5a => { self.addr = self.pc; self.nop(); },
                 0x5b => { self.absolute_y::<true>(); self.sre(); }
                 0x5c => { self.absolute_x::<false>(); self.nop(); }
                 0x5d => { self.absolute_x::<false>(); self.eor(); }
@@ -486,7 +486,7 @@ impl<B: Bus> Cpu<B> {
                 0x77 => { self.zero_page_x(); self.rra(); }
                 0x78 => self.sei(),
                 0x79 => { self.absolute_y::<false>(); self.adc(); }
-                0x7a => self.nop_implied(),
+                0x7a => { self.addr = self.pc; self.nop(); },
                 0x7b => { self.absolute_y::<true>(); self.rra(); }
                 0x7c => { self.absolute_x::<false>(); self.nop(); }
                 0x7d => { self.absolute_x::<false>(); self.adc(); }
@@ -582,7 +582,7 @@ impl<B: Bus> Cpu<B> {
                 0xd7 => { self.zero_page_x(); self.dcp(); }
                 0xd8 => self.cld(),
                 0xd9 => { self.absolute_y::<false>(); self.cmp(); }
-                0xda => self.nop_implied(),
+                0xda => { self.addr = self.pc; self.nop(); },
                 0xdb => { self.absolute_y::<true>(); self.dcp(); }
                 0xdc => { self.absolute_x::<false>(); self.nop(); }
                 0xdd => { self.absolute_x::<false>(); self.cmp(); }
@@ -598,7 +598,7 @@ impl<B: Bus> Cpu<B> {
                 0xe7 => { self.zero_page(); self.isb(); }
                 0xe8 => self.inx(),
                 0xe9 => { self.immediate(); self.sbc(); }
-                0xea => self.nop_implied(),
+                0xea => { self.addr = self.pc; self.nop(); },
                 0xeb => { self.immediate(); self.sbc(); }
                 0xec => { self.absolute(); self.cpx(); }
                 0xed => { self.absolute(); self.sbc(); }
@@ -614,7 +614,7 @@ impl<B: Bus> Cpu<B> {
                 0xf7 => { self.zero_page_x(); self.isb(); }
                 0xf8 => self.sed(),
                 0xf9 => { self.absolute_y::<false>(); self.sbc(); }
-                0xfa => self.nop_implied(),
+                0xfa => { self.addr = self.pc; self.nop(); },
                 0xfb => { self.absolute_y::<true>(); self.isb(); }
                 0xfc => { self.absolute_x::<false>(); self.nop(); }
                 0xfd => { self.absolute_x::<false>(); self.sbc(); }
@@ -1210,10 +1210,6 @@ impl<B: Bus> Cpu<B> {
 
     fn nop(&mut self) {
         self.read_byte(self.addr);
-    }
-
-    fn nop_implied(&mut self) {
-        self.read_byte(self.pc);
     }
 
     fn ora(&mut self) {
