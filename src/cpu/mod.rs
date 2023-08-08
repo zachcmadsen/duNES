@@ -2,12 +2,6 @@ use proc_bitfield::bitfield;
 
 use crate::bus::{Bus, DuNesBus, Pins};
 
-use instruction::*;
-use mode::*;
-
-mod instruction;
-mod mode;
-
 const NMI_VECTOR: u16 = 0xfffa;
 const RESET_VECTOR: u16 = 0xfffc;
 const IRQ_VECTOR: u16 = 0xfffe;
@@ -401,7 +395,10 @@ impl<B: Bus> Cpu<B> {
                     self.ora();
                 }
                 0x0a => self.asl_accumulator(),
-                0x0b => self.anc_immediate(),
+                0x0b => {
+                    self.immediate();
+                    self.anc();
+                }
                 0x0c => {
                     self.absolute();
                     self.nop();
@@ -502,7 +499,10 @@ impl<B: Bus> Cpu<B> {
                     self.and();
                 }
                 0x2a => self.rol_accumulator(),
-                0x2b => self.anc_immediate(),
+                0x2b => {
+                    self.immediate();
+                    self.anc();
+                }
                 0x2c => {
                     self.absolute();
                     self.bit();
@@ -603,7 +603,10 @@ impl<B: Bus> Cpu<B> {
                     self.eor();
                 }
                 0x4a => self.lsr_accumulator(),
-                0x4b => self.alr_immediate(),
+                0x4b => {
+                    self.immediate();
+                    self.alr();
+                }
                 0x4c => {
                     self.absolute();
                     self.jmp();
@@ -704,7 +707,10 @@ impl<B: Bus> Cpu<B> {
                     self.adc();
                 }
                 0x6a => self.ror_accumulator(),
-                0x6b => self.arr_immediate(),
+                0x6b => {
+                    self.immediate();
+                    self.arr();
+                }
                 0x6c => {
                     self.indirect();
                     self.jmp();
@@ -811,7 +817,10 @@ impl<B: Bus> Cpu<B> {
                     self.nop();
                 }
                 0x8a => self.txa(),
-                0x8b => self.ane_immediate(),
+                0x8b => {
+                    self.immediate();
+                    self.ane();
+                }
                 0x8c => {
                     self.absolute();
                     self.sty();
@@ -860,7 +869,10 @@ impl<B: Bus> Cpu<B> {
                     self.sta();
                 }
                 0x9a => self.txs(),
-                0x9b => self.tas_absolute_y(),
+                0x9b => {
+                    self.absolute_y_write();
+                    self.tas();
+                }
                 0x9c => {
                     self.absolute_x_write();
                     self.shy();
@@ -1512,6 +1524,41 @@ impl<B: Bus> Cpu<B> {
         self.p.set_n(self.a & 0x80 != 0);
     }
 
+    fn alr(&mut self) {
+        self.a &= self.read_byte(self.addr);
+        let carry = self.a & 0x01 != 0;
+        self.a = self.a.wrapping_shr(1);
+
+        self.p.set_c(carry);
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
+    }
+
+    fn anc(&mut self) {
+        self.a &= self.read_byte(self.addr);
+
+        self.p.set_c(self.a & 0x80 != 0);
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80 != 0);
+    }
+
+    fn ane(&mut self) {
+        // Treat ANE as a NOP since it's unstable.
+        self.read_byte(self.addr);
+    }
+
+    fn arr(&mut self) {
+        self.a &= self.read_byte(self.addr);
+        self.a = (self.p.c() as u8) << 7 | self.a.wrapping_shr(1);
+
+        // TODO: Explain how the carry and overflow flag are set.
+        self.p.set_c(self.a & 0x40 != 0);
+        self.p.set_z(self.a == 0);
+        self.p
+            .set_v(((self.p.c() as u8) ^ ((self.a >> 5) & 0x01)) != 0);
+        self.p.set_n(self.a & 0x80 != 0);
+    }
+
     fn asl(&mut self) {
         let addr = self.addr;
         let mut value = self.read_byte(addr);
@@ -2054,48 +2101,19 @@ impl<B: Bus> Cpu<B> {
         self.write_byte(self.addr, self.y);
     }
 
-    // fn absolute(&mut self) -> u16 {
-    //     self.consume_word()
-    // }
+    fn tas(&mut self) {
+        let high_byte = (self.addr & 0xff00) >> 8;
+        let low_byte = self.addr & 0x00ff;
+        let value = self.a & self.x & (high_byte as u8).wrapping_add(1);
+        self.s = self.a & self.x;
 
-    // fn asl<F>(&mut self, mode: F)
-    // where
-    //     F: FnOnce(&mut Cpu<B>) -> u16,
-    // {
-    //     let addr = mode(self);
-    //     self.asl_inner(addr);
-    // }
-
-    // fn asl_inner(&mut self, addr: u16) {
-    //     let mut value = self.read_byte(addr);
-    //     self.write_byte(addr, value);
-    //     let carry = value & 0x80 != 0;
-    //     value <<= 1;
-    //     self.write_byte(addr, value);
-
-    //     self.p.set_c(carry);
-    //     self.p.set_z(value == 0);
-    //     self.p.set_n(value & 0x80 != 0);
-    // }
-
-    fn alr_immediate(&mut self) {
-        alr!(self, immediate);
-    }
-
-    fn anc_immediate(&mut self) {
-        anc!(self, immediate);
-    }
-
-    fn ane_immediate(&mut self) {
-        ane!(self, immediate);
-    }
-
-    fn arr_immediate(&mut self) {
-        arr!(self, immediate);
-    }
-
-    fn tas_absolute_y(&mut self) {
-        tas!(self, absolute_y_write);
+        // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
+        self.write_byte(
+            ((self.a as u16 & self.x as u16 & (high_byte.wrapping_add(1)))
+                << 8)
+                | low_byte,
+            value,
+        );
     }
 
     fn tax(&mut self) {
