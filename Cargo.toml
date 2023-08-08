@@ -10,5 +10,6 @@ proc-bitfield = "0.2.2"
 [dev-dependencies]
 bincode = "2.0.0-rc.3"
 
-[profile.release]
-lto = "thin"
+[profile.test]
+# The tests are too slow without some optimizations.
+opt-level = 2
