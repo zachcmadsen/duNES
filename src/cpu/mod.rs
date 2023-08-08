@@ -362,855 +362,265 @@ impl<B: Bus> Cpu<B> {
             brk(self);
         } else {
             let opcode = self.consume_byte();
+            #[rustfmt::skip]
             match opcode {
                 0x00 => self.brk(),
-                0x01 => {
-                    self.indexed_indirect();
-                    self.ora();
-                }
+                0x01 => { self.indexed_indirect(); self.ora(); }
                 0x02 => self.jam(),
-                0x03 => {
-                    self.indexed_indirect();
-                    self.slo();
-                }
-                0x04 => {
-                    self.zero_page();
-                    self.nop();
-                }
-                0x05 => {
-                    self.zero_page();
-                    self.ora();
-                }
-                0x06 => {
-                    self.zero_page();
-                    self.asl();
-                }
-                0x07 => {
-                    self.zero_page();
-                    self.slo();
-                }
+                0x03 => { self.indexed_indirect(); self.slo(); }
+                0x04 => { self.zero_page(); self.nop(); }
+                0x05 => { self.zero_page(); self.ora(); }
+                0x06 => { self.zero_page(); self.asl(); }
+                0x07 => { self.zero_page(); self.slo(); }
                 0x08 => self.php(),
-                0x09 => {
-                    self.immediate();
-                    self.ora();
-                }
+                0x09 => { self.immediate(); self.ora(); }
                 0x0a => self.asl_accumulator(),
-                0x0b => {
-                    self.immediate();
-                    self.anc();
-                }
-                0x0c => {
-                    self.absolute();
-                    self.nop();
-                }
-                0x0d => {
-                    self.absolute();
-                    self.ora();
-                }
-                0x0e => {
-                    self.absolute();
-                    self.asl();
-                }
-                0x0f => {
-                    self.absolute();
-                    self.slo();
-                }
+                0x0b => { self.immediate(); self.anc(); }
+                0x0c => { self.absolute(); self.nop(); }
+                0x0d => { self.absolute(); self.ora(); }
+                0x0e => { self.absolute(); self.asl(); }
+                0x0f => { self.absolute(); self.slo(); }
                 0x10 => self.bpl(),
-                0x11 => {
-                    self.indirect_indexed_read();
-                    self.ora();
-                }
+                0x11 => { self.indirect_indexed_read(); self.ora(); }
                 0x12 => self.jam(),
-                0x13 => {
-                    self.indirect_indexed_write();
-                    self.slo();
-                }
-                0x14 => {
-                    self.zero_page_x();
-                    self.nop();
-                }
-                0x15 => {
-                    self.zero_page_x();
-                    self.ora();
-                }
-                0x16 => {
-                    self.zero_page_x();
-                    self.asl();
-                }
-                0x17 => {
-                    self.zero_page_x();
-                    self.slo();
-                }
+                0x13 => { self.indirect_indexed_write(); self.slo(); }
+                0x14 => { self.zero_page_x(); self.nop(); }
+                0x15 => { self.zero_page_x(); self.ora(); }
+                0x16 => { self.zero_page_x(); self.asl(); }
+                0x17 => { self.zero_page_x(); self.slo(); }
                 0x18 => self.clc(),
-                0x19 => {
-                    self.absolute_y_read();
-                    self.ora();
-                }
+                0x19 => { self.absolute_y_read(); self.ora(); }
                 0x1a => self.nop_implied(),
-                0x1b => {
-                    self.absolute_y_write();
-                    self.slo();
-                }
-                0x1c => {
-                    self.absolute_x_read();
-                    self.nop();
-                }
-                0x1d => {
-                    self.absolute_x_read();
-                    self.ora();
-                }
-                0x1e => {
-                    self.absolute_x_write();
-                    self.asl();
-                }
-                0x1f => {
-                    self.absolute_x_write();
-                    self.slo();
-                }
+                0x1b => { self.absolute_y_write(); self.slo(); }
+                0x1c => { self.absolute_x_read(); self.nop(); }
+                0x1d => { self.absolute_x_read(); self.ora(); }
+                0x1e => { self.absolute_x_write(); self.asl(); }
+                0x1f => { self.absolute_x_write(); self.slo(); }
                 0x20 => self.jsr(),
-                0x21 => {
-                    self.indexed_indirect();
-                    self.and();
-                }
+                0x21 => { self.indexed_indirect(); self.and(); }
                 0x22 => self.jam(),
-                0x23 => {
-                    self.indexed_indirect();
-                    self.rla();
-                }
-                0x24 => {
-                    self.zero_page();
-                    self.bit();
-                }
-                0x25 => {
-                    self.zero_page();
-                    self.and();
-                }
-                0x26 => {
-                    self.zero_page();
-                    self.rol();
-                }
-                0x27 => {
-                    self.zero_page();
-                    self.rla();
-                }
+                0x23 => { self.indexed_indirect(); self.rla(); }
+                0x24 => { self.zero_page(); self.bit(); }
+                0x25 => { self.zero_page(); self.and(); }
+                0x26 => { self.zero_page(); self.rol(); }
+                0x27 => { self.zero_page(); self.rla(); }
                 0x28 => self.plp(),
-                0x29 => {
-                    self.immediate();
-                    self.and();
-                }
+                0x29 => { self.immediate(); self.and(); }
                 0x2a => self.rol_accumulator(),
-                0x2b => {
-                    self.immediate();
-                    self.anc();
-                }
-                0x2c => {
-                    self.absolute();
-                    self.bit();
-                }
-                0x2d => {
-                    self.absolute();
-                    self.and();
-                }
-                0x2e => {
-                    self.absolute();
-                    self.rol();
-                }
-                0x2f => {
-                    self.absolute();
-                    self.rla();
-                }
+                0x2b => { self.immediate(); self.anc(); }
+                0x2c => { self.absolute(); self.bit(); }
+                0x2d => { self.absolute(); self.and(); }
+                0x2e => { self.absolute(); self.rol(); }
+                0x2f => { self.absolute(); self.rla(); }
                 0x30 => self.bmi(),
-                0x31 => {
-                    self.indirect_indexed_read();
-                    self.and();
-                }
+                0x31 => { self.indirect_indexed_read(); self.and(); }
                 0x32 => self.jam(),
-                0x33 => {
-                    self.indirect_indexed_write();
-                    self.rla();
-                }
-                0x34 => {
-                    self.zero_page_x();
-                    self.nop();
-                }
-                0x35 => {
-                    self.zero_page_x();
-                    self.and();
-                }
-                0x36 => {
-                    self.zero_page_x();
-                    self.rol();
-                }
-                0x37 => {
-                    self.zero_page_x();
-                    self.rla();
-                }
+                0x33 => { self.indirect_indexed_write(); self.rla(); }
+                0x34 => { self.zero_page_x(); self.nop(); }
+                0x35 => { self.zero_page_x(); self.and(); }
+                0x36 => { self.zero_page_x(); self.rol(); }
+                0x37 => { self.zero_page_x(); self.rla(); }
                 0x38 => self.sec(),
-                0x39 => {
-                    self.absolute_y_read();
-                    self.and();
-                }
+                0x39 => { self.absolute_y_read(); self.and(); }
                 0x3a => self.nop_implied(),
-                0x3b => {
-                    self.absolute_y_write();
-                    self.rla();
-                }
-                0x3c => {
-                    self.absolute_x_read();
-                    self.nop();
-                }
-                0x3d => {
-                    self.absolute_x_read();
-                    self.and();
-                }
-                0x3e => {
-                    self.absolute_x_write();
-                    self.rol();
-                }
-                0x3f => {
-                    self.absolute_x_write();
-                    self.rla();
-                }
+                0x3b => { self.absolute_y_write(); self.rla(); }
+                0x3c => { self.absolute_x_read(); self.nop(); }
+                0x3d => { self.absolute_x_read(); self.and(); }
+                0x3e => { self.absolute_x_write(); self.rol(); }
+                0x3f => { self.absolute_x_write(); self.rla(); }
                 0x40 => self.rti(),
-                0x41 => {
-                    self.indexed_indirect();
-                    self.eor();
-                }
+                0x41 => { self.indexed_indirect(); self.eor(); }
                 0x42 => self.jam(),
-                0x43 => {
-                    self.indexed_indirect();
-                    self.sre();
-                }
-                0x44 => {
-                    self.zero_page();
-                    self.nop();
-                }
-                0x45 => {
-                    self.zero_page();
-                    self.eor();
-                }
-                0x46 => {
-                    self.zero_page();
-                    self.lsr();
-                }
-                0x47 => {
-                    self.zero_page();
-                    self.sre();
-                }
+                0x43 => { self.indexed_indirect(); self.sre(); }
+                0x44 => { self.zero_page(); self.nop(); }
+                0x45 => { self.zero_page(); self.eor(); }
+                0x46 => { self.zero_page(); self.lsr(); }
+                0x47 => { self.zero_page(); self.sre(); }
                 0x48 => self.pha(),
-                0x49 => {
-                    self.immediate();
-                    self.eor();
-                }
+                0x49 => { self.immediate(); self.eor(); }
                 0x4a => self.lsr_accumulator(),
-                0x4b => {
-                    self.immediate();
-                    self.alr();
-                }
-                0x4c => {
-                    self.absolute();
-                    self.jmp();
-                }
-                0x4d => {
-                    self.absolute();
-                    self.eor();
-                }
-                0x4e => {
-                    self.absolute();
-                    self.lsr();
-                }
-                0x4f => {
-                    self.absolute();
-                    self.sre();
-                }
+                0x4b => { self.immediate(); self.alr(); }
+                0x4c => { self.absolute(); self.jmp(); }
+                0x4d => { self.absolute(); self.eor(); }
+                0x4e => { self.absolute(); self.lsr(); }
+                0x4f => { self.absolute(); self.sre(); }
                 0x50 => self.bvc(),
-                0x51 => {
-                    self.indirect_indexed_read();
-                    self.eor();
-                }
+                0x51 => { self.indirect_indexed_read(); self.eor(); }
                 0x52 => self.jam(),
-                0x53 => {
-                    self.indirect_indexed_write();
-                    self.sre();
-                }
-                0x54 => {
-                    self.zero_page_x();
-                    self.nop();
-                }
-                0x55 => {
-                    self.zero_page_x();
-                    self.eor();
-                }
-                0x56 => {
-                    self.zero_page_x();
-                    self.lsr();
-                }
-                0x57 => {
-                    self.zero_page_x();
-                    self.sre();
-                }
+                0x53 => { self.indirect_indexed_write(); self.sre(); }
+                0x54 => { self.zero_page_x(); self.nop(); }
+                0x55 => { self.zero_page_x(); self.eor(); }
+                0x56 => { self.zero_page_x(); self.lsr(); }
+                0x57 => { self.zero_page_x(); self.sre(); }
                 0x58 => self.cli(),
-                0x59 => {
-                    self.absolute_y_read();
-                    self.eor();
-                }
+                0x59 => { self.absolute_y_read(); self.eor(); }
                 0x5a => self.nop_implied(),
-                0x5b => {
-                    self.absolute_y_write();
-                    self.sre();
-                }
-                0x5c => {
-                    self.absolute_x_read();
-                    self.nop();
-                }
-                0x5d => {
-                    self.absolute_x_read();
-                    self.eor();
-                }
-                0x5e => {
-                    self.absolute_x_write();
-                    self.lsr();
-                }
-                0x5f => {
-                    self.absolute_x_write();
-                    self.sre();
-                }
+                0x5b => { self.absolute_y_write(); self.sre(); }
+                0x5c => { self.absolute_x_read(); self.nop(); }
+                0x5d => { self.absolute_x_read(); self.eor(); }
+                0x5e => { self.absolute_x_write(); self.lsr(); }
+                0x5f => { self.absolute_x_write(); self.sre(); }
                 0x60 => self.rts(),
-                0x61 => {
-                    self.indexed_indirect();
-                    self.adc();
-                }
+                0x61 => { self.indexed_indirect(); self.adc(); }
                 0x62 => self.jam(),
-                0x63 => {
-                    self.indexed_indirect();
-                    self.rra();
-                }
-                0x64 => {
-                    self.zero_page();
-                    self.nop();
-                }
-                0x65 => {
-                    self.zero_page();
-                    self.adc();
-                }
-                0x66 => {
-                    self.zero_page();
-                    self.ror();
-                }
-                0x67 => {
-                    self.zero_page();
-                    self.rra();
-                }
+                0x63 => { self.indexed_indirect(); self.rra(); }
+                0x64 => { self.zero_page(); self.nop(); }
+                0x65 => { self.zero_page(); self.adc(); }
+                0x66 => { self.zero_page(); self.ror(); }
+                0x67 => { self.zero_page(); self.rra(); }
                 0x68 => self.pla(),
-                0x69 => {
-                    self.immediate();
-                    self.adc();
-                }
+                0x69 => { self.immediate(); self.adc(); }
                 0x6a => self.ror_accumulator(),
-                0x6b => {
-                    self.immediate();
-                    self.arr();
-                }
-                0x6c => {
-                    self.indirect();
-                    self.jmp();
-                }
-                0x6d => {
-                    self.absolute();
-                    self.adc();
-                }
-                0x6e => {
-                    self.absolute();
-                    self.ror();
-                }
-                0x6f => {
-                    self.absolute();
-                    self.rra();
-                }
+                0x6b => { self.immediate(); self.arr(); }
+                0x6c => { self.indirect(); self.jmp(); }
+                0x6d => { self.absolute(); self.adc(); }
+                0x6e => { self.absolute(); self.ror(); }
+                0x6f => { self.absolute(); self.rra(); }
                 0x70 => self.bvs(),
-                0x71 => {
-                    self.indirect_indexed_read();
-                    self.adc();
-                }
+                0x71 => { self.indirect_indexed_read(); self.adc(); }
                 0x72 => self.jam(),
-                0x73 => {
-                    self.indirect_indexed_write();
-                    self.rra();
-                }
-                0x74 => {
-                    self.zero_page_x();
-                    self.nop();
-                }
-                0x75 => {
-                    self.zero_page_x();
-                    self.adc();
-                }
-                0x76 => {
-                    self.zero_page_x();
-                    self.ror();
-                }
-                0x77 => {
-                    self.zero_page_x();
-                    self.rra();
-                }
+                0x73 => { self.indirect_indexed_write(); self.rra(); }
+                0x74 => { self.zero_page_x(); self.nop(); }
+                0x75 => { self.zero_page_x(); self.adc(); }
+                0x76 => { self.zero_page_x(); self.ror(); }
+                0x77 => { self.zero_page_x(); self.rra(); }
                 0x78 => self.sei(),
-                0x79 => {
-                    self.absolute_y_read();
-                    self.adc();
-                }
+                0x79 => { self.absolute_y_read(); self.adc(); }
                 0x7a => self.nop_implied(),
-                0x7b => {
-                    self.absolute_y_write();
-                    self.rra();
-                }
-                0x7c => {
-                    self.absolute_x_read();
-                    self.nop();
-                }
-                0x7d => {
-                    self.absolute_x_read();
-                    self.adc();
-                }
-                0x7e => {
-                    self.absolute_x_write();
-                    self.ror();
-                }
-                0x7f => {
-                    self.absolute_x_write();
-                    self.rra();
-                }
-                0x80 => {
-                    self.immediate();
-                    self.nop();
-                }
-                0x81 => {
-                    self.indexed_indirect();
-                    self.sta();
-                }
-                0x82 => {
-                    self.immediate();
-                    self.nop();
-                }
-                0x83 => {
-                    self.indexed_indirect();
-                    self.sax();
-                }
-                0x84 => {
-                    self.zero_page();
-                    self.sty();
-                }
-                0x85 => {
-                    self.zero_page();
-                    self.sta();
-                }
-                0x86 => {
-                    self.zero_page();
-                    self.stx();
-                }
-                0x87 => {
-                    self.zero_page();
-                    self.sax();
-                }
+                0x7b => { self.absolute_y_write(); self.rra(); }
+                0x7c => { self.absolute_x_read(); self.nop(); }
+                0x7d => { self.absolute_x_read(); self.adc(); }
+                0x7e => { self.absolute_x_write(); self.ror(); }
+                0x7f => { self.absolute_x_write(); self.rra(); }
+                0x80 => { self.immediate(); self.nop(); }
+                0x81 => { self.indexed_indirect(); self.sta(); }
+                0x82 => { self.immediate(); self.nop(); }
+                0x83 => { self.indexed_indirect(); self.sax(); }
+                0x84 => { self.zero_page(); self.sty(); }
+                0x85 => { self.zero_page(); self.sta(); }
+                0x86 => { self.zero_page(); self.stx(); }
+                0x87 => { self.zero_page(); self.sax(); }
                 0x88 => self.dey(),
-                0x89 => {
-                    self.immediate();
-                    self.nop();
-                }
+                0x89 => { self.immediate(); self.nop(); }
                 0x8a => self.txa(),
-                0x8b => {
-                    self.immediate();
-                    self.ane();
-                }
-                0x8c => {
-                    self.absolute();
-                    self.sty();
-                }
-                0x8d => {
-                    self.absolute();
-                    self.sta();
-                }
-                0x8e => {
-                    self.absolute();
-                    self.stx();
-                }
-                0x8f => {
-                    self.absolute();
-                    self.sax();
-                }
+                0x8b => { self.immediate(); self.ane(); }
+                0x8c => { self.absolute(); self.sty(); }
+                0x8d => { self.absolute(); self.sta(); }
+                0x8e => { self.absolute(); self.stx(); }
+                0x8f => { self.absolute(); self.sax(); }
                 0x90 => self.bcc(),
-                0x91 => {
-                    self.indirect_indexed_write();
-                    self.sta();
-                }
+                0x91 => { self.indirect_indexed_write(); self.sta(); }
                 0x92 => self.jam(),
-                0x93 => {
-                    self.absolute_y_write();
-                    self.sha();
-                }
-                0x94 => {
-                    self.zero_page_x();
-                    self.sty();
-                }
-                0x95 => {
-                    self.zero_page_x();
-                    self.sta();
-                }
-                0x96 => {
-                    self.zero_page_y();
-                    self.stx();
-                }
-                0x97 => {
-                    self.zero_page_y();
-                    self.sax();
-                }
+                0x93 => { self.absolute_y_write(); self.sha(); }
+                0x94 => { self.zero_page_x(); self.sty(); }
+                0x95 => { self.zero_page_x(); self.sta(); }
+                0x96 => { self.zero_page_y(); self.stx(); }
+                0x97 => { self.zero_page_y(); self.sax(); }
                 0x98 => self.tya(),
-                0x99 => {
-                    self.absolute_y_write();
-                    self.sta();
-                }
+                0x99 => { self.absolute_y_write(); self.sta(); }
                 0x9a => self.txs(),
-                0x9b => {
-                    self.absolute_y_write();
-                    self.tas();
-                }
-                0x9c => {
-                    self.absolute_x_write();
-                    self.shy();
-                }
-                0x9d => {
-                    self.absolute_x_write();
-                    self.sta();
-                }
-                0x9e => {
-                    self.absolute_y_write();
-                    self.shx();
-                }
-                0x9f => {
-                    self.indirect_indexed_write();
-                    self.sha();
-                }
-                0xa0 => {
-                    self.immediate();
-                    self.ldy();
-                }
-                0xa1 => {
-                    self.indexed_indirect();
-                    self.lda();
-                }
-                0xa2 => {
-                    self.immediate();
-                    self.ldx();
-                }
-                0xa3 => {
-                    self.indexed_indirect();
-                    self.lax();
-                }
-                0xa4 => {
-                    self.zero_page();
-                    self.ldy();
-                }
-                0xa5 => {
-                    self.zero_page();
-                    self.lda();
-                }
-                0xa6 => {
-                    self.zero_page();
-                    self.ldx();
-                }
-                0xa7 => {
-                    self.zero_page();
-                    self.lax();
-                }
+                0x9b => { self.absolute_y_write(); self.tas(); }
+                0x9c => { self.absolute_x_write(); self.shy(); }
+                0x9d => { self.absolute_x_write(); self.sta(); }
+                0x9e => { self.absolute_y_write(); self.shx(); }
+                0x9f => { self.indirect_indexed_write(); self.sha(); }
+                0xa0 => { self.immediate(); self.ldy(); }
+                0xa1 => { self.indexed_indirect(); self.lda(); }
+                0xa2 => { self.immediate(); self.ldx(); }
+                0xa3 => { self.indexed_indirect(); self.lax(); }
+                0xa4 => { self.zero_page(); self.ldy(); }
+                0xa5 => { self.zero_page(); self.lda(); }
+                0xa6 => { self.zero_page(); self.ldx(); }
+                0xa7 => { self.zero_page(); self.lax(); }
                 0xa8 => self.tay(),
-                0xa9 => {
-                    self.immediate();
-                    self.lda();
-                }
+                0xa9 => { self.immediate(); self.lda(); }
                 0xaa => self.tax(),
                 0xab => self.lxa(),
-                0xac => {
-                    self.absolute();
-                    self.ldy();
-                }
-                0xad => {
-                    self.absolute();
-                    self.lda();
-                }
-                0xae => {
-                    self.absolute();
-                    self.ldx();
-                }
-                0xaf => {
-                    self.absolute();
-                    self.lax();
-                }
+                0xac => { self.absolute(); self.ldy(); }
+                0xad => { self.absolute(); self.lda(); }
+                0xae => { self.absolute(); self.ldx(); }
+                0xaf => { self.absolute(); self.lax(); }
                 0xb0 => self.bcs(),
-                0xb1 => {
-                    self.indirect_indexed_read();
-                    self.lda();
-                }
+                0xb1 => { self.indirect_indexed_read(); self.lda(); }
                 0xb2 => self.jam(),
-                0xb3 => {
-                    self.indirect_indexed_read();
-                    self.lax();
-                }
-                0xb4 => {
-                    self.zero_page_x();
-                    self.ldy();
-                }
-                0xb5 => {
-                    self.zero_page_x();
-                    self.lda();
-                }
-                0xb6 => {
-                    self.zero_page_y();
-                    self.ldx();
-                }
-                0xb7 => {
-                    self.zero_page_y();
-                    self.lax();
-                }
+                0xb3 => { self.indirect_indexed_read(); self.lax(); }
+                0xb4 => { self.zero_page_x(); self.ldy(); }
+                0xb5 => { self.zero_page_x(); self.lda(); }
+                0xb6 => { self.zero_page_y(); self.ldx(); }
+                0xb7 => { self.zero_page_y(); self.lax(); }
                 0xb8 => self.clv(),
-                0xb9 => {
-                    self.absolute_y_read();
-                    self.lda();
-                }
+                0xb9 => { self.absolute_y_read(); self.lda(); }
                 0xba => self.tsx(),
                 0xbb => self.las(),
-                0xbc => {
-                    self.absolute_x_read();
-                    self.ldy();
-                }
-                0xbd => {
-                    self.absolute_x_read();
-                    self.lda();
-                }
-                0xbe => {
-                    self.absolute_y_read();
-                    self.ldx();
-                }
-                0xbf => {
-                    self.absolute_y_read();
-                    self.lax();
-                }
-                0xc0 => {
-                    self.immediate();
-                    self.cpy();
-                }
-                0xc1 => {
-                    self.indexed_indirect();
-                    self.cmp();
-                }
-                0xc2 => {
-                    self.immediate();
-                    self.nop();
-                }
-                0xc3 => {
-                    self.indexed_indirect();
-                    self.dcp();
-                }
-                0xc4 => {
-                    self.zero_page();
-                    self.cpy();
-                }
-                0xc5 => {
-                    self.zero_page();
-                    self.cmp();
-                }
-                0xc6 => {
-                    self.zero_page();
-                    self.dec();
-                }
-                0xc7 => {
-                    self.zero_page();
-                    self.dcp();
-                }
+                0xbc => { self.absolute_x_read(); self.ldy(); }
+                0xbd => { self.absolute_x_read(); self.lda(); }
+                0xbe => { self.absolute_y_read(); self.ldx(); }
+                0xbf => { self.absolute_y_read(); self.lax(); }
+                0xc0 => { self.immediate(); self.cpy(); }
+                0xc1 => { self.indexed_indirect(); self.cmp(); }
+                0xc2 => { self.immediate(); self.nop(); }
+                0xc3 => { self.indexed_indirect(); self.dcp(); }
+                0xc4 => { self.zero_page(); self.cpy(); }
+                0xc5 => { self.zero_page(); self.cmp(); }
+                0xc6 => { self.zero_page(); self.dec(); }
+                0xc7 => { self.zero_page(); self.dcp(); }
                 0xc8 => self.iny(),
-                0xc9 => {
-                    self.immediate();
-                    self.cmp();
-                }
+                0xc9 => { self.immediate(); self.cmp(); }
                 0xca => self.dex(),
                 0xcb => self.sbx(),
-                0xcc => {
-                    self.absolute();
-                    self.cpy();
-                }
-                0xcd => {
-                    self.absolute();
-                    self.cmp();
-                }
-                0xce => {
-                    self.absolute();
-                    self.dec();
-                }
-                0xcf => {
-                    self.absolute();
-                    self.dcp();
-                }
+                0xcc => { self.absolute(); self.cpy(); }
+                0xcd => { self.absolute(); self.cmp(); }
+                0xce => { self.absolute(); self.dec(); }
+                0xcf => { self.absolute(); self.dcp(); }
                 0xd0 => self.bne(),
-                0xd1 => {
-                    self.indirect_indexed_read();
-                    self.cmp();
-                }
+                0xd1 => { self.indirect_indexed_read(); self.cmp(); }
                 0xd2 => self.jam(),
-                0xd3 => {
-                    self.indirect_indexed_write();
-                    self.dcp();
-                }
-                0xd4 => {
-                    self.zero_page_x();
-                    self.nop();
-                }
-                0xd5 => {
-                    self.zero_page_x();
-                    self.cmp();
-                }
-                0xd6 => {
-                    self.zero_page_x();
-                    self.dec();
-                }
-                0xd7 => {
-                    self.zero_page_x();
-                    self.dcp();
-                }
+                0xd3 => { self.indirect_indexed_write(); self.dcp(); }
+                0xd4 => { self.zero_page_x(); self.nop(); }
+                0xd5 => { self.zero_page_x(); self.cmp(); }
+                0xd6 => { self.zero_page_x(); self.dec(); }
+                0xd7 => { self.zero_page_x(); self.dcp(); }
                 0xd8 => self.cld(),
-                0xd9 => {
-                    self.absolute_y_read();
-                    self.cmp();
-                }
+                0xd9 => { self.absolute_y_read(); self.cmp(); }
                 0xda => self.nop_implied(),
-                0xdb => {
-                    self.absolute_y_write();
-                    self.dcp();
-                }
-                0xdc => {
-                    self.absolute_x_read();
-                    self.nop();
-                }
-                0xdd => {
-                    self.absolute_x_read();
-                    self.cmp();
-                }
-                0xde => {
-                    self.absolute_x_write();
-                    self.dec();
-                }
-                0xdf => {
-                    self.absolute_x_write();
-                    self.dcp();
-                }
-                0xe0 => {
-                    self.immediate();
-                    self.cpx();
-                }
-                0xe1 => {
-                    self.indexed_indirect();
-                    self.sbc();
-                }
-                0xe2 => {
-                    self.immediate();
-                    self.nop();
-                }
-                0xe3 => {
-                    self.indexed_indirect();
-                    self.isb();
-                }
-                0xe4 => {
-                    self.zero_page();
-                    self.cpx();
-                }
-                0xe5 => {
-                    self.zero_page();
-                    self.sbc();
-                }
-                0xe6 => {
-                    self.zero_page();
-                    self.inc();
-                }
-                0xe7 => {
-                    self.zero_page();
-                    self.isb();
-                }
+                0xdb => { self.absolute_y_write(); self.dcp(); }
+                0xdc => { self.absolute_x_read(); self.nop(); }
+                0xdd => { self.absolute_x_read(); self.cmp(); }
+                0xde => { self.absolute_x_write(); self.dec(); }
+                0xdf => { self.absolute_x_write(); self.dcp(); }
+                0xe0 => { self.immediate(); self.cpx(); }
+                0xe1 => { self.indexed_indirect(); self.sbc(); }
+                0xe2 => { self.immediate(); self.nop(); }
+                0xe3 => { self.indexed_indirect(); self.isb(); }
+                0xe4 => { self.zero_page(); self.cpx(); }
+                0xe5 => { self.zero_page(); self.sbc(); }
+                0xe6 => { self.zero_page(); self.inc(); }
+                0xe7 => { self.zero_page(); self.isb(); }
                 0xe8 => self.inx(),
-                0xe9 => {
-                    self.immediate();
-                    self.sbc();
-                }
+                0xe9 => { self.immediate(); self.sbc(); }
                 0xea => self.nop_implied(),
-                0xeb => {
-                    self.immediate();
-                    self.sbc();
-                }
-                0xec => {
-                    self.absolute();
-                    self.cpx();
-                }
-                0xed => {
-                    self.absolute();
-                    self.sbc();
-                }
-                0xee => {
-                    self.absolute();
-                    self.inc();
-                }
-                0xef => {
-                    self.absolute();
-                    self.isb();
-                }
+                0xeb => { self.immediate(); self.sbc(); }
+                0xec => { self.absolute(); self.cpx(); }
+                0xed => { self.absolute(); self.sbc(); }
+                0xee => { self.absolute(); self.inc(); }
+                0xef => { self.absolute(); self.isb(); }
                 0xf0 => self.beq(),
-                0xf1 => {
-                    self.indirect_indexed_read();
-                    self.sbc();
-                }
+                0xf1 => { self.indirect_indexed_read(); self.sbc(); }
                 0xf2 => self.jam(),
-                0xf3 => {
-                    self.indirect_indexed_write();
-                    self.isb();
-                }
-                0xf4 => {
-                    self.zero_page_x();
-                    self.nop();
-                }
-                0xf5 => {
-                    self.zero_page_x();
-                    self.sbc();
-                }
-                0xf6 => {
-                    self.zero_page_x();
-                    self.inc();
-                }
-                0xf7 => {
-                    self.zero_page_x();
-                    self.isb();
-                }
+                0xf3 => { self.indirect_indexed_write(); self.isb(); }
+                0xf4 => { self.zero_page_x(); self.nop(); }
+                0xf5 => { self.zero_page_x(); self.sbc(); }
+                0xf6 => { self.zero_page_x(); self.inc(); }
+                0xf7 => { self.zero_page_x(); self.isb(); }
                 0xf8 => self.sed(),
-                0xf9 => {
-                    self.absolute_y_read();
-                    self.sbc();
-                }
+                0xf9 => { self.absolute_y_read(); self.sbc(); }
                 0xfa => self.nop_implied(),
-                0xfb => {
-                    self.absolute_y_write();
-                    self.isb();
-                }
-                0xfc => {
-                    self.absolute_x_read();
-                    self.nop();
-                }
-                0xfd => {
-                    self.absolute_x_read();
-                    self.sbc();
-                }
-                0xfe => {
-                    self.absolute_x_write();
-                    self.inc();
-                }
-                0xff => {
-                    self.absolute_x_write();
-                    self.isb();
-                }
-            }
+                0xfb => { self.absolute_y_write(); self.isb(); }
+                0xfc => { self.absolute_x_read(); self.nop(); }
+                0xfd => { self.absolute_x_read(); self.sbc(); }
+                0xfe => { self.absolute_x_write(); self.inc(); }
+                0xff => { self.absolute_x_write(); self.isb(); }
+            };
         }
     }
 
