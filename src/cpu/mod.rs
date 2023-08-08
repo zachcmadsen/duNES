@@ -381,21 +381,21 @@ impl<B: Bus> Cpu<B> {
                 0x0e => { self.absolute(); self.asl(); }
                 0x0f => { self.absolute(); self.slo(); }
                 0x10 => self.bpl(),
-                0x11 => { self.indirect_indexed_read(); self.ora(); }
+                0x11 => { self.indirect_indexed::<false>(); self.ora(); }
                 0x12 => self.jam(),
-                0x13 => { self.indirect_indexed_write(); self.slo(); }
+                0x13 => { self.indirect_indexed::<true>(); self.slo(); }
                 0x14 => { self.zero_page_x(); self.nop(); }
                 0x15 => { self.zero_page_x(); self.ora(); }
                 0x16 => { self.zero_page_x(); self.asl(); }
                 0x17 => { self.zero_page_x(); self.slo(); }
                 0x18 => self.clc(),
-                0x19 => { self.absolute_y_read(); self.ora(); }
+                0x19 => { self.absolute_y::<false>(); self.ora(); }
                 0x1a => self.nop_implied(),
-                0x1b => { self.absolute_y_write(); self.slo(); }
-                0x1c => { self.absolute_x_read(); self.nop(); }
-                0x1d => { self.absolute_x_read(); self.ora(); }
-                0x1e => { self.absolute_x_write(); self.asl(); }
-                0x1f => { self.absolute_x_write(); self.slo(); }
+                0x1b => { self.absolute_y::<true>(); self.slo(); }
+                0x1c => { self.absolute_x::<false>(); self.nop(); }
+                0x1d => { self.absolute_x::<false>(); self.ora(); }
+                0x1e => { self.absolute_x::<true>(); self.asl(); }
+                0x1f => { self.absolute_x::<true>(); self.slo(); }
                 0x20 => self.jsr(),
                 0x21 => { self.indexed_indirect(); self.and(); }
                 0x22 => self.jam(),
@@ -413,21 +413,21 @@ impl<B: Bus> Cpu<B> {
                 0x2e => { self.absolute(); self.rol(); }
                 0x2f => { self.absolute(); self.rla(); }
                 0x30 => self.bmi(),
-                0x31 => { self.indirect_indexed_read(); self.and(); }
+                0x31 => { self.indirect_indexed::<false>(); self.and(); }
                 0x32 => self.jam(),
-                0x33 => { self.indirect_indexed_write(); self.rla(); }
+                0x33 => { self.indirect_indexed::<true>(); self.rla(); }
                 0x34 => { self.zero_page_x(); self.nop(); }
                 0x35 => { self.zero_page_x(); self.and(); }
                 0x36 => { self.zero_page_x(); self.rol(); }
                 0x37 => { self.zero_page_x(); self.rla(); }
                 0x38 => self.sec(),
-                0x39 => { self.absolute_y_read(); self.and(); }
+                0x39 => { self.absolute_y::<false>(); self.and(); }
                 0x3a => self.nop_implied(),
-                0x3b => { self.absolute_y_write(); self.rla(); }
-                0x3c => { self.absolute_x_read(); self.nop(); }
-                0x3d => { self.absolute_x_read(); self.and(); }
-                0x3e => { self.absolute_x_write(); self.rol(); }
-                0x3f => { self.absolute_x_write(); self.rla(); }
+                0x3b => { self.absolute_y::<true>(); self.rla(); }
+                0x3c => { self.absolute_x::<false>(); self.nop(); }
+                0x3d => { self.absolute_x::<false>(); self.and(); }
+                0x3e => { self.absolute_x::<true>(); self.rol(); }
+                0x3f => { self.absolute_x::<true>(); self.rla(); }
                 0x40 => self.rti(),
                 0x41 => { self.indexed_indirect(); self.eor(); }
                 0x42 => self.jam(),
@@ -445,21 +445,21 @@ impl<B: Bus> Cpu<B> {
                 0x4e => { self.absolute(); self.lsr(); }
                 0x4f => { self.absolute(); self.sre(); }
                 0x50 => self.bvc(),
-                0x51 => { self.indirect_indexed_read(); self.eor(); }
+                0x51 => { self.indirect_indexed::<false>(); self.eor(); }
                 0x52 => self.jam(),
-                0x53 => { self.indirect_indexed_write(); self.sre(); }
+                0x53 => { self.indirect_indexed::<true>(); self.sre(); }
                 0x54 => { self.zero_page_x(); self.nop(); }
                 0x55 => { self.zero_page_x(); self.eor(); }
                 0x56 => { self.zero_page_x(); self.lsr(); }
                 0x57 => { self.zero_page_x(); self.sre(); }
                 0x58 => self.cli(),
-                0x59 => { self.absolute_y_read(); self.eor(); }
+                0x59 => { self.absolute_y::<false>(); self.eor(); }
                 0x5a => self.nop_implied(),
-                0x5b => { self.absolute_y_write(); self.sre(); }
-                0x5c => { self.absolute_x_read(); self.nop(); }
-                0x5d => { self.absolute_x_read(); self.eor(); }
-                0x5e => { self.absolute_x_write(); self.lsr(); }
-                0x5f => { self.absolute_x_write(); self.sre(); }
+                0x5b => { self.absolute_y::<true>(); self.sre(); }
+                0x5c => { self.absolute_x::<false>(); self.nop(); }
+                0x5d => { self.absolute_x::<false>(); self.eor(); }
+                0x5e => { self.absolute_x::<true>(); self.lsr(); }
+                0x5f => { self.absolute_x::<true>(); self.sre(); }
                 0x60 => self.rts(),
                 0x61 => { self.indexed_indirect(); self.adc(); }
                 0x62 => self.jam(),
@@ -477,21 +477,21 @@ impl<B: Bus> Cpu<B> {
                 0x6e => { self.absolute(); self.ror(); }
                 0x6f => { self.absolute(); self.rra(); }
                 0x70 => self.bvs(),
-                0x71 => { self.indirect_indexed_read(); self.adc(); }
+                0x71 => { self.indirect_indexed::<false>(); self.adc(); }
                 0x72 => self.jam(),
-                0x73 => { self.indirect_indexed_write(); self.rra(); }
+                0x73 => { self.indirect_indexed::<true>(); self.rra(); }
                 0x74 => { self.zero_page_x(); self.nop(); }
                 0x75 => { self.zero_page_x(); self.adc(); }
                 0x76 => { self.zero_page_x(); self.ror(); }
                 0x77 => { self.zero_page_x(); self.rra(); }
                 0x78 => self.sei(),
-                0x79 => { self.absolute_y_read(); self.adc(); }
+                0x79 => { self.absolute_y::<false>(); self.adc(); }
                 0x7a => self.nop_implied(),
-                0x7b => { self.absolute_y_write(); self.rra(); }
-                0x7c => { self.absolute_x_read(); self.nop(); }
-                0x7d => { self.absolute_x_read(); self.adc(); }
-                0x7e => { self.absolute_x_write(); self.ror(); }
-                0x7f => { self.absolute_x_write(); self.rra(); }
+                0x7b => { self.absolute_y::<true>(); self.rra(); }
+                0x7c => { self.absolute_x::<false>(); self.nop(); }
+                0x7d => { self.absolute_x::<false>(); self.adc(); }
+                0x7e => { self.absolute_x::<true>(); self.ror(); }
+                0x7f => { self.absolute_x::<true>(); self.rra(); }
                 0x80 => { self.immediate(); self.nop(); }
                 0x81 => { self.indexed_indirect(); self.sta(); }
                 0x82 => { self.immediate(); self.nop(); }
@@ -509,21 +509,21 @@ impl<B: Bus> Cpu<B> {
                 0x8e => { self.absolute(); self.stx(); }
                 0x8f => { self.absolute(); self.sax(); }
                 0x90 => self.bcc(),
-                0x91 => { self.indirect_indexed_write(); self.sta(); }
+                0x91 => { self.indirect_indexed::<true>(); self.sta(); }
                 0x92 => self.jam(),
-                0x93 => { self.absolute_y_write(); self.sha(); }
+                0x93 => { self.absolute_y::<true>(); self.sha(); }
                 0x94 => { self.zero_page_x(); self.sty(); }
                 0x95 => { self.zero_page_x(); self.sta(); }
                 0x96 => { self.zero_page_y(); self.stx(); }
                 0x97 => { self.zero_page_y(); self.sax(); }
                 0x98 => self.tya(),
-                0x99 => { self.absolute_y_write(); self.sta(); }
+                0x99 => { self.absolute_y::<true>(); self.sta(); }
                 0x9a => self.txs(),
-                0x9b => { self.absolute_y_write(); self.tas(); }
-                0x9c => { self.absolute_x_write(); self.shy(); }
-                0x9d => { self.absolute_x_write(); self.sta(); }
-                0x9e => { self.absolute_y_write(); self.shx(); }
-                0x9f => { self.indirect_indexed_write(); self.sha(); }
+                0x9b => { self.absolute_y::<true>(); self.tas(); }
+                0x9c => { self.absolute_x::<true>(); self.shy(); }
+                0x9d => { self.absolute_x::<true>(); self.sta(); }
+                0x9e => { self.absolute_y::<true>(); self.shx(); }
+                0x9f => { self.indirect_indexed::<true>(); self.sha(); }
                 0xa0 => { self.immediate(); self.ldy(); }
                 0xa1 => { self.indexed_indirect(); self.lda(); }
                 0xa2 => { self.immediate(); self.ldx(); }
@@ -535,27 +535,27 @@ impl<B: Bus> Cpu<B> {
                 0xa8 => self.tay(),
                 0xa9 => { self.immediate(); self.lda(); }
                 0xaa => self.tax(),
-                0xab => self.lxa(),
+                0xab => { self.immediate(); self.lxa() },
                 0xac => { self.absolute(); self.ldy(); }
                 0xad => { self.absolute(); self.lda(); }
                 0xae => { self.absolute(); self.ldx(); }
                 0xaf => { self.absolute(); self.lax(); }
                 0xb0 => self.bcs(),
-                0xb1 => { self.indirect_indexed_read(); self.lda(); }
+                0xb1 => { self.indirect_indexed::<false>(); self.lda(); }
                 0xb2 => self.jam(),
-                0xb3 => { self.indirect_indexed_read(); self.lax(); }
+                0xb3 => { self.indirect_indexed::<false>(); self.lax(); }
                 0xb4 => { self.zero_page_x(); self.ldy(); }
                 0xb5 => { self.zero_page_x(); self.lda(); }
                 0xb6 => { self.zero_page_y(); self.ldx(); }
                 0xb7 => { self.zero_page_y(); self.lax(); }
                 0xb8 => self.clv(),
-                0xb9 => { self.absolute_y_read(); self.lda(); }
+                0xb9 => { self.absolute_y::<false>(); self.lda(); }
                 0xba => self.tsx(),
-                0xbb => self.las(),
-                0xbc => { self.absolute_x_read(); self.ldy(); }
-                0xbd => { self.absolute_x_read(); self.lda(); }
-                0xbe => { self.absolute_y_read(); self.ldx(); }
-                0xbf => { self.absolute_y_read(); self.lax(); }
+                0xbb => { self.absolute_y::<false>(); self.las() },
+                0xbc => { self.absolute_x::<false>(); self.ldy(); }
+                0xbd => { self.absolute_x::<false>(); self.lda(); }
+                0xbe => { self.absolute_y::<false>(); self.ldx(); }
+                0xbf => { self.absolute_y::<false>(); self.lax(); }
                 0xc0 => { self.immediate(); self.cpy(); }
                 0xc1 => { self.indexed_indirect(); self.cmp(); }
                 0xc2 => { self.immediate(); self.nop(); }
@@ -567,27 +567,27 @@ impl<B: Bus> Cpu<B> {
                 0xc8 => self.iny(),
                 0xc9 => { self.immediate(); self.cmp(); }
                 0xca => self.dex(),
-                0xcb => self.sbx(),
+                0xcb => { self.immediate(); self.sbx() },
                 0xcc => { self.absolute(); self.cpy(); }
                 0xcd => { self.absolute(); self.cmp(); }
                 0xce => { self.absolute(); self.dec(); }
                 0xcf => { self.absolute(); self.dcp(); }
                 0xd0 => self.bne(),
-                0xd1 => { self.indirect_indexed_read(); self.cmp(); }
+                0xd1 => { self.indirect_indexed::<false>(); self.cmp(); }
                 0xd2 => self.jam(),
-                0xd3 => { self.indirect_indexed_write(); self.dcp(); }
+                0xd3 => { self.indirect_indexed::<true>(); self.dcp(); }
                 0xd4 => { self.zero_page_x(); self.nop(); }
                 0xd5 => { self.zero_page_x(); self.cmp(); }
                 0xd6 => { self.zero_page_x(); self.dec(); }
                 0xd7 => { self.zero_page_x(); self.dcp(); }
                 0xd8 => self.cld(),
-                0xd9 => { self.absolute_y_read(); self.cmp(); }
+                0xd9 => { self.absolute_y::<false>(); self.cmp(); }
                 0xda => self.nop_implied(),
-                0xdb => { self.absolute_y_write(); self.dcp(); }
-                0xdc => { self.absolute_x_read(); self.nop(); }
-                0xdd => { self.absolute_x_read(); self.cmp(); }
-                0xde => { self.absolute_x_write(); self.dec(); }
-                0xdf => { self.absolute_x_write(); self.dcp(); }
+                0xdb => { self.absolute_y::<true>(); self.dcp(); }
+                0xdc => { self.absolute_x::<false>(); self.nop(); }
+                0xdd => { self.absolute_x::<false>(); self.cmp(); }
+                0xde => { self.absolute_x::<true>(); self.dec(); }
+                0xdf => { self.absolute_x::<true>(); self.dcp(); }
                 0xe0 => { self.immediate(); self.cpx(); }
                 0xe1 => { self.indexed_indirect(); self.sbc(); }
                 0xe2 => { self.immediate(); self.nop(); }
@@ -605,21 +605,21 @@ impl<B: Bus> Cpu<B> {
                 0xee => { self.absolute(); self.inc(); }
                 0xef => { self.absolute(); self.isb(); }
                 0xf0 => self.beq(),
-                0xf1 => { self.indirect_indexed_read(); self.sbc(); }
+                0xf1 => { self.indirect_indexed::<false>(); self.sbc(); }
                 0xf2 => self.jam(),
-                0xf3 => { self.indirect_indexed_write(); self.isb(); }
+                0xf3 => { self.indirect_indexed::<true>(); self.isb(); }
                 0xf4 => { self.zero_page_x(); self.nop(); }
                 0xf5 => { self.zero_page_x(); self.sbc(); }
                 0xf6 => { self.zero_page_x(); self.inc(); }
                 0xf7 => { self.zero_page_x(); self.isb(); }
                 0xf8 => self.sed(),
-                0xf9 => { self.absolute_y_read(); self.sbc(); }
+                0xf9 => { self.absolute_y::<false>(); self.sbc(); }
                 0xfa => self.nop_implied(),
-                0xfb => { self.absolute_y_write(); self.isb(); }
-                0xfc => { self.absolute_x_read(); self.nop(); }
-                0xfd => { self.absolute_x_read(); self.sbc(); }
-                0xfe => { self.absolute_x_write(); self.inc(); }
-                0xff => { self.absolute_x_write(); self.isb(); }
+                0xfb => { self.absolute_y::<true>(); self.isb(); }
+                0xfc => { self.absolute_x::<false>(); self.nop(); }
+                0xfd => { self.absolute_x::<false>(); self.sbc(); }
+                0xfe => { self.absolute_x::<true>(); self.inc(); }
+                0xff => { self.absolute_x::<true>(); self.isb(); }
             };
         }
     }
@@ -808,7 +808,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     #[inline]
-    fn absolute_x_read(&mut self) {
+    fn absolute_x<const WRITE: bool>(&mut self) {
         let (low, page_cross) = self.consume_byte().overflowing_add(self.x);
         let high = self.consume_byte();
         self.addr =
@@ -816,23 +816,13 @@ impl<B: Bus> Cpu<B> {
 
         // If the effective address is invalid, i.e., it crossed a page, then
         // it takes an extra read cycle to fix it.
-        if page_cross {
+        if WRITE || page_cross {
             self.read_byte((high as u16) << 8 | low as u16);
         }
     }
 
     #[inline]
-    fn absolute_x_write(&mut self) {
-        let (low, page_cross) = self.consume_byte().overflowing_add(self.x);
-        let high = self.consume_byte();
-        self.addr =
-            (high.wrapping_add(page_cross as u8) as u16) << 8 | (low as u16);
-
-        self.read_byte((high as u16) << 8 | low as u16);
-    }
-
-    #[inline]
-    fn absolute_y_read(&mut self) {
+    fn absolute_y<const WRITE: bool>(&mut self) {
         let (low, page_cross) = self.consume_byte().overflowing_add(self.y);
         let high = self.consume_byte();
         self.addr =
@@ -840,19 +830,9 @@ impl<B: Bus> Cpu<B> {
 
         // If the effective address is invalid, i.e., it crossed a page, then
         // it takes an extra read cycle to fix it.
-        if page_cross {
+        if WRITE || page_cross {
             self.read_byte((high as u16) << 8 | low as u16);
         }
-    }
-
-    #[inline]
-    fn absolute_y_write(&mut self) {
-        let (low, page_cross) = self.consume_byte().overflowing_add(self.y);
-        let high = self.consume_byte();
-        self.addr =
-            (high.wrapping_add(page_cross as u8) as u16) << 8 | (low as u16);
-
-        self.read_byte((high as u16) << 8 | low as u16);
     }
 
     #[inline]
@@ -869,7 +849,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     #[inline]
-    fn indirect_indexed_read(&mut self) {
+    fn indirect_indexed<const WRITE: bool>(&mut self) {
         let ptr = self.consume_byte();
         let (low, did_cross_page) =
             self.read_byte(ptr as u16).overflowing_add(self.y);
@@ -879,21 +859,9 @@ impl<B: Bus> Cpu<B> {
 
         // If the effective address is invalid, i.e., it crossed a page, then
         // it takes an extra read cycle to fix it.
-        if did_cross_page {
+        if WRITE || did_cross_page {
             self.read_byte((high as u16) << 8 | low as u16);
         }
-    }
-
-    #[inline]
-    fn indirect_indexed_write(&mut self) {
-        let ptr = self.consume_byte();
-        let (low, did_cross_page) =
-            self.read_byte(ptr as u16).overflowing_add(self.y);
-        let high = self.read_byte(ptr.wrapping_add(1) as u16);
-        self.addr = (high.wrapping_add(did_cross_page as u8) as u16) << 8
-            | (low as u16);
-
-        self.read_byte((high as u16) << 8 | low as u16);
     }
 
     #[inline]
@@ -1180,7 +1148,6 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn las(&mut self) {
-        self.absolute_y_read();
         self.a = self.read_byte(self.addr) & self.s;
         self.x = self.a;
         self.s = self.a;
@@ -1247,7 +1214,6 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn lxa(&mut self) {
-        self.immediate();
         // This instruction should perform a bitwise AND between a constant and
         // the operand before storing the result. The constant is unreliable
         // though. To remove uncertainty, we have the constant always be 0xff,
@@ -1410,7 +1376,6 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn sbx(&mut self) {
-        self.immediate();
         let value = self.read_byte(self.addr);
         let carry = (self.a & self.x) >= value;
         self.x = (self.a & self.x).wrapping_sub(value);
