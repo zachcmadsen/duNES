@@ -890,8 +890,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn adc(&mut self) {
-        let addr = self.addr;
-        let value = self.read_byte(addr);
+        let value = self.read_byte(self.addr);
         self.add(value);
     }
 
@@ -938,12 +937,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn asl(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         let carry = value & 0x80 != 0;
         value <<= 1;
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
 
         self.p.set_c(carry);
         self.p.set_z(value == 0);
@@ -973,8 +971,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn bit(&mut self) {
-        let addr = self.addr;
-        let value = self.read_byte(addr);
+        let value = self.read_byte(self.addr);
 
         self.p.set_z(self.a & value == 0);
         self.p.set_v(Status::from(value).v());
@@ -1031,38 +1028,33 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn cmp(&mut self) {
-        let addr = self.addr;
-        let value = self.read_byte(addr);
+        let value = self.read_byte(self.addr);
         self.compare(self.a, value);
     }
 
     fn cpx(&mut self) {
-        let addr = self.addr;
-        let value = self.read_byte(addr);
+        let value = self.read_byte(self.addr);
         self.compare(self.x, value);
     }
 
     fn cpy(&mut self) {
-        let addr = self.addr;
-        let value = self.read_byte(addr);
+        let value = self.read_byte(self.addr);
         self.compare(self.y, value);
     }
 
     fn dcp(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         value = value.wrapping_sub(1);
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
         self.compare(self.a, value);
     }
 
     fn dec(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         value = value.wrapping_sub(1);
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
 
         self.p.set_z(value == 0);
         self.p.set_n(value & 0x80 != 0);
@@ -1085,24 +1077,21 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn eor(&mut self) {
-        let addr = self.addr;
-        self.a ^= self.read_byte(addr);
+        self.a ^= self.read_byte(self.addr);
 
         self.p.set_z(self.a == 0);
         self.p.set_n(self.a & 0x80 != 0);
     }
 
     fn jmp(&mut self) {
-        let addr = self.addr;
-        self.pc = addr;
+        self.pc = self.addr;
     }
 
     fn inc(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         value = value.wrapping_add(1);
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
 
         self.p.set_z(value == 0);
         self.p.set_n(value & 0x80 != 0);
@@ -1125,11 +1114,10 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn isb(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         value = value.wrapping_add(1);
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
         self.add(value ^ 0xff);
     }
 
@@ -1157,8 +1145,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn lax(&mut self) {
-        let addr = self.addr;
-        let value = self.read_byte(addr);
+        let value = self.read_byte(self.addr);
         self.a = value;
         self.x = value;
 
@@ -1167,36 +1154,32 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn lda(&mut self) {
-        let addr = self.addr;
-        self.a = self.read_byte(addr);
+        self.a = self.read_byte(self.addr);
 
         self.p.set_z(self.a == 0);
         self.p.set_n(self.a & 0x80 != 0);
     }
 
     fn ldx(&mut self) {
-        let addr = self.addr;
-        self.x = self.read_byte(addr);
+        self.x = self.read_byte(self.addr);
 
         self.p.set_z(self.x == 0);
         self.p.set_n(self.x & 0x80 != 0);
     }
 
     fn ldy(&mut self) {
-        let addr = self.addr;
-        self.y = self.read_byte(addr);
+        self.y = self.read_byte(self.addr);
 
         self.p.set_z(self.y == 0);
         self.p.set_n(self.y & 0x80 != 0);
     }
 
     fn lsr(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         let carry = value & 0x01 != 0;
         value >>= 1;
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
 
         self.p.set_c(carry);
         self.p.set_z(value == 0);
@@ -1226,8 +1209,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn nop(&mut self) {
-        let addr = self.addr;
-        self.read_byte(addr);
+        self.read_byte(self.addr);
     }
 
     fn nop_implied(&mut self) {
@@ -1235,8 +1217,7 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn ora(&mut self) {
-        let addr = self.addr;
-        self.a |= self.read_byte(addr);
+        self.a |= self.read_byte(self.addr);
 
         self.p.set_z(self.a == 0);
         self.p.set_n(self.a & 0x80 != 0);
@@ -1270,12 +1251,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn rla(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         let carry = value & 0x80 != 0;
         value = ((value << 1) & 0xfe) | self.p.c() as u8;
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
         self.a &= value;
 
         self.p.set_c(carry);
@@ -1284,12 +1264,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn rol(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         let carry = value & 0x80 != 0;
         value = ((value << 1) & 0xfe) | self.p.c() as u8;
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
 
         self.p.set_c(carry);
         self.p.set_z(value == 0);
@@ -1307,12 +1286,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn ror(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         let carry = value & 0x01 != 0;
         value = (self.p.c() as u8) << 7 | ((value >> 1) & 0x7f);
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
 
         self.p.set_c(carry);
         self.p.set_z(value == 0);
@@ -1330,12 +1308,11 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn rra(&mut self) {
-        let addr = self.addr;
-        let mut value = self.read_byte(addr);
-        self.write_byte(addr, value);
+        let mut value = self.read_byte(self.addr);
+        self.write_byte(self.addr, value);
         let carry = value & 0x01 != 0;
         value = (self.p.c() as u8) << 7 | ((value >> 1) & 0x7f);
-        self.write_byte(addr, value);
+        self.write_byte(self.addr, value);
         self.p.set_c(carry);
         self.add(value);
     }
@@ -1362,16 +1339,14 @@ impl<B: Bus> Cpu<B> {
     }
 
     fn sax(&mut self) {
-        let addr = self.addr;
-        self.write_byte(addr, self.a & self.x);
+        self.write_byte(self.addr, self.a & self.x);
     }
 
     fn sbc(&mut self) {
-        let addr = self.addr;
         // If we reformulate subtraction as addition, then we can use the same
         // logic for ADC and SBC. All we need to do is make our value from
         // memory negative, i.e., invert it.
-        let value = self.read_byte(addr) ^ 0xff;
+        let value = self.read_byte(self.addr) ^ 0xff;
         self.add(value);
     }
 
