@@ -10,9 +10,5 @@ proc-bitfield = "0.2.2"
 [dev-dependencies]
 bincode = "2.0.0-rc.3"
 
-[[bench]]
-name = "cpu"
-harness = false
-
 [profile.release]
 lto = "thin"
