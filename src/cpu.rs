@@ -723,7 +723,8 @@ impl<B: Bus> Cpu<B> {
         // OAM DMA should take an extra cycle if we're on an odd CPU
         // cycle.
         if self.cycles % 2 == 1 {
-            // TODO: Find out what the actual contents of the bus is.
+            // TODO: Find out what the actual contents of the bus is on this
+            // cycle.
             self.read_byte(page as u16 * 0x100);
         }
 
