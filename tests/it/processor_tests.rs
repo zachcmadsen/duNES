@@ -4,9 +4,6 @@ use std::vec::IntoIter;
 use dunes::{Bus, Cpu, Status};
 use serde::Deserialize;
 
-const JAM_OPCODES: [&str; 12] = [
-    "02", "12", "22", "32", "42", "52", "62", "72", "92", "b2", "d2", "f2",
-];
 // The tests for NOP with absolute addressing might have the wrong number of
 // cycles.
 const NOP_ABS_OPCODES: [&str; 7] = ["0c", "1c", "3c", "5c", "7c", "dc", "fc"];
@@ -32,7 +29,7 @@ struct CpuState {
 }
 
 struct ProcessorTestsBus {
-    memory: [u8; 0x10000],
+    memory: Box<[u8; 0x10000]>,
     cycles: IntoIter<(u16, u8, String)>,
 }
 
@@ -59,8 +56,7 @@ impl Bus for ProcessorTestsBus {
 }
 
 fn run(opcode: &str) {
-    if JAM_OPCODES.contains(&opcode)
-        || NOP_ABS_OPCODES.contains(&opcode)
+    if NOP_ABS_OPCODES.contains(&opcode)
         || UNSTABLE_OPCODES.contains(&opcode)
         || MAYBE_WRONG_OPCODES.contains(&opcode)
     {
@@ -73,7 +69,7 @@ fn run(opcode: &str) {
     let tests: Vec<Test> = serde_json::from_str(&contents).unwrap();
 
     let bus = ProcessorTestsBus {
-        memory: [0u8; 0x10000],
+        memory: vec![0; 0x10000].try_into().unwrap(),
         cycles: vec![].into_iter(),
     };
     let mut cpu = Cpu::new(bus);
@@ -109,6 +105,8 @@ fn run(opcode: &str) {
     }
 }
 
+// The following opcodes aren't tested: JAM
+
 #[test]
 fn opcode_00() {
     run("00");
@@ -117,11 +115,6 @@ fn opcode_00() {
 #[test]
 fn opcode_01() {
     run("01");
-}
-
-#[test]
-fn opcode_02() {
-    run("02");
 }
 
 #[test]
@@ -200,11 +193,6 @@ fn opcode_11() {
 }
 
 #[test]
-fn opcode_12() {
-    run("12");
-}
-
-#[test]
 fn opcode_13() {
     run("13");
 }
@@ -277,11 +265,6 @@ fn opcode_20() {
 #[test]
 fn opcode_21() {
     run("21");
-}
-
-#[test]
-fn opcode_22() {
-    run("22");
 }
 
 #[test]
@@ -360,11 +343,6 @@ fn opcode_31() {
 }
 
 #[test]
-fn opcode_32() {
-    run("32");
-}
-
-#[test]
 fn opcode_33() {
     run("33");
 }
@@ -437,11 +415,6 @@ fn opcode_40() {
 #[test]
 fn opcode_41() {
     run("41");
-}
-
-#[test]
-fn opcode_42() {
-    run("42");
 }
 
 #[test]
@@ -520,11 +493,6 @@ fn opcode_51() {
 }
 
 #[test]
-fn opcode_52() {
-    run("52");
-}
-
-#[test]
 fn opcode_53() {
     run("53");
 }
@@ -600,11 +568,6 @@ fn opcode_61() {
 }
 
 #[test]
-fn opcode_62() {
-    run("62");
-}
-
-#[test]
 fn opcode_63() {
     run("63");
 }
@@ -677,11 +640,6 @@ fn opcode_70() {
 #[test]
 fn opcode_71() {
     run("71");
-}
-
-#[test]
-fn opcode_72() {
-    run("72");
 }
 
 #[test]
@@ -840,11 +798,6 @@ fn opcode_91() {
 }
 
 #[test]
-fn opcode_92() {
-    run("92");
-}
-
-#[test]
 fn opcode_93() {
     run("93");
 }
@@ -997,11 +950,6 @@ fn opcode_b0() {
 #[test]
 fn opcode_b1() {
     run("b1");
-}
-
-#[test]
-fn opcode_b2() {
-    run("b2");
 }
 
 #[test]
@@ -1160,11 +1108,6 @@ fn opcode_d1() {
 }
 
 #[test]
-fn opcode_d2() {
-    run("d2");
-}
-
-#[test]
 fn opcode_d3() {
     run("d3");
 }
@@ -1317,11 +1260,6 @@ fn opcode_f0() {
 #[test]
 fn opcode_f1() {
     run("f1");
-}
-
-#[test]
-fn opcode_f2() {
-    run("f2");
 }
 
 #[test]
