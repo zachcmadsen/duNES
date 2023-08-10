@@ -1,4 +1,4 @@
 mod instr;
 mod klaus;
 mod nestest;
-mod processor_test;
+mod processor_tests;
