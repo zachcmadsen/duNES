@@ -2,7 +2,7 @@ use std::fs;
 
 use dunes::{Cpu, DuNesBus, NromCartridge};
 
-fn run_instr(filepath: &str) {
+fn run(filepath: &str) {
     const STATUS: u16 = 0x6000;
     const RUNNING: u8 = 0x80;
     const OUTPUT: u16 = 0x6004;
@@ -39,80 +39,80 @@ fn run_instr(filepath: &str) {
 
 #[test]
 fn basics() {
-    run_instr("roms/instr_test-v5/01-basics.nes");
+    run("roms/instr_test-v5/01-basics.nes");
 }
 
 #[test]
 fn implied() {
-    run_instr("roms/instr_test-v5/02-implied.nes");
+    run("roms/instr_test-v5/02-implied.nes");
 }
 
 #[test]
 fn immediate() {
-    run_instr("roms/instr_test-v5/03-immediate.nes");
+    run("roms/instr_test-v5/03-immediate.nes");
 }
 
 #[test]
 fn zero_page() {
-    run_instr("roms/instr_test-v5/04-zero_page.nes");
+    run("roms/instr_test-v5/04-zero_page.nes");
 }
 
 #[test]
 fn zp_xy() {
-    run_instr("roms/instr_test-v5/05-zp_xy.nes");
+    run("roms/instr_test-v5/05-zp_xy.nes");
 }
 
 #[test]
 fn absolute() {
-    run_instr("roms/instr_test-v5/06-absolute.nes");
+    run("roms/instr_test-v5/06-absolute.nes");
 }
 
 #[test]
 fn abs_xy() {
-    run_instr("roms/instr_test-v5/07-abs_xy.nes");
+    run("roms/instr_test-v5/07-abs_xy.nes");
 }
 
 #[test]
 fn ind_x() {
-    run_instr("roms/instr_test-v5/08-ind_x.nes");
+    run("roms/instr_test-v5/08-ind_x.nes");
 }
 
 #[test]
 fn ind_y() {
-    run_instr("roms/instr_test-v5/09-ind_y.nes");
+    run("roms/instr_test-v5/09-ind_y.nes");
 }
 
 #[test]
 fn branches() {
-    run_instr("roms/instr_test-v5/10-branches.nes");
+    run("roms/instr_test-v5/10-branches.nes");
 }
 
 #[test]
 fn stack() {
-    run_instr("roms/instr_test-v5/11-stack.nes");
+    run("roms/instr_test-v5/11-stack.nes");
 }
 
 #[test]
 fn jmp_jsr() {
-    run_instr("roms/instr_test-v5/12-jmp_jsr.nes");
+    run("roms/instr_test-v5/12-jmp_jsr.nes");
 }
 
 #[test]
 fn rts() {
-    run_instr("roms/instr_test-v5/13-rts.nes");
+    run("roms/instr_test-v5/13-rts.nes");
 }
 
 #[test]
 fn rti() {
-    run_instr("roms/instr_test-v5/14-rti.nes");
+    run("roms/instr_test-v5/14-rti.nes");
 }
 
 #[test]
 fn brk() {
-    run_instr("roms/instr_test-v5/15-brk.nes");
+    run("roms/instr_test-v5/15-brk.nes");
 }
 
 #[test]
 fn special() {
-    run_instr("roms/instr_test-v5/16-special.nes");
+    run("roms/instr_test-v5/16-special.nes");
 }

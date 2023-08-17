@@ -42,7 +42,7 @@ impl Bus for KlausBus {
     }
 }
 
-fn run_klaus(filepath: &str, success_address: u16) {
+fn run(filepath: &str, success_address: u16) {
     let rom = fs::read(filepath)
         .unwrap_or_else(|_| panic!("{filepath} should exist"));
     let mut cpu = Cpu::new(KlausBus::new(&rom));
@@ -67,10 +67,10 @@ fn run_klaus(filepath: &str, success_address: u16) {
 }
 
 #[test]
-fn klaus_functional() {
-    run_klaus("roms/klaus/6502_functional_test.bin", FUNCTIONAL_SUCCESS);
+fn functional() {
+    run("roms/klaus/6502_functional_test.bin", FUNCTIONAL_SUCCESS);
 }
 #[test]
-fn klaus_interrupt() {
-    run_klaus("roms/klaus/6502_interrupt_test.bin", INTERRUPT_SUCCESS);
+fn interrupt() {
+    run("roms/klaus/6502_interrupt_test.bin", INTERRUPT_SUCCESS);
 }
