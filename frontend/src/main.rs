@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use dunes::DuNes;
+use frontend::DuNes;
 
 fn main() {
     let mut args = env::args();

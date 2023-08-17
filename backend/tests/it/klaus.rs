@@ -1,6 +1,6 @@
 use std::fs;
 
-use dunes::{Bus, Cpu};
+use backend::{Bus, Cpu};
 
 const ZERO_PAGE_START: usize = 0xa;
 const CODE_SEGMENT_START: u16 = 0x400;
@@ -24,11 +24,11 @@ impl KlausBus {
 }
 
 impl Bus for KlausBus {
-    fn read(&mut self, pins: &mut dunes::Pins) {
+    fn read(&mut self, pins: &mut backend::Pins) {
         pins.data = self.memory[pins.address as usize];
     }
 
-    fn write(&mut self, pins: &mut dunes::Pins) {
+    fn write(&mut self, pins: &mut backend::Pins) {
         if pins.address == INTERRUPT_FEEDBACK_REGISTER {
             let old_data = self.memory[pins.address as usize];
             let prev_nmi = old_data & NMI_MASK != 0;
@@ -68,9 +68,9 @@ fn run(filepath: &str, success_address: u16) {
 
 #[test]
 fn functional() {
-    run("roms/klaus/6502_functional_test.bin", FUNCTIONAL_SUCCESS);
+    run("../roms/klaus/6502_functional_test.bin", FUNCTIONAL_SUCCESS);
 }
 #[test]
 fn interrupt() {
-    run("roms/klaus/6502_interrupt_test.bin", INTERRUPT_SUCCESS);
+    run("../roms/klaus/6502_interrupt_test.bin", INTERRUPT_SUCCESS);
 }

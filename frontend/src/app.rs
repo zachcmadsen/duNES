@@ -6,7 +6,7 @@ use eframe::{
     App, CreationContext,
 };
 
-use crate::{Cpu, DuNesBus, NromCartridge};
+use backend::{Cpu, DuNesBus, NromCartridge};
 
 /// The width of the pattern table image in pixels.
 const PATTERN_TABLE_WIDTH: usize = 128;

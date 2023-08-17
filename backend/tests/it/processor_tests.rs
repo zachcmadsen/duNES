@@ -1,7 +1,7 @@
 use std::fs;
 use std::vec::IntoIter;
 
-use dunes::{Bus, Cpu, Status};
+use backend::{Bus, Cpu, Status};
 use serde::Deserialize;
 
 // The tests for NOP with absolute addressing might have the wrong number of
@@ -34,7 +34,7 @@ struct ProcessorTestsBus {
 }
 
 impl Bus for ProcessorTestsBus {
-    fn read(&mut self, pins: &mut dunes::Pins) {
+    fn read(&mut self, pins: &mut backend::Pins) {
         pins.data = self.memory[pins.address as usize];
 
         if let Some((addr, data, kind)) = self.cycles.next() {
@@ -44,7 +44,7 @@ impl Bus for ProcessorTestsBus {
         }
     }
 
-    fn write(&mut self, pins: &mut dunes::Pins) {
+    fn write(&mut self, pins: &mut backend::Pins) {
         if let Some((addr, data, kind)) = self.cycles.next() {
             assert_eq!(addr, pins.address);
             assert_eq!(data, pins.data);
@@ -64,7 +64,7 @@ fn run(opcode: &str) {
     }
 
     let contents =
-        fs::read_to_string(format!("roms/processor_tests/{opcode}.json"))
+        fs::read_to_string(format!("../roms/processor_tests/{opcode}.json"))
             .unwrap();
     let tests: Vec<Test> = serde_json::from_str(&contents).unwrap();
 
