@@ -932,8 +932,7 @@ impl<B: Bus> Cpu<B> {
         // TODO: Explain how the carry and overflow flag are set.
         self.p.set_c(self.a & 0x40 != 0);
         self.p.set_z(self.a == 0);
-        self.p
-            .set_v(((self.p.c() as u8) ^ ((self.a >> 5) & 0x01)) != 0);
+        self.p.set_v(((self.p.c() as u8) ^ ((self.a >> 5) & 0x01)) != 0);
         self.p.set_n(self.a & 0x80 != 0);
     }
 
@@ -1242,9 +1241,8 @@ impl<B: Bus> Cpu<B> {
     fn plp(&mut self) {
         self.read_byte(self.pc);
         self.peek();
-        self.p = Status::from(self.pop())
-            .with_b(self.p.b())
-            .with_u(self.p.u());
+        self.p =
+            Status::from(self.pop()).with_b(self.p.b()).with_u(self.p.u());
     }
 
     fn rla(&mut self) {
@@ -1317,9 +1315,8 @@ impl<B: Bus> Cpu<B> {
     fn rti(&mut self) {
         self.read_byte(self.pc);
         self.peek();
-        self.p = Status::from(self.pop())
-            .with_b(self.p.b())
-            .with_u(self.p.u());
+        self.p =
+            Status::from(self.pop()).with_b(self.p.b()).with_u(self.p.u());
         let pcl = self.pop();
         let pch = self.pop();
         self.pc = (pch as u16) << 8 | pcl as u16;

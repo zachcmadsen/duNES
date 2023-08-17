@@ -28,15 +28,7 @@ fn nestest() {
                 let sp = u8::from_str_radix(&line[71..73], 16).unwrap();
                 let cycles = line[90..].parse().unwrap();
 
-                NestestLog {
-                    pc,
-                    a,
-                    x,
-                    y,
-                    p,
-                    sp,
-                    cycles,
-                }
+                NestestLog { pc, a, x, y, p, sp, cycles }
             })
             .collect();
 

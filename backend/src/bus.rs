@@ -69,10 +69,9 @@ impl Bus for DuNesBus {
                 self.controller_state = self.controller;
             }
             0x4015..=0x401f => (),
-            0x4020..=0xffff => self
-                .cartridge
-                .borrow_mut()
-                .write_prg(pins.address, pins.data),
+            0x4020..=0xffff => {
+                self.cartridge.borrow_mut().write_prg(pins.address, pins.data)
+            }
         }
 
         self.ppu.tick();

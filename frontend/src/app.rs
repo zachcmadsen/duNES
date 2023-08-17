@@ -115,46 +115,22 @@ impl App for DuNes {
         let container = CentralPanel::default().show(ctx, |ui| {
             self.cpu.bus.controller = 0;
 
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::J)) {
-                0x80
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::K)) {
-                0x40
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::U)) {
-                0x20
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::Y)) {
-                0x10
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::W)) {
-                0x08
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::S)) {
-                0x04
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::A)) {
-                0x02
-            } else {
-                0
-            };
-            self.cpu.bus.controller |= if ui.input(|i| i.key_down(Key::D)) {
-                0x01
-            } else {
-                0
-            };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::J)) { 0x80 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::K)) { 0x40 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::U)) { 0x20 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::Y)) { 0x10 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::W)) { 0x08 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::S)) { 0x04 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::A)) { 0x02 } else { 0 };
+            self.cpu.bus.controller |=
+                if ui.input(|i| i.key_down(Key::D)) { 0x01 } else { 0 };
 
             if ui.input(|i| i.key_pressed(Key::P)) {
                 self.paused = !self.paused;
@@ -218,53 +194,41 @@ impl DuNes {
     }
 
     fn draw_registers(&self, ui: &mut Ui) {
-        CollapsingHeader::new("Registers")
-            .default_open(true)
-            .show(ui, |ui| {
-                ui.label(
-                    RichText::new(format!(
-                        "A: 0x{a:02X} ({a})",
-                        a = self.cpu.a,
-                    ))
+        CollapsingHeader::new("Registers").default_open(true).show(ui, |ui| {
+            ui.label(
+                RichText::new(format!("A: 0x{a:02X} ({a})", a = self.cpu.a,))
                     .monospace(),
-                );
-                ui.label(
-                    RichText::new(format!(
-                        "X: 0x{x:02X} ({x})",
-                        x = self.cpu.x
-                    ))
+            );
+            ui.label(
+                RichText::new(format!("X: 0x{x:02X} ({x})", x = self.cpu.x))
                     .monospace(),
-                );
-                ui.label(
-                    RichText::new(format!(
-                        "Y: 0x{y:02X} ({y})",
-                        y = self.cpu.y
-                    ))
+            );
+            ui.label(
+                RichText::new(format!("Y: 0x{y:02X} ({y})", y = self.cpu.y))
                     .monospace(),
-                );
-                ui.label(
-                    RichText::new(format!("PC: 0x{:04X}", self.cpu.pc))
-                        .monospace(),
-                );
-                ui.label(
-                    RichText::new(format!("SP: 0x{:02X}", self.cpu.s))
-                        .monospace(),
-                );
-                // TODO: Show which flags are on/off.
-                ui.label(
-                    RichText::new(format!(
-                        "Status: 0x{:02X}",
-                        u8::from(self.cpu.p),
-                    ))
+            );
+            ui.label(
+                RichText::new(format!("PC: 0x{:04X}", self.cpu.pc))
                     .monospace(),
-                );
-            });
+            );
+            ui.label(
+                RichText::new(format!("SP: 0x{:02X}", self.cpu.s)).monospace(),
+            );
+            // TODO: Show which flags are on/off.
+            ui.label(
+                RichText::new(format!(
+                    "Status: 0x{:02X}",
+                    u8::from(self.cpu.p),
+                ))
+                .monospace(),
+            );
+        });
     }
 
     fn draw_disassembly(&self, ui: &mut Ui) {
-        CollapsingHeader::new("Disassembly")
-            .default_open(true)
-            .show(ui, |ui| {
+        CollapsingHeader::new("Disassembly").default_open(true).show(
+            ui,
+            |ui| {
                 let disasm = self.cpu.disassemble();
                 let mut disasm_iter = disasm.iter();
 
@@ -275,36 +239,35 @@ impl DuNes {
                 for instruction in disasm_iter {
                     ui.label(RichText::new(instruction).monospace());
                 }
-            });
+            },
+        );
     }
 
     fn draw_pattern_table(&mut self, ui: &mut Ui) {
         let image = self.generate_pattern_table_image();
-        self.pattern_table_texture
-            .set(image, TextureOptions::NEAREST);
+        self.pattern_table_texture.set(image, TextureOptions::NEAREST);
 
-        CollapsingHeader::new("Pattern table")
-            .default_open(true)
-            .show(ui, |ui| {
+        CollapsingHeader::new("Pattern table").default_open(true).show(
+            ui,
+            |ui| {
                 ui.image(
                     self.pattern_table_texture.id(),
                     self.pattern_table_texture.size_vec2() * 2.0,
                 );
-            });
+            },
+        );
     }
 
     fn draw_screen(&mut self, ui: &mut Ui) {
         let image = self.generate_screen_image();
         self.screen_texture.set(image, TextureOptions::NEAREST);
 
-        CollapsingHeader::new("Screen")
-            .default_open(true)
-            .show(ui, |ui| {
-                ui.image(
-                    self.screen_texture.id(),
-                    self.screen_texture.size_vec2() * 2.0,
-                );
-            });
+        CollapsingHeader::new("Screen").default_open(true).show(ui, |ui| {
+            ui.image(
+                self.screen_texture.id(),
+                self.screen_texture.size_vec2() * 2.0,
+            );
+        });
     }
 
     fn generate_pattern_table_image(&self) -> ColorImage {
@@ -363,10 +326,7 @@ impl DuNes {
             })
             .collect();
 
-        ColorImage {
-            size: [SCREEN_WIDTH, SCREEN_HEIGHT],
-            pixels,
-        }
+        ColorImage { size: [SCREEN_WIDTH, SCREEN_HEIGHT], pixels }
     }
 
     fn get_color(&self, pixel_value: u8, palette: u8) -> Color32 {
