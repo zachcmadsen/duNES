@@ -84,7 +84,6 @@ fn run(opcode: &str) {
         cpu.y = test.initial.y;
         cpu.p = Status::from(test.initial.p);
 
-        cpu.bus.memory.fill(0);
         for (addr, data) in test.initial.ram {
             cpu.bus.memory[addr as usize] = data;
         }

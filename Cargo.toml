@@ -3,7 +3,3 @@ members = [
     "backend",
     "frontend",
 ]
-
-[profile.test.package.backend]
-# The tests are too slow without some optimizations.
-opt-level = 2
