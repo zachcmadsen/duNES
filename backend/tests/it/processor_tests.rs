@@ -1,8 +1,9 @@
 use std::fs;
-use std::vec::IntoIter;
+use std::slice::Iter;
 
 use backend::{Bus, Cpu, Status};
-use serde::Deserialize;
+use rkyv::string::ArchivedString;
+use rkyv::Archive;
 
 // The tests for NOP with absolute addressing might have the wrong number of
 // cycles.
@@ -10,14 +11,14 @@ const NOP_ABS_OPCODES: [&str; 7] = ["0c", "1c", "3c", "5c", "7c", "dc", "fc"];
 const UNSTABLE_OPCODES: [&str; 7] = ["8b", "93", "9b", "9c", "9e", "9f", "ab"];
 const MAYBE_WRONG_OPCODES: [&str; 1] = ["6b"];
 
-#[derive(Deserialize)]
+#[derive(Archive)]
 struct Test {
     initial: CpuState,
     r#final: CpuState,
     cycles: Vec<(u16, u8, String)>,
 }
 
-#[derive(Deserialize)]
+#[derive(Archive)]
 struct CpuState {
     pc: u16,
     s: u8,
@@ -28,16 +29,18 @@ struct CpuState {
     ram: Vec<(u16, u8)>,
 }
 
-struct ProcessorTestsBus {
+struct ProcessorTestsBus<'a> {
     memory: Box<[u8; 0x10000]>,
-    cycles: IntoIter<(u16, u8, String)>,
+    // TODO: Try to keep the bus agnostic to the deserialization framework,
+    // i.e., use &str instead of ArchivedString.
+    cycles: Iter<'a, (u16, u8, ArchivedString)>,
 }
 
-impl Bus for ProcessorTestsBus {
+impl<'a> Bus for ProcessorTestsBus<'a> {
     fn read(&mut self, pins: &mut backend::Pins) {
         pins.data = self.memory[pins.address as usize];
 
-        if let Some((addr, data, kind)) = self.cycles.next() {
+        if let Some(&(addr, data, ref kind)) = self.cycles.next() {
             assert_eq!(addr, pins.address);
             assert_eq!(data, pins.data);
             assert_eq!(kind, "read");
@@ -45,7 +48,7 @@ impl Bus for ProcessorTestsBus {
     }
 
     fn write(&mut self, pins: &mut backend::Pins) {
-        if let Some((addr, data, kind)) = self.cycles.next() {
+        if let Some(&(addr, data, ref kind)) = self.cycles.next() {
             assert_eq!(addr, pins.address);
             assert_eq!(data, pins.data);
             assert_eq!(kind, "write");
@@ -63,20 +66,20 @@ fn run(opcode: &str) {
         return;
     }
 
-    let contents =
-        fs::read_to_string(format!("../roms/processor_tests/{opcode}.json"))
-            .unwrap();
-    let tests: Vec<Test> = serde_json::from_str(&contents).unwrap();
+    let bytes =
+        fs::read(format!("../roms/processor_tests/{opcode}.rkyv")).unwrap();
+    let tests = unsafe { rkyv::archived_root::<Vec<Test>>(&bytes) };
 
+    let empty = vec![];
     let bus = ProcessorTestsBus {
         memory: vec![0; 0x10000].try_into().unwrap(),
-        cycles: vec![].into_iter(),
+        cycles: empty.iter(),
     };
     let mut cpu = Cpu::new(bus);
 
     cpu.step();
 
-    for test in tests {
+    for test in tests.iter() {
         cpu.pc = test.initial.pc;
         cpu.s = test.initial.s;
         cpu.a = test.initial.a;
@@ -84,10 +87,10 @@ fn run(opcode: &str) {
         cpu.y = test.initial.y;
         cpu.p = Status::from(test.initial.p);
 
-        for (addr, data) in test.initial.ram {
+        for &(addr, data) in test.initial.ram.iter() {
             cpu.bus.memory[addr as usize] = data;
         }
-        cpu.bus.cycles = test.cycles.into_iter();
+        cpu.bus.cycles = test.cycles.iter();
 
         cpu.step();
 
@@ -98,7 +101,7 @@ fn run(opcode: &str) {
         assert_eq!(cpu.y, test.r#final.y);
         assert_eq!(u8::from(cpu.p), test.r#final.p);
 
-        for (addr, data) in test.r#final.ram {
+        for &(addr, data) in test.r#final.ram.iter() {
             assert_eq!(cpu.bus.memory[addr as usize], data);
         }
     }
