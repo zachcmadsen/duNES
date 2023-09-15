@@ -3,8 +3,6 @@ name = "backend"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-proc-bitfield = "0.2.2"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dev-dependencies]
-rkyv = "0.7.42"
+[dependencies]

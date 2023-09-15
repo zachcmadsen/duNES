@@ -1,9 +1,14 @@
-mod bus;
-mod cartridge;
-mod cpu;
-mod ppu;
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
 
-pub use bus::{Bus, DuNesBus, Pins};
-pub use cartridge::NromCartridge;
-pub use cpu::{Cpu, Status};
-pub use ppu::Ppu;
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
+    }
+}
