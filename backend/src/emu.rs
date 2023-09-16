@@ -7,7 +7,7 @@ pub struct Emu {
 
 impl Emu {
     pub fn step(&mut self) {
-        self.cpu.lda(&mut EmuView { _ram: &self.ram });
+        self.cpu.step(&mut EmuView { _ram: &self.ram });
     }
 }
 
