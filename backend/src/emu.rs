@@ -1,26 +1,22 @@
-use crate::{bus::Bus, cpu::Cpu};
+use crate::{
+    bus::Bus,
+    cpu::{self, Cpu},
+};
+
+/// The size of the CPU address space in bytes;
+const CPU_ADDR_SPACE_SIZE: usize = 0x10000;
 
 pub struct Emu {
-    cpu: Cpu,
-    ram: [u8; 0x800],
+    pub bus: Bus<CPU_ADDR_SPACE_SIZE>,
+    pub cpu: Cpu,
 }
 
 impl Emu {
+    pub fn new() -> Emu {
+        Emu { bus: Bus::new(), cpu: Cpu::new() }
+    }
+
     pub fn step(&mut self) {
-        self.cpu.step(&mut EmuView { _ram: &self.ram });
-    }
-}
-
-struct EmuView<'a> {
-    _ram: &'a [u8; 0x800],
-}
-
-impl<'a> Bus for EmuView<'a> {
-    fn read_byte(&mut self, _addr: u16) -> u8 {
-        todo!()
-    }
-
-    fn write_byte(&mut self, _addr: u16, _data: u8) {
-        todo!()
+        cpu::step(self);
     }
 }

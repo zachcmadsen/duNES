@@ -1,27 +1,12 @@
 use proc_bitfield::bitfield;
 
-use crate::{bus::Bus, util::word};
+use crate::{bus, Emu};
 
-macro_rules! update_flags {
-    ($cpu:expr, $reg:expr) => {
-        $cpu.p.set_z($reg == 0);
-        $cpu.p.set_n(($reg & 0x80) != 0);
+macro_rules! update_zn {
+    ($cpu:expr, $reg:ident) => {
+        $cpu.p.set_z($cpu.$reg == 0);
+        $cpu.p.set_n(($cpu.$reg & 0x80) != 0);
     };
-}
-
-trait BugRead: Bus {
-    fn read_word_bugged(&mut self, addr: u16) -> u16;
-}
-
-impl<B: Bus> BugRead for B {
-    fn read_word_bugged(&mut self, addr: u16) -> u16 {
-        let low = self.read_byte(addr);
-        // Indirect addressing modes are affected by a hardware bug where reads
-        // wrap instead of crossing pages.
-        let high = self
-            .read_byte((addr as u8).wrapping_add(1) as u16 | (addr & 0xFF00));
-        word!(low, high)
-    }
 }
 
 bitfield! {
@@ -37,6 +22,265 @@ bitfield! {
     }
 }
 
+static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
+    &[],                               // 0x00
+    &[],                               // 0x01
+    &[],                               // 0x02
+    &[],                               // 0x03
+    &[],                               // 0x04
+    &[],                               // 0x05
+    &[],                               // 0x06
+    &[],                               // 0x07
+    &[],                               // 0x08
+    &[],                               // 0x09
+    &[],                               // 0x0A
+    &[],                               // 0x0B
+    &[],                               // 0x0C
+    &[],                               // 0x0D
+    &[],                               // 0x0E
+    &[],                               // 0x0F
+    &[],                               // 0x10
+    &[],                               // 0x11
+    &[],                               // 0x12
+    &[],                               // 0x13
+    &[],                               // 0x14
+    &[],                               // 0x15
+    &[],                               // 0x16
+    &[],                               // 0x17
+    &[],                               // 0x18
+    &[],                               // 0x19
+    &[],                               // 0x1A
+    &[],                               // 0x1B
+    &[],                               // 0x1C
+    &[],                               // 0x1D
+    &[],                               // 0x1E
+    &[],                               // 0x1F
+    &[],                               // 0x20
+    &[],                               // 0x21
+    &[],                               // 0x22
+    &[],                               // 0x23
+    &[],                               // 0x24
+    &[],                               // 0x25
+    &[],                               // 0x26
+    &[],                               // 0x27
+    &[],                               // 0x28
+    &[],                               // 0x29
+    &[],                               // 0x2A
+    &[],                               // 0x2B
+    &[],                               // 0x2C
+    &[],                               // 0x2D
+    &[],                               // 0x2E
+    &[],                               // 0x2F
+    &[],                               // 0x30
+    &[],                               // 0x31
+    &[],                               // 0x32
+    &[],                               // 0x33
+    &[],                               // 0x34
+    &[],                               // 0x35
+    &[],                               // 0x36
+    &[],                               // 0x37
+    &[],                               // 0x38
+    &[],                               // 0x39
+    &[],                               // 0x3A
+    &[],                               // 0x3B
+    &[],                               // 0x3C
+    &[],                               // 0x3D
+    &[],                               // 0x3E
+    &[],                               // 0x3F
+    &[],                               // 0x40
+    &[],                               // 0x41
+    &[],                               // 0x42
+    &[],                               // 0x43
+    &[],                               // 0x44
+    &[],                               // 0x45
+    &[],                               // 0x46
+    &[],                               // 0x47
+    &[],                               // 0x48
+    &[],                               // 0x49
+    &[],                               // 0x4A
+    &[],                               // 0x4B
+    &[],                               // 0x4C
+    &[],                               // 0x4D
+    &[],                               // 0x4E
+    &[],                               // 0x4F
+    &[],                               // 0x50
+    &[],                               // 0x51
+    &[],                               // 0x52
+    &[],                               // 0x53
+    &[],                               // 0x54
+    &[],                               // 0x55
+    &[],                               // 0x56
+    &[],                               // 0x57
+    &[],                               // 0x58
+    &[],                               // 0x59
+    &[],                               // 0x5A
+    &[],                               // 0x5B
+    &[],                               // 0x5C
+    &[],                               // 0x5D
+    &[],                               // 0x5E
+    &[],                               // 0x5F
+    &[],                               // 0x60
+    &[],                               // 0x61
+    &[],                               // 0x62
+    &[],                               // 0x63
+    &[],                               // 0x64
+    &[],                               // 0x65
+    &[],                               // 0x66
+    &[],                               // 0x67
+    &[],                               // 0x68
+    &[],                               // 0x69
+    &[],                               // 0x6A
+    &[],                               // 0x6B
+    &[],                               // 0x6C
+    &[],                               // 0x6D
+    &[],                               // 0x6E
+    &[],                               // 0x6F
+    &[],                               // 0x70
+    &[],                               // 0x71
+    &[],                               // 0x72
+    &[],                               // 0x73
+    &[],                               // 0x74
+    &[],                               // 0x75
+    &[],                               // 0x76
+    &[],                               // 0x77
+    &[],                               // 0x78
+    &[],                               // 0x79
+    &[],                               // 0x7A
+    &[],                               // 0x7B
+    &[],                               // 0x7C
+    &[],                               // 0x7D
+    &[],                               // 0x7E
+    &[],                               // 0x7F
+    &[],                               // 0x80
+    &[],                               // 0x81
+    &[],                               // 0x82
+    &[],                               // 0x83
+    &[],                               // 0x84
+    &[],                               // 0x85
+    &[],                               // 0x86
+    &[],                               // 0x87
+    &[],                               // 0x88
+    &[],                               // 0x89
+    &[],                               // 0x8A
+    &[],                               // 0x8B
+    &[],                               // 0x8C
+    &[],                               // 0x8D
+    &[],                               // 0x8E
+    &[],                               // 0x8F
+    &[],                               // 0x90
+    &[],                               // 0x91
+    &[],                               // 0x92
+    &[],                               // 0x93
+    &[],                               // 0x94
+    &[],                               // 0x95
+    &[],                               // 0x96
+    &[],                               // 0x97
+    &[],                               // 0x98
+    &[],                               // 0x99
+    &[],                               // 0x9A
+    &[],                               // 0x9B
+    &[],                               // 0x9C
+    &[],                               // 0x9D
+    &[],                               // 0x9E
+    &[],                               // 0x9F
+    &[],                               // 0xA0
+    &[],                               // 0xA1
+    &[],                               // 0xA2
+    &[],                               // 0xA3
+    &[],                               // 0xA4
+    &[zpg, lda, decode],               // 0xA5
+    &[],                               // 0xA6
+    &[],                               // 0xA7
+    &[],                               // 0xA8
+    &[],                               // 0xA9
+    &[],                               // 0xAA
+    &[],                               // 0xAB
+    &[abs_low, abs_high, ldy, decode], // 0xAC
+    &[abs_low, abs_high, lda, decode], // 0xAD
+    &[abs_low, abs_high, ldx, decode], // 0xAE
+    &[],                               // 0xAF
+    &[],                               // 0xB0
+    &[],                               // 0xB1
+    &[],                               // 0xB2
+    &[],                               // 0xB3
+    &[],                               // 0xB4
+    &[],                               // 0xB5
+    &[],                               // 0xB6
+    &[],                               // 0xB7
+    &[],                               // 0xB8
+    &[],                               // 0xB9
+    &[],                               // 0xBA
+    &[],                               // 0xBB
+    &[],                               // 0xBC
+    &[],                               // 0xBD
+    &[],                               // 0xBE
+    &[],                               // 0xBF
+    &[],                               // 0xC0
+    &[],                               // 0xC1
+    &[],                               // 0xC2
+    &[],                               // 0xC3
+    &[],                               // 0xC4
+    &[],                               // 0xC5
+    &[],                               // 0xC6
+    &[],                               // 0xC7
+    &[],                               // 0xC8
+    &[],                               // 0xC9
+    &[],                               // 0xCA
+    &[],                               // 0xCB
+    &[],                               // 0xCC
+    &[],                               // 0xCD
+    &[],                               // 0xCE
+    &[],                               // 0xCF
+    &[],                               // 0xD0
+    &[],                               // 0xD1
+    &[],                               // 0xD2
+    &[],                               // 0xD3
+    &[],                               // 0xD4
+    &[],                               // 0xD5
+    &[],                               // 0xD6
+    &[],                               // 0xD7
+    &[],                               // 0xD8
+    &[],                               // 0xD9
+    &[],                               // 0xDA
+    &[],                               // 0xDB
+    &[],                               // 0xDC
+    &[],                               // 0xDD
+    &[],                               // 0xDE
+    &[],                               // 0xDF
+    &[],                               // 0xE0
+    &[],                               // 0xE1
+    &[],                               // 0xE2
+    &[],                               // 0xE3
+    &[],                               // 0xE4
+    &[],                               // 0xE5
+    &[],                               // 0xE6
+    &[],                               // 0xE7
+    &[],                               // 0xE8
+    &[],                               // 0xE9
+    &[],                               // 0xEA
+    &[],                               // 0xEB
+    &[],                               // 0xEC
+    &[],                               // 0xED
+    &[],                               // 0xEE
+    &[],                               // 0xEF
+    &[],                               // 0xF0
+    &[],                               // 0xF1
+    &[],                               // 0xF2
+    &[],                               // 0xF3
+    &[],                               // 0xF4
+    &[],                               // 0xF5
+    &[],                               // 0xF6
+    &[],                               // 0xF7
+    &[],                               // 0xF8
+    &[],                               // 0xF9
+    &[],                               // 0xFA
+    &[],                               // 0xFB
+    &[],                               // 0xFC
+    &[],                               // 0xFD
+    &[],                               // 0xFE
+    &[],                               // 0xFF
+];
+
 pub struct Cpu {
     pub a: u8,
     pub x: u8,
@@ -45,434 +289,69 @@ pub struct Cpu {
     pub s: u8,
     pub p: Status,
 
-    /// The effective address.
+    opc: u8,
+    cyc: i8,
     addr: u16,
 }
 
 impl Cpu {
     /// Constructs a new `Cpu` in a power up state.
-    pub const fn new() -> Cpu {
-        Cpu { a: 0, x: 0, y: 0, pc: 0, s: 0xFD, p: Status(0x34), addr: 0 }
-    }
+    pub fn new() -> Cpu {
+        Cpu {
+            a: 0,
+            x: 0,
+            y: 0,
+            pc: 0,
+            s: 0xFD,
+            p: Status(0x34),
 
-    /// Executes the next instruction.
-    pub fn step<B: Bus>(&mut self, bus: &mut B) {
-        const READ: bool = false;
-        const WRITE: bool = true;
-
-        let opcode = bus.read_byte(self.pc);
-        self.pc = self.pc.wrapping_add(1);
-
-        #[rustfmt::skip]
-        match opcode {
-            // 0x00 => self.brk(),
-            // 0x01 => { self.idx(bus); self.ora(); }
-            // 0x02 => self.jam(),
-            // 0x03 => { self.idx(bus); self.slo(); }
-            // 0x04 => { self.zpg(bus); self.nop(); }
-            // 0x05 => { self.zpg(bus); self.ora(); }
-            // 0x06 => { self.zpg(bus); self.asl(); }
-            // 0x07 => { self.zpg(bus); self.slo(); }
-            // 0x08 => self.php(),
-            // 0x09 => { self.imm(); self.ora(); }
-            // 0x0a => self.asl_accumulator(),
-            // 0x0b => { self.imm(); self.anc(); }
-            // 0x0c => { self.abs(bus); self.nop(); }
-            // 0x0d => { self.abs(bus); self.ora(); }
-            // 0x0e => { self.abs(bus); self.asl(); }
-            // 0x0f => { self.abs(bus); self.slo(); }
-            // 0x10 => self.bpl(),
-            // 0x11 => { self.indirect_indexed::<READ>(); self.ora(); }
-            // 0x12 => self.jam(),
-            // 0x13 => { self.idy::<WRITE>(bus); self.slo(); }
-            // 0x14 => { self.zpx(bus); self.nop(); }
-            // 0x15 => { self.zpx(bus); self.ora(); }
-            // 0x16 => { self.zpx(bus); self.asl(); }
-            // 0x17 => { self.zpx(bus); self.slo(); }
-            // 0x18 => self.clc(),
-            // 0x19 => { self.aby::<READ>(bus); self.ora(); }
-            // 0x1a => { self.addr = self.pc; self.nop(); },
-            // 0x1b => { self.aby::<WRITE>(bus); self.slo(); }
-            // 0x1c => { self.abx::<READ>(bus); self.nop(); }
-            // 0x1d => { self.abx::<READ>(bus); self.ora(); }
-            // 0x1e => { self.abx::<WRITE>(bus); self.asl(); }
-            // 0x1f => { self.abx::<WRITE>(bus); self.slo(); }
-            // 0x20 => self.jsr(),
-            // 0x21 => { self.idx(bus); self.and(); }
-            // 0x22 => self.jam(),
-            // 0x23 => { self.idx(bus); self.rla(); }
-            // 0x24 => { self.zpg(bus); self.bit(); }
-            // 0x25 => { self.zpg(bus); self.and(); }
-            // 0x26 => { self.zpg(bus); self.rol(); }
-            // 0x27 => { self.zpg(bus); self.rla(); }
-            // 0x28 => self.plp(),
-            // 0x29 => { self.imm(); self.and(); }
-            // 0x2a => self.rol_accumulator(),
-            // 0x2b => { self.imm(); self.anc(); }
-            // 0x2c => { self.abs(bus); self.bit(); }
-            // 0x2d => { self.abs(bus); self.and(); }
-            // 0x2e => { self.abs(bus); self.rol(); }
-            // 0x2f => { self.abs(bus); self.rla(); }
-            // 0x30 => self.bmi(),
-            // 0x31 => { self.indirect_indexed::<READ>(); self.and(); }
-            // 0x32 => self.jam(),
-            // 0x33 => { self.idy::<WRITE>(bus); self.rla(); }
-            // 0x34 => { self.zpx(bus); self.nop(); }
-            // 0x35 => { self.zpx(bus); self.and(); }
-            // 0x36 => { self.zpx(bus); self.rol(); }
-            // 0x37 => { self.zpx(bus); self.rla(); }
-            // 0x38 => self.sec(),
-            // 0x39 => { self.aby::<READ>(bus); self.and(); }
-            // 0x3a => { self.addr = self.pc; self.nop(); },
-            // 0x3b => { self.aby::<WRITE>(bus); self.rla(); }
-            // 0x3c => { self.abx::<READ>(bus); self.nop(); }
-            // 0x3d => { self.abx::<READ>(bus); self.and(); }
-            // 0x3e => { self.abx::<WRITE>(bus); self.rol(); }
-            // 0x3f => { self.abx::<WRITE>(bus); self.rla(); }
-            // 0x40 => self.rti(),
-            // 0x41 => { self.idx(bus); self.eor(); }
-            // 0x42 => self.jam(),
-            // 0x43 => { self.idx(bus); self.sre(); }
-            // 0x44 => { self.zpg(bus); self.nop(); }
-            // 0x45 => { self.zpg(bus); self.eor(); }
-            // 0x46 => { self.zpg(bus); self.lsr(); }
-            // 0x47 => { self.zpg(bus); self.sre(); }
-            // 0x48 => self.pha(),
-            // 0x49 => { self.imm(); self.eor(); }
-            // 0x4a => self.lsr_accumulator(),
-            // 0x4b => { self.imm(); self.alr(); }
-            0x4C => { self.abs(bus); self.jmp(); }
-            // 0x4d => { self.abs(bus); self.eor(); }
-            // 0x4e => { self.abs(bus); self.lsr(); }
-            // 0x4f => { self.abs(bus); self.sre(); }
-            // 0x50 => self.bvc(),
-            // 0x51 => { self.indirect_indexed::<READ>(); self.eor(); }
-            // 0x52 => self.jam(),
-            // 0x53 => { self.idy::<WRITE>(bus); self.sre(); }
-            // 0x54 => { self.zpx(bus); self.nop(); }
-            // 0x55 => { self.zpx(bus); self.eor(); }
-            // 0x56 => { self.zpx(bus); self.lsr(); }
-            // 0x57 => { self.zpx(bus); self.sre(); }
-            // 0x58 => self.cli(),
-            // 0x59 => { self.aby::<READ>(bus); self.eor(); }
-            // 0x5a => { self.addr = self.pc; self.nop(); },
-            // 0x5b => { self.aby::<WRITE>(bus); self.sre(); }
-            // 0x5c => { self.abx::<READ>(bus); self.nop(); }
-            // 0x5d => { self.abx::<READ>(bus); self.eor(); }
-            // 0x5e => { self.abx::<WRITE>(bus); self.lsr(); }
-            // 0x5f => { self.abx::<WRITE>(bus); self.sre(); }
-            // 0x60 => self.rts(),
-            // 0x61 => { self.idx(bus); self.adc(); }
-            // 0x62 => self.jam(),
-            // 0x63 => { self.idx(bus); self.rra(); }
-            // 0x64 => { self.zpg(bus); self.nop(); }
-            // 0x65 => { self.zpg(bus); self.adc(); }
-            // 0x66 => { self.zpg(bus); self.ror(); }
-            // 0x67 => { self.zpg(bus); self.rra(); }
-            // 0x68 => self.pla(),
-            // 0x69 => { self.imm(); self.adc(); }
-            // 0x6a => self.ror_accumulator(),
-            // 0x6b => { self.imm(); self.arr(); }
-            0x6C => { self.ind(bus); self.jmp(); }
-            // 0x6d => { self.abs(bus); self.adc(); }
-            // 0x6e => { self.abs(bus); self.ror(); }
-            // 0x6f => { self.abs(bus); self.rra(); }
-            // 0x70 => self.bvs(),
-            // 0x71 => { self.indirect_indexed::<READ>(); self.adc(); }
-            // 0x72 => self.jam(),
-            // 0x73 => { self.idy::<WRITE>(bus); self.rra(); }
-            // 0x74 => { self.zpx(bus); self.nop(); }
-            // 0x75 => { self.zpx(bus); self.adc(); }
-            // 0x76 => { self.zpx(bus); self.ror(); }
-            // 0x77 => { self.zpx(bus); self.rra(); }
-            // 0x78 => self.sei(),
-            // 0x79 => { self.aby::<READ>(bus); self.adc(); }
-            // 0x7a => { self.addr = self.pc; self.nop(); },
-            // 0x7b => { self.aby::<WRITE>(bus); self.rra(); }
-            // 0x7c => { self.abx::<READ>(bus); self.nop(); }
-            // 0x7d => { self.abx::<READ>(bus); self.adc(); }
-            // 0x7e => { self.abx::<WRITE>(bus); self.ror(); }
-            // 0x7f => { self.abx::<WRITE>(bus); self.rra(); }
-            // 0x80 => { self.imm(); self.nop(); }
-            0x81 => { self.idx(bus); self.sta(bus); }
-            // 0x82 => { self.imm(); self.nop(); }
-            // 0x83 => { self.idx(bus); self.sax(); }
-            0x84 => { self.zpg(bus); self.sty(bus); }
-            0x85 => { self.zpg(bus); self.sta(bus); }
-            0x86 => { self.zpg(bus); self.stx(bus); }
-            // 0x87 => { self.zpg(bus); self.sax(); }
-            // 0x88 => self.dey(),
-            // 0x89 => { self.imm(); self.nop(); }
-            0x8A => self.txa(bus),
-            // 0x8b => { self.imm(); self.ane(); }
-            0x8C => { self.abs(bus); self.sty(bus); }
-            0x8D => { self.abs(bus); self.sta(bus); }
-            0x8E => { self.abs(bus); self.stx(bus); }
-            // 0x8f => { self.abs(bus); self.sax(); }
-            // 0x90 => self.bcc(),
-            0x91 => { self.idy::<WRITE>(bus); self.sta(bus); }
-            // 0x92 => self.jam(),
-            // 0x93 => { self.aby::<WRITE>(bus); self.sha(); }
-            0x94 => { self.zpx(bus); self.sty(bus); }
-            0x95 => { self.zpx(bus); self.sta(bus); }
-            0x96 => { self.zpy(bus); self.stx(bus); }
-            // 0x97 => { self.zpy(bus); self.sax(); }
-            0x98 => self.tya(bus),
-            0x99 => { self.aby::<WRITE>(bus); self.sta(bus); }
-            0x9A => self.txs(bus),
-            // 0x9b => { self.aby::<WRITE>(bus); self.tas(); }
-            // 0x9c => { self.abx::<WRITE>(bus); self.shy(); }
-            0x9D => { self.abx::<WRITE>(bus); self.sta(bus); }
-            // 0x9e => { self.aby::<WRITE>(bus); self.shx(); }
-            // 0x9f => { self.idy::<WRITE>(bus); self.sha(); }
-            0xA0 => { self.imm(); self.ldy(bus); }
-            0xA1 => { self.idx(bus); self.lda(bus); }
-            0xA2 => { self.imm(); self.ldx(bus); }
-            // 0xA3 => { self.idx(bus); self.lax(); }
-            0xA4 => { self.zpg(bus); self.ldy(bus); }
-            0xA5 => { self.zpg(bus); self.lda(bus); }
-            0xA6 => { self.zpg(bus); self.ldx(bus); }
-            // 0xA7 => { self.zpg(bus); self.lax(); }
-            0xA8 => self.tay(bus),
-            0xA9 => { self.imm(); self.lda(bus); }
-            0xAA => self.tax(bus),
-            // 0xAB => { self.imm(); self.lxa() },
-            0xAC => { self.abs(bus); self.ldy(bus); }
-            0xAD => { self.abs(bus); self.lda(bus); }
-            0xAE => { self.abs(bus); self.ldx(bus); }
-            // 0xAF => { self.abs(bus); self.lax(); }
-            // 0xB0 => self.bcs(),
-            0xB1 => { self.idy::<READ>(bus); self.lda(bus); }
-            // 0xB2 => self.jam(),
-            // 0xB3 => { self.indirect_indexed::<READ>(); self.lax(); }
-            0xB4 => { self.zpx(bus); self.ldy(bus); }
-            0xB5 => { self.zpx(bus); self.lda(bus); }
-            0xB6 => { self.zpy(bus); self.ldx(bus); }
-            // 0xB7 => { self.zpy(bus); self.lax(); }
-            // 0xB8 => self.clv(),
-            0xB9 => { self.aby::<READ>(bus); self.lda(bus); }
-            0xBA => self.tsx(bus),
-            // 0xBB => { self.aby::<READ>(bus); self.las() },
-            0xBC => { self.abx::<READ>(bus); self.ldy(bus); }
-            0xBD => { self.abx::<READ>(bus); self.lda(bus); }
-            0xBE => { self.aby::<READ>(bus); self.ldx(bus); }
-            // 0xBF => { self.aby::<READ>(bus); self.lax(); }
-            // 0xc0 => { self.imm(); self.cpy(); }
-            // 0xc1 => { self.idx(bus); self.cmp(); }
-            // 0xc2 => { self.imm(); self.nop(); }
-            // 0xc3 => { self.idx(bus); self.dcp(); }
-            // 0xc4 => { self.zpg(bus); self.cpy(); }
-            // 0xc5 => { self.zpg(bus); self.cmp(); }
-            // 0xc6 => { self.zpg(bus); self.dec(); }
-            // 0xc7 => { self.zpg(bus); self.dcp(); }
-            // 0xc8 => self.iny(),
-            // 0xc9 => { self.imm(); self.cmp(); }
-            // 0xca => self.dex(),
-            // 0xcb => { self.imm(); self.sbx() },
-            // 0xcc => { self.abs(bus); self.cpy(); }
-            // 0xcd => { self.abs(bus); self.cmp(); }
-            // 0xce => { self.abs(bus); self.dec(); }
-            // 0xcf => { self.abs(bus); self.dcp(); }
-            // 0xd0 => self.bne(),
-            // 0xd1 => { self.indirect_indexed::<READ>(); self.cmp(); }
-            // 0xd2 => self.jam(),
-            // 0xd3 => { self.idy::<WRITE>(bus); self.dcp(); }
-            // 0xd4 => { self.zpx(bus); self.nop(); }
-            // 0xd5 => { self.zpx(bus); self.cmp(); }
-            // 0xd6 => { self.zpx(bus); self.dec(); }
-            // 0xd7 => { self.zpx(bus); self.dcp(); }
-            // 0xd8 => self.cld(),
-            // 0xd9 => { self.aby::<READ>(bus); self.cmp(); }
-            // 0xda => { self.addr = self.pc; self.nop(); },
-            // 0xdb => { self.aby::<WRITE>(bus); self.dcp(); }
-            // 0xdc => { self.abx::<READ>(bus); self.nop(); }
-            // 0xdd => { self.abx::<READ>(bus); self.cmp(); }
-            // 0xde => { self.abx::<WRITE>(bus); self.dec(); }
-            // 0xdf => { self.abx::<WRITE>(bus); self.dcp(); }
-            // 0xe0 => { self.imm(); self.cpx(); }
-            // 0xe1 => { self.idx(bus); self.sbc(); }
-            // 0xe2 => { self.imm(); self.nop(); }
-            // 0xe3 => { self.idx(bus); self.isb(); }
-            // 0xe4 => { self.zpg(bus); self.cpx(); }
-            // 0xe5 => { self.zpg(bus); self.sbc(); }
-            // 0xe6 => { self.zpg(bus); self.inc(); }
-            // 0xe7 => { self.zpg(bus); self.isb(); }
-            // 0xe8 => self.inx(),
-            // 0xe9 => { self.imm(); self.sbc(); }
-            // 0xea => { self.addr = self.pc; self.nop(); },
-            // 0xeb => { self.imm(); self.sbc(); }
-            // 0xec => { self.abs(bus); self.cpx(); }
-            // 0xed => { self.abs(bus); self.sbc(); }
-            // 0xee => { self.abs(bus); self.inc(); }
-            // 0xef => { self.abs(bus); self.isb(); }
-            // 0xf0 => self.beq(),
-            // 0xf1 => { self.indirect_indexed::<READ>(); self.sbc(); }
-            // 0xf2 => self.jam(),
-            // 0xf3 => { self.idy::<WRITE>(bus); self.isb(); }
-            // 0xf4 => { self.zpx(bus); self.nop(); }
-            // 0xf5 => { self.zpx(bus); self.sbc(); }
-            // 0xf6 => { self.zpx(bus); self.inc(); }
-            // 0xf7 => { self.zpx(bus); self.isb(); }
-            // 0xf8 => self.sed(),
-            // 0xf9 => { self.aby::<READ>(bus); self.sbc(); }
-            // 0xfa => { self.addr = self.pc; self.nop(); },
-            // 0xfb => { self.aby::<WRITE>(bus); self.isb(); }
-            // 0xfc => { self.abx::<READ>(bus); self.nop(); }
-            // 0xfd => { self.abx::<READ>(bus); self.sbc(); }
-            // 0xfe => { self.abx::<WRITE>(bus); self.inc(); }
-            // 0xff => { self.abx::<WRITE>(bus); self.isb(); }
-            _ => todo!()
-        };
-    }
-
-    fn next_byte(&mut self, bus: &mut impl Bus) -> u8 {
-        let byte = bus.read_byte(self.pc);
-        self.pc = self.pc.wrapping_add(1);
-        byte
-    }
-
-    fn next_word(&mut self, bus: &mut impl Bus) -> u16 {
-        let word = bus.read_word(self.pc);
-        self.pc = self.pc.wrapping_add(2);
-        word
-    }
-
-    fn abs(&mut self, bus: &mut impl Bus) {
-        self.addr = self.next_word(bus);
-    }
-
-    fn abx<const W: bool>(&mut self, bus: &mut impl Bus) {
-        let (low, carry) = self.next_byte(bus).overflowing_add(self.x);
-        let high = self.next_byte(bus);
-        self.addr = word!(low, high.wrapping_add(carry as u8));
-
-        // The effective address is invalid if it crosses a page. It takes an
-        // extra read cycle to fix it.
-        if W || carry {
-            bus.read_byte(word!(low, high));
+            // TODO: Explain the initial values of `opc` and `cyc`.
+            opc: 0xA5,
+            cyc: 1,
+            addr: 0,
         }
     }
+}
 
-    fn aby<const W: bool>(&mut self, bus: &mut impl Bus) {
-        let (low, carry) = self.next_byte(bus).overflowing_add(self.y);
-        let high = self.next_byte(bus);
-        self.addr = word!(low, high.wrapping_add(carry as u8));
+pub fn step(emu: &mut Emu) {
+    emu.cpu.cyc += 1;
+    OPC_LUT[emu.cpu.opc as usize][emu.cpu.cyc as usize](emu);
+}
 
-        // The effective address is invalid if it crosses a page. It takes an
-        // extra read cycle to fix it.
-        if W || carry {
-            bus.read_byte(word!(low, high));
-        }
-    }
+fn next_byte(emu: &mut Emu) -> u8 {
+    let byte = bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
+    byte
+}
 
-    fn imm(&mut self) {
-        self.addr = self.pc;
-        self.pc = self.pc.wrapping_add(1);
-    }
+fn decode(emu: &mut Emu) {
+    emu.cpu.opc = next_byte(emu);
+    emu.cpu.cyc = -1;
+}
 
-    fn idx(&mut self, bus: &mut impl Bus) {
-        let ptr = self.next_byte(bus);
-        bus.read_byte(ptr as u16);
-        self.addr = bus.read_word_bugged(ptr.wrapping_add(self.x) as u16);
-    }
+fn abs_low(emu: &mut Emu) {
+    emu.cpu.addr = next_byte(emu) as u16;
+}
 
-    fn idy<const W: bool>(&mut self, bus: &mut impl Bus) {
-        let ptr = self.next_byte(bus);
-        let (low, carry) = bus.read_byte(ptr as u16).overflowing_add(self.y);
-        let high = bus.read_byte(ptr.wrapping_add(1) as u16);
-        self.addr = word!(low, high.wrapping_add(carry as u8));
+fn abs_high(emu: &mut Emu) {
+    emu.cpu.addr |= (next_byte(emu) as u16) << 8;
+}
 
-        // The effective address is invalid if it crosses a page. It takes an
-        // extra read cycle to fix it.
-        if W || carry {
-            bus.read_byte(word!(low, high));
-        }
-    }
+fn zpg(emu: &mut Emu) {
+    emu.cpu.addr = next_byte(emu) as u16;
+}
 
-    fn ind(&mut self, bus: &mut impl Bus) {
-        let ptr = self.next_word(bus);
-        self.addr = bus.read_word_bugged(ptr);
-    }
+fn lda(emu: &mut Emu) {
+    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
+    update_zn!(emu.cpu, a);
+}
 
-    fn zpg(&mut self, bus: &mut impl Bus) {
-        self.addr = self.next_byte(bus) as u16;
-    }
+fn ldx(emu: &mut Emu) {
+    emu.cpu.x = bus::read_byte(emu, emu.cpu.addr);
+    update_zn!(emu.cpu, x);
+}
 
-    fn zpx(&mut self, bus: &mut impl Bus) {
-        let addr = self.next_byte(bus);
-        bus.read_byte(addr as u16);
-        self.addr = addr.wrapping_add(self.x) as u16;
-    }
-
-    fn zpy(&mut self, bus: &mut impl Bus) {
-        let addr = self.next_byte(bus);
-        bus.read_byte(addr as u16);
-        self.addr = addr.wrapping_add(self.y) as u16;
-    }
-
-    fn jmp(&mut self) {
-        self.pc = self.addr;
-    }
-
-    fn lda(&mut self, bus: &mut impl Bus) {
-        self.a = bus.read_byte(self.addr);
-        update_flags!(self, self.a);
-    }
-
-    fn ldx(&mut self, bus: &mut impl Bus) {
-        self.x = bus.read_byte(self.addr);
-        update_flags!(self, self.x);
-    }
-
-    fn ldy(&mut self, bus: &mut impl Bus) {
-        self.y = bus.read_byte(self.addr);
-        update_flags!(self, self.y);
-    }
-
-    fn sta(&mut self, bus: &mut impl Bus) {
-        bus.write_byte(self.addr, self.a);
-    }
-
-    fn stx(&mut self, bus: &mut impl Bus) {
-        bus.write_byte(self.addr, self.x);
-    }
-
-    fn sty(&mut self, bus: &mut impl Bus) {
-        bus.write_byte(self.addr, self.y);
-    }
-
-    fn tax(&mut self, bus: &mut impl Bus) {
-        bus.read_byte(self.pc);
-        self.x = self.a;
-        update_flags!(self, self.x);
-    }
-
-    fn tay(&mut self, bus: &mut impl Bus) {
-        bus.read_byte(self.pc);
-        self.y = self.a;
-        update_flags!(self, self.y);
-    }
-
-    fn tsx(&mut self, bus: &mut impl Bus) {
-        bus.read_byte(self.pc);
-        self.x = self.s;
-        update_flags!(self, self.x);
-    }
-
-    fn txa(&mut self, bus: &mut impl Bus) {
-        bus.read_byte(self.pc);
-        self.a = self.x;
-        update_flags!(self, self.a);
-    }
-
-    fn txs(&mut self, bus: &mut impl Bus) {
-        bus.read_byte(self.pc);
-        self.s = self.x;
-    }
-
-    fn tya(&mut self, bus: &mut impl Bus) {
-        bus.read_byte(self.pc);
-        self.a = self.y;
-        update_flags!(self, self.a);
-    }
+fn ldy(emu: &mut Emu) {
+    emu.cpu.y = bus::read_byte(emu, emu.cpu.addr);
+    update_zn!(emu.cpu, y);
 }
