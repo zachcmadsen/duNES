@@ -80,6 +80,11 @@ fn opc_ad() {
 }
 
 #[test]
+fn opc_a9() {
+    run(0xA9);
+}
+
+#[test]
 fn opc_ae() {
     run(0xAE);
 }
@@ -92,4 +97,24 @@ fn opc_b5() {
 #[test]
 fn opc_b6() {
     run(0xB6);
+}
+
+#[test]
+fn opc_b9() {
+    run(0xB9);
+}
+
+#[test]
+fn opc_bc() {
+    run(0xBC);
+}
+
+#[test]
+fn opc_bd() {
+    run(0xBD);
+}
+
+#[test]
+fn opc_be() {
+    run(0xBE);
 }
