@@ -83,3 +83,13 @@ fn opc_ad() {
 fn opc_ae() {
     run(0xAE);
 }
+
+#[test]
+fn opc_b5() {
+    run(0xB5);
+}
+
+#[test]
+fn opc_b6() {
+    run(0xB6);
+}

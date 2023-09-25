@@ -204,8 +204,8 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                               // 0xB2
     &[],                               // 0xB3
     &[],                               // 0xB4
-    &[],                               // 0xB5
-    &[],                               // 0xB6
+    &[zpg, zpx, lda, decode],          // 0xB5
+    &[zpg, zpy, ldx, decode],          // 0xB6
     &[],                               // 0xB7
     &[],                               // 0xB8
     &[],                               // 0xB9
@@ -339,6 +339,16 @@ fn abs_high(emu: &mut Emu) {
 
 fn zpg(emu: &mut Emu) {
     emu.cpu.addr = next_byte(emu) as u16;
+}
+
+fn zpx(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.addr = (emu.cpu.addr as u8).wrapping_add(emu.cpu.x) as u16
+}
+
+fn zpy(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.addr = (emu.cpu.addr as u8).wrapping_add(emu.cpu.y) as u16
 }
 
 fn lda(emu: &mut Emu) {
