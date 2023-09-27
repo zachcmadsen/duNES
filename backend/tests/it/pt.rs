@@ -70,8 +70,23 @@ fn opc_81() {
 }
 
 #[test]
+fn opc_84() {
+    run(0x84);
+}
+
+#[test]
 fn opc_85() {
     run(0x85);
+}
+
+#[test]
+fn opc_86() {
+    run(0x86);
+}
+
+#[test]
+fn opc_8c() {
+    run(0x8C);
 }
 
 #[test]
@@ -80,13 +95,28 @@ fn opc_8d() {
 }
 
 #[test]
+fn opc_8e() {
+    run(0x8E);
+}
+
+#[test]
 fn opc_91() {
     run(0x91);
 }
 
 #[test]
+fn opc_94() {
+    run(0x94);
+}
+
+#[test]
 fn opc_95() {
     run(0x95);
+}
+
+#[test]
+fn opc_96() {
+    run(0x96);
 }
 
 #[test]

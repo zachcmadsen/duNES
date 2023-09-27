@@ -286,25 +286,25 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     idx!(sta),                       // 0x81
     &[],                             // 0x82
     &[],                             // 0x83
-    &[],                             // 0x84
+    zpg!(sty),                       // 0x84
     zpg!(sta),                       // 0x85
-    &[],                             // 0x86
+    zpg!(stx),                       // 0x86
     &[],                             // 0x87
     &[],                             // 0x88
     &[],                             // 0x89
     &[],                             // 0x8A
     &[],                             // 0x8B
-    &[],                             // 0x8C
+    abs!(sty),                       // 0x8C
     abs!(sta),                       // 0x8D
-    &[],                             // 0x8E
+    abs!(stx),                       // 0x8E
     &[],                             // 0x8F
     &[],                             // 0x90
     idy_w!(sta),                     // 0x91
     &[],                             // 0x92
     &[],                             // 0x93
-    &[],                             // 0x94
+    zpx!(sty),                       // 0x94
     zpx!(sta),                       // 0x95
-    &[],                             // 0x96
+    zpy!(stx),                       // 0x96
     &[],                             // 0x97
     &[],                             // 0x98
     aby_w!(sta),                     // 0x99
@@ -564,4 +564,12 @@ fn ldy_imm(emu: &mut Emu) {
 
 fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
+}
+
+fn stx(emu: &mut Emu) {
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.x);
+}
+
+fn sty(emu: &mut Emu) {
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
 }
