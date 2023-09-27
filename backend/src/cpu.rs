@@ -24,6 +24,8 @@ bitfield! {
 
 const X: bool = true;
 const Y: bool = false;
+const READ: bool = true;
+const WRITE: bool = false;
 
 macro_rules! abs {
     ($f:ident) => {
@@ -36,24 +38,48 @@ macro_rules! abs {
     };
 }
 
-macro_rules! abx {
+macro_rules! abx_r {
     ($f:ident) => {
         &[
             read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<X>,
-            read_addr_and_inc_addr_high,
+            read_pc_and_set_addr_high_and_add_index::<X, READ>,
+            read_addr_and_fix_addr_high,
             $f,
             read_pc_and_set_opc,
         ]
     };
 }
 
-macro_rules! aby {
+macro_rules! abx_w {
     ($f:ident) => {
         &[
             read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<Y>,
-            read_addr_and_inc_addr_high,
+            read_pc_and_set_addr_high_and_add_index::<X, WRITE>,
+            read_addr_and_fix_addr_high,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! aby_r {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_pc_and_set_addr_high_and_add_index::<Y, READ>,
+            read_addr_and_fix_addr_high,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! aby_w {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_pc_and_set_addr_high_and_add_index::<Y, WRITE>,
+            read_addr_and_fix_addr_high,
             $f,
             read_pc_and_set_opc,
         ]
@@ -73,13 +99,26 @@ macro_rules! idx {
     };
 }
 
-macro_rules! idy {
+macro_rules! idy_r {
     ($f:ident) => {
         &[
             read_pc_and_set_addr_low,
             read_addr_and_inc_addr_low_and_set_addr_high,
-            read_addr_and_add_y_and_set_addr,
-            read_addr_and_inc_addr_high,
+            read_addr_and_add_y_and_set_addr::<READ>,
+            read_addr_and_fix_addr_high,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! idy_w {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_addr_and_inc_addr_low_and_set_addr_high,
+            read_addr_and_add_y_and_set_addr::<WRITE>,
+            read_addr_and_fix_addr_high,
             $f,
             read_pc_and_set_opc,
         ]
@@ -244,11 +283,11 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x7E
     &[],                             // 0x7F
     &[],                             // 0x80
-    &[],                             // 0x81
+    idx!(sta),                       // 0x81
     &[],                             // 0x82
     &[],                             // 0x83
     &[],                             // 0x84
-    &[],                             // 0x85
+    zpg!(sta),                       // 0x85
     &[],                             // 0x86
     &[],                             // 0x87
     &[],                             // 0x88
@@ -256,23 +295,23 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x8A
     &[],                             // 0x8B
     &[],                             // 0x8C
-    &[],                             // 0x8D
+    abs!(sta),                       // 0x8D
     &[],                             // 0x8E
     &[],                             // 0x8F
     &[],                             // 0x90
-    &[],                             // 0x91
+    idy_w!(sta),                     // 0x91
     &[],                             // 0x92
     &[],                             // 0x93
     &[],                             // 0x94
-    &[],                             // 0x95
+    zpx!(sta),                       // 0x95
     &[],                             // 0x96
     &[],                             // 0x97
     &[],                             // 0x98
-    &[],                             // 0x99
+    aby_w!(sta),                     // 0x99
     &[],                             // 0x9A
     &[],                             // 0x9B
     &[],                             // 0x9C
-    &[],                             // 0x9D
+    abx_w!(sta),                     // 0x9D
     &[],                             // 0x9E
     &[],                             // 0x9F
     &[ldy_imm, read_pc_and_set_opc], // 0xA0
@@ -292,7 +331,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abs!(ldx),                       // 0xAE
     &[],                             // 0xAF
     &[],                             // 0xB0
-    idy!(lda),                       // 0xB1
+    idy_r!(lda),                     // 0xB1
     &[],                             // 0xB2
     &[],                             // 0xB3
     zpx!(ldy),                       // 0xB4
@@ -300,12 +339,12 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpy!(ldx),                       // 0xB6
     &[],                             // 0xB7
     &[],                             // 0xB8
-    aby!(lda),                       // 0xB9
+    aby_r!(lda),                     // 0xB9
     &[],                             // 0xBA
     &[],                             // 0xBB
-    abx!(ldy),                       // 0xBC
-    abx!(lda),                       // 0xBD
-    aby!(ldx),                       // 0xBE
+    abx_r!(ldy),                     // 0xBC
+    abx_r!(lda),                     // 0xBD
+    aby_r!(ldx),                     // 0xBE
     &[],                             // 0xBF
     &[],                             // 0xC0
     &[],                             // 0xC1
@@ -384,6 +423,7 @@ pub struct Cpu {
     opc: u8,
     cyc: i8,
     addr: u16,
+    carry: bool,
 }
 
 impl Cpu {
@@ -401,6 +441,7 @@ impl Cpu {
             opc: 0xA5,
             cyc: 1,
             addr: 0,
+            carry: false,
         }
     }
 }
@@ -435,22 +476,27 @@ fn read_addr_and_add_index<const X: bool>(emu: &mut Emu) {
     emu.cpu.addr = (emu.cpu.addr as u8).wrapping_add(index) as u16
 }
 
-fn read_pc_and_set_addr_high_and_add_index<const X: bool>(emu: &mut Emu) {
+fn read_pc_and_set_addr_high_and_add_index<const X: bool, const R: bool>(
+    emu: &mut Emu,
+) {
     let high = next_byte(emu);
     let index = if X { emu.cpu.x } else { emu.cpu.y };
     let (low, carry) = (emu.cpu.addr as u8).overflowing_add(index);
     emu.cpu.addr = low as u16 | (high as u16) << 8;
+    emu.cpu.carry = carry;
 
-    if !carry {
+    if R && !carry {
         emu.cpu.cyc += 1;
     }
 }
 
-fn read_addr_and_inc_addr_high(emu: &mut Emu) {
+fn read_addr_and_fix_addr_high(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.addr);
-    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
-    emu.cpu.addr &= 0x00FF;
-    emu.cpu.addr |= (high.wrapping_add(1) as u16) << 8;
+    if emu.cpu.carry {
+        let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
+        emu.cpu.addr &= 0x00FF;
+        emu.cpu.addr |= (high.wrapping_add(1) as u16) << 8;
+    }
 }
 
 fn read_addr_and_inc_addr_low_and_set_addr_high(emu: &mut Emu) {
@@ -461,14 +507,15 @@ fn read_addr_and_inc_addr_low_and_set_addr_high(emu: &mut Emu) {
     emu.cpu.addr |= (low as u16) << 8;
 }
 
-fn read_addr_and_add_y_and_set_addr(emu: &mut Emu) {
+fn read_addr_and_add_y_and_set_addr<const R: bool>(emu: &mut Emu) {
     let ptr = emu.cpu.addr as u8;
     let high = bus::read_byte(emu, ptr as u16);
     let low = (emu.cpu.addr >> 8) as u8;
     let (low, carry) = low.overflowing_add(emu.cpu.y);
     emu.cpu.addr = low as u16 | (high as u16) << 8;
+    emu.cpu.carry = carry;
 
-    if !carry {
+    if R && !carry {
         emu.cpu.cyc += 1;
     }
 }
@@ -513,4 +560,8 @@ fn ldy(emu: &mut Emu) {
 fn ldy_imm(emu: &mut Emu) {
     imm(emu);
     ldy(emu);
+}
+
+fn sta(emu: &mut Emu) {
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }
