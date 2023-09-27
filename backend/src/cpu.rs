@@ -275,16 +275,16 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x9D
     &[],                             // 0x9E
     &[],                             // 0x9F
-    &[],                             // 0xA0
+    &[ldy_imm, read_pc_and_set_opc], // 0xA0
     idx!(lda),                       // 0xA1
-    &[],                             // 0xA2
+    &[ldx_imm, read_pc_and_set_opc], // 0xA2
     &[],                             // 0xA3
-    &[],                             // 0xA4
+    zpg!(ldy),                       // 0xA4
     zpg!(lda),                       // 0xA5
-    &[],                             // 0xA6
+    zpg!(ldx),                       // 0xA6
     &[],                             // 0xA7
     &[],                             // 0xA8
-    &[imm_lda, read_pc_and_set_opc], // 0xA9
+    &[lda_imm, read_pc_and_set_opc], // 0xA9
     &[],                             // 0xAA
     &[],                             // 0xAB
     abs!(ldy),                       // 0xAC
@@ -295,7 +295,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     idy!(lda),                       // 0xB1
     &[],                             // 0xB2
     &[],                             // 0xB3
-    &[],                             // 0xB4
+    zpx!(ldy),                       // 0xB4
     zpx!(lda),                       // 0xB5
     zpy!(ldx),                       // 0xB6
     &[],                             // 0xB7
@@ -485,14 +485,14 @@ fn imm(emu: &mut Emu) {
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
 }
 
-fn imm_lda(emu: &mut Emu) {
-    imm(emu);
-    lda(emu);
-}
-
 fn lda(emu: &mut Emu) {
     emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
     update_zn!(emu.cpu, a);
+}
+
+fn lda_imm(emu: &mut Emu) {
+    imm(emu);
+    lda(emu);
 }
 
 fn ldx(emu: &mut Emu) {
@@ -500,7 +500,17 @@ fn ldx(emu: &mut Emu) {
     update_zn!(emu.cpu, x);
 }
 
+fn ldx_imm(emu: &mut Emu) {
+    imm(emu);
+    ldx(emu);
+}
+
 fn ldy(emu: &mut Emu) {
     emu.cpu.y = bus::read_byte(emu, emu.cpu.addr);
     update_zn!(emu.cpu, y);
+}
+
+fn ldy_imm(emu: &mut Emu) {
+    imm(emu);
+    ldy(emu);
 }
