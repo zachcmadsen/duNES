@@ -90,6 +90,11 @@ fn opc_ae() {
 }
 
 #[test]
+fn opc_b1() {
+    run(0xB1);
+}
+
+#[test]
 fn opc_b5() {
     run(0xB5);
 }
