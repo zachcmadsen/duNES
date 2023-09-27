@@ -38,6 +38,19 @@ macro_rules! abs {
     };
 }
 
+macro_rules! abs_rmw {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_pc_and_set_addr_high,
+            read_addr_and_set_data,
+            write_data_to_addr,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
 macro_rules! abx_r {
     ($f:ident) => {
         &[
@@ -56,6 +69,20 @@ macro_rules! abx_w {
             read_pc_and_set_addr_low,
             read_pc_and_set_addr_high_and_add_index::<X, WRITE>,
             read_addr_and_fix_addr_high,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! abx_rmw {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_pc_and_set_addr_high_and_add_index::<X, WRITE>,
+            read_addr_and_fix_addr_high,
+            read_addr_and_set_data,
+            write_data_to_addr,
             $f,
             read_pc_and_set_opc,
         ]
@@ -131,11 +158,36 @@ macro_rules! zpg {
     };
 }
 
+macro_rules! zpg_rmw {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_addr_and_set_data,
+            write_data_to_addr,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
 macro_rules! zpx {
     ($f:ident) => {
         &[
             read_pc_and_set_addr_low,
             read_addr_and_add_index::<X>,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! zpx_rmw {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_addr_and_add_index::<X>,
+            read_addr_and_set_data,
+            write_data_to_addr,
             $f,
             read_pc_and_set_opc,
         ]
@@ -384,7 +436,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0xE3
     &[],                             // 0xE4
     &[],                             // 0xE5
-    &[],                             // 0xE6
+    zpg_rmw!(inc),                   // 0xE6
     &[],                             // 0xE7
     &[],                             // 0xE8
     &[],                             // 0xE9
@@ -392,7 +444,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0xEB
     &[],                             // 0xEC
     &[],                             // 0xED
-    &[],                             // 0xEE
+    abs_rmw!(inc),                   // 0xEE
     &[],                             // 0xEF
     &[],                             // 0xF0
     &[],                             // 0xF1
@@ -400,7 +452,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0xF3
     &[],                             // 0xF4
     &[],                             // 0xF5
-    &[],                             // 0xF6
+    zpx_rmw!(inc),                   // 0xF6
     &[],                             // 0xF7
     &[],                             // 0xF8
     &[],                             // 0xF9
@@ -408,7 +460,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0xFB
     &[],                             // 0xFC
     &[],                             // 0xFD
-    &[],                             // 0xFE
+    abx_rmw!(inc),                   // 0xFE
     &[],                             // 0xFF
 ];
 
@@ -424,6 +476,7 @@ pub struct Cpu {
     cyc: i8,
     addr: u16,
     carry: bool,
+    data: u8,
 }
 
 impl Cpu {
@@ -442,6 +495,7 @@ impl Cpu {
             cyc: 1,
             addr: 0,
             carry: false,
+            data: 0,
         }
     }
 }
@@ -527,9 +581,23 @@ fn read_addr_and_set_addr(emu: &mut Emu) {
     emu.cpu.addr = low as u16 | (high as u16) << 8;
 }
 
+fn read_addr_and_set_data(emu: &mut Emu) {
+    emu.cpu.data = bus::read_byte(emu, emu.cpu.addr);
+}
+
+fn write_data_to_addr(emu: &mut Emu) {
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+}
+
 fn imm(emu: &mut Emu) {
     emu.cpu.addr = emu.cpu.pc;
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
+}
+
+fn inc(emu: &mut Emu) {
+    emu.cpu.data = emu.cpu.data.wrapping_add(1);
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    update_zn!(emu.cpu, data);
 }
 
 fn lda(emu: &mut Emu) {

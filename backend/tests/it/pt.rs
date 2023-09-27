@@ -218,3 +218,23 @@ fn opc_bd() {
 fn opc_be() {
     run(0xBE);
 }
+
+#[test]
+fn opc_e6() {
+    run(0xE6);
+}
+
+#[test]
+fn opc_ee() {
+    run(0xEE);
+}
+
+#[test]
+fn opc_f6() {
+    run(0xE6);
+}
+
+#[test]
+fn opc_fe() {
+    run(0xFE);
+}
