@@ -437,7 +437,7 @@ impl Cpu {
             s: 0xFD,
             p: Status(0x34),
 
-            // TODO: Explain the initial values of `opc` and `cyc`.
+            // TODO(zach): Explain the initial values of `opc` and `cyc`.
             opc: 0xA5,
             cyc: 1,
             addr: 0,
