@@ -60,12 +60,25 @@ macro_rules! aby {
     };
 }
 
+macro_rules! idx {
+    ($f:ident) => {
+        &[
+            read_pc_and_set_addr_low,
+            read_addr_and_add_index::<X>,
+            read_addr_and_inc_addr_low_and_set_addr_high,
+            read_addr_and_set_addr,
+            $f,
+            read_pc_and_set_opc,
+        ]
+    };
+}
+
 macro_rules! idy {
     ($f:ident) => {
         &[
             read_pc_and_set_addr_low,
-            read_addr_and_set_addr_high,
-            read_addr_and_add_y,
+            read_addr_and_inc_addr_low_and_set_addr_high,
+            read_addr_and_add_y_and_set_addr,
             read_addr_and_inc_addr_high,
             $f,
             read_pc_and_set_opc,
@@ -263,7 +276,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x9E
     &[],                             // 0x9F
     &[],                             // 0xA0
-    &[],                             // 0xA1
+    idx!(lda),                       // 0xA1
     &[],                             // 0xA2
     &[],                             // 0xA3
     &[],                             // 0xA4
@@ -440,15 +453,17 @@ fn read_addr_and_inc_addr_high(emu: &mut Emu) {
     emu.cpu.addr |= (high.wrapping_add(1) as u16) << 8;
 }
 
-fn read_addr_and_set_addr_high(emu: &mut Emu) {
+fn read_addr_and_inc_addr_low_and_set_addr_high(emu: &mut Emu) {
     let low = bus::read_byte(emu, emu.cpu.addr);
+    // TODO(zach): Explain why we don't incremet the page if ptr wraps.
+    let ptr = emu.cpu.addr as u8;
+    emu.cpu.addr = ptr.wrapping_add(1) as u16;
     emu.cpu.addr |= (low as u16) << 8;
 }
 
-fn read_addr_and_add_y(emu: &mut Emu) {
+fn read_addr_and_add_y_and_set_addr(emu: &mut Emu) {
     let ptr = emu.cpu.addr as u8;
-    // TODO(zach): Explain why we don't incremet the page if ptr wraps.
-    let high = bus::read_byte(emu, ptr.wrapping_add(1) as u16);
+    let high = bus::read_byte(emu, ptr as u16);
     let low = (emu.cpu.addr >> 8) as u8;
     let (low, carry) = low.overflowing_add(emu.cpu.y);
     emu.cpu.addr = low as u16 | (high as u16) << 8;
@@ -456,6 +471,13 @@ fn read_addr_and_add_y(emu: &mut Emu) {
     if !carry {
         emu.cpu.cyc += 1;
     }
+}
+
+fn read_addr_and_set_addr(emu: &mut Emu) {
+    let ptr = emu.cpu.addr as u8;
+    let high = bus::read_byte(emu, ptr as u16);
+    let low = (emu.cpu.addr >> 8) as u8;
+    emu.cpu.addr = low as u16 | (high as u16) << 8;
 }
 
 fn imm(emu: &mut Emu) {

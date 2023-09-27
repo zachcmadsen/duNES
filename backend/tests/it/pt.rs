@@ -65,6 +65,11 @@ fn run(opcode: u8) {
 }
 
 #[test]
+fn opc_a1() {
+    run(0xA1);
+}
+
+#[test]
 fn opc_a5() {
     run(0xA5);
 }
