@@ -70,6 +70,11 @@ fn opc_46() {
 }
 
 #[test]
+fn opc_4a() {
+    run(0x4A);
+}
+
+#[test]
 fn opc_4e() {
     run(0x4E);
 }
