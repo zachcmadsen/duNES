@@ -3,9 +3,9 @@ use proc_bitfield::bitfield;
 use crate::{bus, Emu};
 
 macro_rules! update_zn {
-    ($cpu:expr, $reg:ident) => {
-        $cpu.p.set_z($cpu.$reg == 0);
-        $cpu.p.set_n(($cpu.$reg & 0x80) != 0);
+    ($emu:expr, $field:ident) => {
+        $emu.cpu.p.set_z($emu.cpu.$field == 0);
+        $emu.cpu.p.set_n(($emu.cpu.$field & 0x80) != 0);
     };
 }
 
@@ -276,7 +276,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x43
     &[],                             // 0x44
     &[],                             // 0x45
-    &[],                             // 0x46
+    zpg_rmw!(lsr),                   // 0x46
     &[],                             // 0x47
     &[],                             // 0x48
     &[],                             // 0x49
@@ -284,7 +284,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x4B
     &[],                             // 0x4C
     &[],                             // 0x4D
-    &[],                             // 0x4E
+    abs_rmw!(lsr),                   // 0x4E
     &[],                             // 0x4F
     &[],                             // 0x50
     &[],                             // 0x51
@@ -292,7 +292,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x53
     &[],                             // 0x54
     &[],                             // 0x55
-    &[],                             // 0x56
+    zpx_rmw!(lsr),                   // 0x56
     &[],                             // 0x57
     &[],                             // 0x58
     &[],                             // 0x59
@@ -300,7 +300,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                             // 0x5B
     &[],                             // 0x5C
     &[],                             // 0x5D
-    &[],                             // 0x5E
+    abx_rmw!(lsr),                   // 0x5E
     &[],                             // 0x5F
     &[],                             // 0x60
     &[],                             // 0x61
@@ -597,12 +597,12 @@ fn imm(emu: &mut Emu) {
 fn inc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
-    update_zn!(emu.cpu, data);
+    update_zn!(emu, data);
 }
 
 fn lda(emu: &mut Emu) {
     emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
-    update_zn!(emu.cpu, a);
+    update_zn!(emu, a);
 }
 
 fn lda_imm(emu: &mut Emu) {
@@ -612,7 +612,7 @@ fn lda_imm(emu: &mut Emu) {
 
 fn ldx(emu: &mut Emu) {
     emu.cpu.x = bus::read_byte(emu, emu.cpu.addr);
-    update_zn!(emu.cpu, x);
+    update_zn!(emu, x);
 }
 
 fn ldx_imm(emu: &mut Emu) {
@@ -622,12 +622,20 @@ fn ldx_imm(emu: &mut Emu) {
 
 fn ldy(emu: &mut Emu) {
     emu.cpu.y = bus::read_byte(emu, emu.cpu.addr);
-    update_zn!(emu.cpu, y);
+    update_zn!(emu, y);
 }
 
 fn ldy_imm(emu: &mut Emu) {
     imm(emu);
     ldy(emu);
+}
+
+fn lsr(emu: &mut Emu) {
+    let carry = emu.cpu.data & 0x01;
+    emu.cpu.data >>= 1;
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry != 0);
+    update_zn!(emu, data);
 }
 
 fn sta(emu: &mut Emu) {
