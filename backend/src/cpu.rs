@@ -2,7 +2,7 @@ use proc_bitfield::bitfield;
 
 use crate::{bus, Emu};
 
-macro_rules! update_zn {
+macro_rules! set_zn {
     ($emu:expr, $field:ident) => {
         $emu.cpu.p.set_z($emu.cpu.$field == 0);
         $emu.cpu.p.set_n(($emu.cpu.$field & 0x80) != 0);
@@ -597,12 +597,12 @@ fn imm(emu: &mut Emu) {
 fn inc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
-    update_zn!(emu, data);
+    set_zn!(emu, data);
 }
 
 fn lda(emu: &mut Emu) {
     emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
-    update_zn!(emu, a);
+    set_zn!(emu, a);
 }
 
 fn lda_imm(emu: &mut Emu) {
@@ -612,7 +612,7 @@ fn lda_imm(emu: &mut Emu) {
 
 fn ldx(emu: &mut Emu) {
     emu.cpu.x = bus::read_byte(emu, emu.cpu.addr);
-    update_zn!(emu, x);
+    set_zn!(emu, x);
 }
 
 fn ldx_imm(emu: &mut Emu) {
@@ -622,7 +622,7 @@ fn ldx_imm(emu: &mut Emu) {
 
 fn ldy(emu: &mut Emu) {
     emu.cpu.y = bus::read_byte(emu, emu.cpu.addr);
-    update_zn!(emu, y);
+    set_zn!(emu, y);
 }
 
 fn ldy_imm(emu: &mut Emu) {
@@ -635,7 +635,7 @@ fn lsr(emu: &mut Emu) {
     emu.cpu.data >>= 1;
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry != 0);
-    update_zn!(emu, data);
+    set_zn!(emu, data);
 }
 
 fn lsr_accumulator(emu: &mut Emu) {
@@ -643,7 +643,7 @@ fn lsr_accumulator(emu: &mut Emu) {
     let carry = emu.cpu.a & 0x01;
     emu.cpu.a >>= 1;
     emu.cpu.p.set_c(carry != 0);
-    update_zn!(emu, a);
+    set_zn!(emu, a);
 }
 
 fn sta(emu: &mut Emu) {
