@@ -152,6 +152,12 @@ macro_rules! idy_w {
     };
 }
 
+macro_rules! rel {
+    ($f:ident) => {
+        &[$f, read_pc_and_add_data, read_pc_and_fix_pch, read_pc_and_set_opc]
+    };
+}
+
 macro_rules! zpg {
     ($f:ident) => {
         &[read_pc_and_set_addr_low, $f, read_pc_and_set_opc]
@@ -446,7 +452,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0xED
     abs_rmw!(inc),                           // 0xEE
     &[],                                     // 0xEF
-    &[],                                     // 0xF0
+    rel!(beq),                               // 0xF0
     &[],                                     // 0xF1
     &[],                                     // 0xF2
     &[],                                     // 0xF3
@@ -587,6 +593,35 @@ fn read_addr_and_set_data(emu: &mut Emu) {
 
 fn write_data_to_addr(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+}
+
+fn read_pc_and_add_data(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.addr = emu.cpu.pc;
+    emu.cpu.pc = emu.cpu.pc.wrapping_add(emu.cpu.data as i8 as u16);
+
+    if emu.cpu.addr & 0xFF00 == emu.cpu.pc & 0xFF00 {
+        emu.cpu.cyc += 1;
+    }
+}
+
+fn read_pc_and_fix_pch(emu: &mut Emu) {
+    bus::read_byte(
+        emu,
+        (emu.cpu.addr & 0xFF00)
+            | (emu.cpu.addr as u8).wrapping_add(emu.cpu.data) as u16,
+    );
+}
+
+fn branch(emu: &mut Emu, cond: bool) {
+    emu.cpu.data = next_byte(emu);
+    if !cond {
+        emu.cpu.cyc += 2;
+    }
+}
+
+fn beq(emu: &mut Emu) {
+    branch(emu, emu.cpu.p.z());
 }
 
 fn imm(emu: &mut Emu) {

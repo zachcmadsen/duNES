@@ -255,6 +255,11 @@ fn opc_ee() {
 }
 
 #[test]
+fn opc_f0() {
+    run(0xF0);
+}
+
+#[test]
 fn opc_f6() {
     run(0xE6);
 }
