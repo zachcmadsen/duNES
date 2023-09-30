@@ -27,6 +27,22 @@ pub fn and_imm(emu: &mut Emu) {
     and(emu);
 }
 
+pub fn asl(emu: &mut Emu) {
+    let carry = emu.cpu.data & 0x80 != 0;
+    emu.cpu.data <<= 1;
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, data);
+}
+
+pub fn asl_accumulator(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    let carry = emu.cpu.a & 0x80 != 0;
+    emu.cpu.a <<= 1;
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
 pub fn beq(emu: &mut Emu) {
     branch(emu, emu.cpu.p.z());
 }
@@ -68,18 +84,18 @@ pub fn ldy_imm(emu: &mut Emu) {
 }
 
 pub fn lsr(emu: &mut Emu) {
-    let carry = emu.cpu.data & 0x01;
+    let carry = emu.cpu.data & 0x01 != 0;
     emu.cpu.data >>= 1;
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
-    emu.cpu.p.set_c(carry != 0);
+    emu.cpu.p.set_c(carry);
     set_zn!(emu, data);
 }
 
 pub fn lsr_accumulator(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
-    let carry = emu.cpu.a & 0x01;
+    let carry = emu.cpu.a & 0x01 != 0;
     emu.cpu.a >>= 1;
-    emu.cpu.p.set_c(carry != 0);
+    emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
 }
 

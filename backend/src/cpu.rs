@@ -7,8 +7,9 @@ use crate::{
     bus,
     cpu::{
         instr::{
-            adc, adc_imm, and, and_imm, beq, inc, lda, lda_imm, ldx, ldx_imm,
-            ldy, ldy_imm, lsr, lsr_accumulator, sta, stx, sty,
+            adc, adc_imm, and, and_imm, asl, asl_accumulator, beq, inc, lda,
+            lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_accumulator, sta,
+            stx, sty,
         },
         mode::{
             abs, abs_rmw, abx_r, abx_rmw, abx_w, aby_r, aby_w, idx, idy_r,
@@ -25,15 +26,15 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x03
     &[],                                     // 0x04
     &[],                                     // 0x05
-    &[],                                     // 0x06
+    zpg_rmw!(asl),                           // 0x06
     &[],                                     // 0x07
     &[],                                     // 0x08
     &[],                                     // 0x09
-    &[],                                     // 0x0A
+    &[asl_accumulator, read_pc_and_set_opc], // 0x0A
     &[],                                     // 0x0B
     &[],                                     // 0x0C
     &[],                                     // 0x0D
-    &[],                                     // 0x0E
+    abs_rmw!(asl),                           // 0x0E
     &[],                                     // 0x0F
     &[],                                     // 0x10
     &[],                                     // 0x11
@@ -41,7 +42,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x13
     &[],                                     // 0x14
     &[],                                     // 0x15
-    &[],                                     // 0x16
+    zpx_rmw!(asl),                           // 0x16
     &[],                                     // 0x17
     &[],                                     // 0x18
     &[],                                     // 0x19
@@ -49,7 +50,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x1B
     &[],                                     // 0x1C
     &[],                                     // 0x1D
-    &[],                                     // 0x1E
+    abx_rmw!(asl),                           // 0x1E
     &[],                                     // 0x1F
     &[],                                     // 0x20
     idx!(and),                               // 0x21
