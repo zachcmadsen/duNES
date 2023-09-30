@@ -7,8 +7,8 @@ use crate::{
     bus,
     cpu::{
         instr::{
-            beq, inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr,
-            lsr_accumulator, sta, stx, sty,
+            adc, adc_imm, beq, inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm,
+            lsr, lsr_accumulator, sta, stx, sty,
         },
         mode::{
             abs, abs_rmw, abx_r, abx_rmw, abx_w, aby_r, aby_w, idx, idy_r,
@@ -116,35 +116,35 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abx_rmw!(lsr),                           // 0x5E
     &[],                                     // 0x5F
     &[],                                     // 0x60
-    &[],                                     // 0x61
+    idx!(adc),                               // 0x61
     &[],                                     // 0x62
     &[],                                     // 0x63
     &[],                                     // 0x64
-    &[],                                     // 0x65
+    zpg!(adc),                               // 0x65
     &[],                                     // 0x66
     &[],                                     // 0x67
     &[],                                     // 0x68
-    &[],                                     // 0x69
+    &[adc_imm, read_pc_and_set_opc],         // 0x69
     &[],                                     // 0x6A
     &[],                                     // 0x6B
     &[],                                     // 0x6C
-    &[],                                     // 0x6D
+    abs!(adc),                               // 0x6D
     &[],                                     // 0x6E
     &[],                                     // 0x6F
     &[],                                     // 0x70
-    &[],                                     // 0x71
+    idy_r!(adc),                             // 0x71
     &[],                                     // 0x72
     &[],                                     // 0x73
     &[],                                     // 0x74
-    &[],                                     // 0x75
+    zpx!(adc),                               // 0x75
     &[],                                     // 0x76
     &[],                                     // 0x77
     &[],                                     // 0x78
-    &[],                                     // 0x79
+    aby_r!(adc),                             // 0x79
     &[],                                     // 0x7A
     &[],                                     // 0x7B
     &[],                                     // 0x7C
-    &[],                                     // 0x7D
+    abx_r!(adc),                             // 0x7D
     &[],                                     // 0x7E
     &[],                                     // 0x7F
     &[],                                     // 0x80

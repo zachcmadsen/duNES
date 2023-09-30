@@ -90,6 +90,46 @@ fn opc_5e() {
 }
 
 #[test]
+fn opc_61() {
+    run(0x61);
+}
+
+#[test]
+fn opc_65() {
+    run(0x65);
+}
+
+#[test]
+fn opc_69() {
+    run(0x69);
+}
+
+#[test]
+fn opc_6d() {
+    run(0x6D);
+}
+
+#[test]
+fn opc_71() {
+    run(0x71);
+}
+
+#[test]
+fn opc_75() {
+    run(0x75);
+}
+
+#[test]
+fn opc_79() {
+    run(0x79);
+}
+
+#[test]
+fn opc_7d() {
+    run(0x7D);
+}
+
+#[test]
 fn opc_81() {
     run(0x81);
 }

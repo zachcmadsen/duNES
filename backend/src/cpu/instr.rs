@@ -7,6 +7,16 @@ macro_rules! set_zn {
     };
 }
 
+pub fn adc(emu: &mut Emu) {
+    let val = bus::read_byte(emu, emu.cpu.addr);
+    add(emu, val);
+}
+
+pub fn adc_imm(emu: &mut Emu) {
+    imm(emu);
+    adc(emu);
+}
+
 pub fn beq(emu: &mut Emu) {
     branch(emu, emu.cpu.p.z());
 }
@@ -73,6 +83,17 @@ pub fn stx(emu: &mut Emu) {
 
 pub fn sty(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
+}
+
+fn add(emu: &mut Emu, val: u8) {
+    let prev_a = emu.cpu.a;
+    let res = (emu.cpu.a as u16)
+        .wrapping_add(val as u16)
+        .wrapping_add(emu.cpu.p.c() as u16);
+    emu.cpu.a = res as u8;
+    emu.cpu.p.set_c(res > 0xFF);
+    emu.cpu.p.set_v(((prev_a ^ emu.cpu.a) & (val ^ emu.cpu.a) & 0x80) != 0);
+    set_zn!(emu, a);
 }
 
 fn branch(emu: &mut Emu, cond: bool) {
