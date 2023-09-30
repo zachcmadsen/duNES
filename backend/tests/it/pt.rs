@@ -40,7 +40,7 @@ fn run(opcode: u8) {
 
         // Use `memset` since `fill` is too slow in debug builds.
         unsafe {
-            libc::memset(emu.bus.mem.as_mut_ptr() as _, 0, emu.bus.mem.len())
+            libc::memset(emu.bus.mem.as_mut_ptr() as _, 0, emu.bus.mem.len());
         };
         for (addr, data) in test.initial.ram {
             emu.bus.mem[addr as usize] = data;
