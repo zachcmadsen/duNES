@@ -43,6 +43,14 @@ pub fn asl_accumulator(emu: &mut Emu) {
     set_zn!(emu, a);
 }
 
+pub fn bcc(emu: &mut Emu) {
+    branch(emu, !emu.cpu.p.c());
+}
+
+pub fn bcs(emu: &mut Emu) {
+    branch(emu, emu.cpu.p.c());
+}
+
 pub fn beq(emu: &mut Emu) {
     branch(emu, emu.cpu.p.z());
 }

@@ -230,6 +230,11 @@ fn opc_8e() {
 }
 
 #[test]
+fn opc_90() {
+    run(0x90);
+}
+
+#[test]
 fn opc_91() {
     run(0x91);
 }
@@ -307,6 +312,11 @@ fn opc_a9() {
 #[test]
 fn opc_ae() {
     run(0xAE);
+}
+
+#[test]
+fn opc_b0() {
+    run(0xB0);
 }
 
 #[test]

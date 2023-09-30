@@ -7,9 +7,9 @@ use crate::{
     bus,
     cpu::{
         instr::{
-            adc, adc_imm, and, and_imm, asl, asl_accumulator, beq, inc, lda,
-            lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_accumulator, sta,
-            stx, sty,
+            adc, adc_imm, and, and_imm, asl, asl_accumulator, bcc, bcs, beq,
+            inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr,
+            lsr_accumulator, sta, stx, sty,
         },
         mode::{
             abs, abs_rmw, abx_r, abx_rmw, abx_w, aby_r, aby_w, idx, idy_r,
@@ -164,7 +164,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abs!(sta),                               // 0x8D
     abs!(stx),                               // 0x8E
     &[],                                     // 0x8F
-    &[],                                     // 0x90
+    rel!(bcc),                               // 0x90
     idy_w!(sta),                             // 0x91
     &[],                                     // 0x92
     &[],                                     // 0x93
@@ -196,7 +196,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abs!(lda),                               // 0xAD
     abs!(ldx),                               // 0xAE
     &[],                                     // 0xAF
-    &[],                                     // 0xB0
+    rel!(bcs),                               // 0xB0
     idy_r!(lda),                             // 0xB1
     &[],                                     // 0xB2
     &[],                                     // 0xB3
