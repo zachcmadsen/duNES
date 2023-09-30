@@ -17,6 +17,16 @@ pub fn adc_imm(emu: &mut Emu) {
     adc(emu);
 }
 
+pub fn and(emu: &mut Emu) {
+    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    set_zn!(emu, a);
+}
+
+pub fn and_imm(emu: &mut Emu) {
+    imm(emu);
+    and(emu);
+}
+
 pub fn beq(emu: &mut Emu) {
     branch(emu, emu.cpu.p.z());
 }

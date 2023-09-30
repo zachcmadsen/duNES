@@ -65,6 +65,46 @@ fn run(opcode: u8) {
 }
 
 #[test]
+fn opc_21() {
+    run(0x21);
+}
+
+#[test]
+fn opc_25() {
+    run(0x25);
+}
+
+#[test]
+fn opc_29() {
+    run(0x29);
+}
+
+#[test]
+fn opc_2d() {
+    run(0x2D);
+}
+
+#[test]
+fn opc_31() {
+    run(0x31);
+}
+
+#[test]
+fn opc_35() {
+    run(0x35);
+}
+
+#[test]
+fn opc_39() {
+    run(0x39);
+}
+
+#[test]
+fn opc_3d() {
+    run(0x3D);
+}
+
+#[test]
 fn opc_46() {
     run(0x46);
 }
