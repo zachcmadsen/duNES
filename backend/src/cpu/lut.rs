@@ -3,7 +3,8 @@ use crate::{
         instr::{
             adc, adc_imm, and, and_imm, asl, asl_accumulator, bcc, bcs, beq,
             bit, bmi, bne, bpl, inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm,
-            lsr, lsr_accumulator, sta, stx, sty,
+            lsr, lsr_accumulator, push_p, push_pch, push_pcl,
+            read_pc_and_inc_pc, set_pch, set_pcl, sta, stx, sty,
         },
         mode::read_pc_and_set_opc,
     },
@@ -219,7 +220,15 @@ macro_rules! zpy {
 }
 
 pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
-    &[],                                     // 0x00
+    &[
+        read_pc_and_inc_pc,
+        push_pch,
+        push_pcl,
+        push_p,
+        set_pcl::<0xfffe>,
+        set_pch::<0xfffe>,
+        read_pc_and_set_opc,
+    ], // 0x00
     &[],                                     // 0x01
     &[],                                     // 0x02
     &[],                                     // 0x03

@@ -1,5 +1,7 @@
 use crate::{bus, cpu::next_byte, Emu, Status};
 
+const STACK_BASE_ADDR: u16 = 0x0100;
+
 macro_rules! set_zn {
     ($emu:expr, $field:ident) => {
         $emu.cpu.p.set_z($emu.cpu.$field == 0);
@@ -139,6 +141,31 @@ pub fn sty(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
 }
 
+pub fn read_pc_and_inc_pc(emu: &mut Emu) {
+    next_byte(emu);
+}
+
+pub fn push_pcl(emu: &mut Emu) {
+    push(emu, emu.cpu.pc as u8);
+}
+
+pub fn push_pch(emu: &mut Emu) {
+    push(emu, (emu.cpu.pc >> 8) as u8);
+}
+
+pub fn push_p(emu: &mut Emu) {
+    push(emu, emu.cpu.p.with_b(true).0);
+    emu.cpu.p.set_i(true);
+}
+
+pub fn set_pcl<const V: u16>(emu: &mut Emu) {
+    emu.cpu.pc = bus::read_byte(emu, V) as u16;
+}
+
+pub fn set_pch<const V: u16>(emu: &mut Emu) {
+    emu.cpu.pc |= (bus::read_byte(emu, V + 1) as u16) << 8;
+}
+
 fn add(emu: &mut Emu, val: u8) {
     let prev_a = emu.cpu.a;
     let res = (emu.cpu.a as u16)
@@ -162,19 +189,7 @@ fn imm(emu: &mut Emu) {
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
 }
 
-// pub fn read_pc_and_inc_pc(emu: &mut Emu) {
-//     next_byte(emu);
-// }
-
-// pub fn push_pch(emu: &mut Emu) {
-//     push(emu, (emu.cpu.pc >> 8) as u8);
-// }
-
-// pub fn push_pcl(emu: &mut Emu) {
-//     push(emu, emu.cpu.pc as u8);
-// }
-
-// pub fn push_p(emu: &mut Emu) {
-//     push(emu, emu.cpu.p.with_b(true).0);
-//     emu.cpu.p.set_i(true);
-// }
+fn push(emu: &mut Emu, data: u8) {
+    bus::write_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16, data);
+    emu.cpu.s = emu.cpu.s.wrapping_sub(1);
+}

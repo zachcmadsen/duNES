@@ -6,9 +6,8 @@ use proc_bitfield::bitfield;
 
 use crate::{bus, cpu::lut::OPC_LUT, Emu};
 
-// const STACK_BASE_ADDR: u16 = 0x0100;
-
 bitfield! {
+    #[derive(Clone, Copy)]
     pub struct Status(pub u8) {
         c: bool @ 0,
         z: bool @ 1,
@@ -67,8 +66,3 @@ fn next_byte(emu: &mut Emu) -> u8 {
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
     byte
 }
-
-// fn push(emu: &mut Emu, data: u8) {
-//     bus::write_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16, data);
-//     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
-// }
