@@ -161,3 +161,20 @@ fn imm(emu: &mut Emu) {
     emu.cpu.addr = emu.cpu.pc;
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
 }
+
+// pub fn read_pc_and_inc_pc(emu: &mut Emu) {
+//     next_byte(emu);
+// }
+
+// pub fn push_pch(emu: &mut Emu) {
+//     push(emu, (emu.cpu.pc >> 8) as u8);
+// }
+
+// pub fn push_pcl(emu: &mut Emu) {
+//     push(emu, emu.cpu.pc as u8);
+// }
+
+// pub fn push_p(emu: &mut Emu) {
+//     push(emu, emu.cpu.p.with_b(true).0);
+//     emu.cpu.p.set_i(true);
+// }
