@@ -8,8 +8,8 @@ use crate::{
     cpu::{
         instr::{
             adc, adc_imm, and, and_imm, asl, asl_accumulator, bcc, bcs, beq,
-            inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr,
-            lsr_accumulator, sta, stx, sty,
+            bit, bmi, bne, bpl, inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm,
+            lsr, lsr_accumulator, sta, stx, sty,
         },
         mode::{
             abs, abs_rmw, abx_r, abx_rmw, abx_w, aby_r, aby_w, idx, idy_r,
@@ -36,7 +36,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x0D
     abs_rmw!(asl),                           // 0x0E
     &[],                                     // 0x0F
-    &[],                                     // 0x10
+    rel!(bpl),                               // 0x10
     &[],                                     // 0x11
     &[],                                     // 0x12
     &[],                                     // 0x13
@@ -56,7 +56,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     idx!(and),                               // 0x21
     &[],                                     // 0x22
     &[],                                     // 0x23
-    &[],                                     // 0x24
+    zpg!(bit),                               // 0x24
     zpg!(and),                               // 0x25
     &[],                                     // 0x26
     &[],                                     // 0x27
@@ -64,11 +64,11 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[and_imm, read_pc_and_set_opc],         // 0x29
     &[],                                     // 0x2A
     &[],                                     // 0x2B
-    &[],                                     // 0x2C
+    abs!(bit),                               // 0x2C
     abs!(and),                               // 0x2D
     &[],                                     // 0x2E
     &[],                                     // 0x2F
-    &[],                                     // 0x30
+    rel!(bmi),                               // 0x30
     idy_r!(and),                             // 0x31
     &[],                                     // 0x32
     &[],                                     // 0x33
@@ -228,7 +228,7 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0xCD
     &[],                                     // 0xCE
     &[],                                     // 0xCF
-    &[],                                     // 0xD0
+    rel!(bne),                               // 0xD0
     &[],                                     // 0xD1
     &[],                                     // 0xD2
     &[],                                     // 0xD3

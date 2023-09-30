@@ -1,4 +1,4 @@
-use crate::{bus, cpu::next_byte, Emu};
+use crate::{bus, cpu::next_byte, Emu, Status};
 
 macro_rules! set_zn {
     ($emu:expr, $field:ident) => {
@@ -53,6 +53,26 @@ pub fn bcs(emu: &mut Emu) {
 
 pub fn beq(emu: &mut Emu) {
     branch(emu, emu.cpu.p.z());
+}
+
+pub fn bit(emu: &mut Emu) {
+    let data = bus::read_byte(emu, emu.cpu.addr);
+    let status = Status(data);
+    emu.cpu.p.set_z(emu.cpu.a & data == 0);
+    emu.cpu.p.set_v(status.v());
+    emu.cpu.p.set_n(status.n());
+}
+
+pub fn bmi(emu: &mut Emu) {
+    branch(emu, emu.cpu.p.n());
+}
+
+pub fn bne(emu: &mut Emu) {
+    branch(emu, !emu.cpu.p.z());
+}
+
+pub fn bpl(emu: &mut Emu) {
+    branch(emu, !emu.cpu.p.n());
 }
 
 pub fn inc(emu: &mut Emu) {
