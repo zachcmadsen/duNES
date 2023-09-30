@@ -1,215 +1,22 @@
+mod instr;
+mod mode;
+
 use proc_bitfield::bitfield;
 
-use crate::{bus, Emu};
-
-macro_rules! set_zn {
-    ($emu:expr, $field:ident) => {
-        $emu.cpu.p.set_z($emu.cpu.$field == 0);
-        $emu.cpu.p.set_n(($emu.cpu.$field & 0x80) != 0);
-    };
-}
-
-bitfield! {
-    pub struct Status(pub u8) {
-        c: bool @ 0,
-        z: bool @ 1,
-        i: bool @ 2,
-        d: bool @ 3,
-        b: bool @ 4,
-        u: bool @ 5,
-        v: bool @ 6,
-        n: bool @ 7,
-    }
-}
-
-const X: bool = true;
-const Y: bool = false;
-const READ: bool = true;
-const WRITE: bool = false;
-
-macro_rules! abs {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! abs_rmw {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high,
-            read_addr_and_set_data,
-            write_data_to_addr,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! abx_r {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<X, READ>,
-            read_addr_and_fix_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! abx_w {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<X, WRITE>,
-            read_addr_and_fix_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! abx_rmw {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<X, WRITE>,
-            read_addr_and_fix_addr_high,
-            read_addr_and_set_data,
-            write_data_to_addr,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! aby_r {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<Y, READ>,
-            read_addr_and_fix_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! aby_w {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_pc_and_set_addr_high_and_add_index::<Y, WRITE>,
-            read_addr_and_fix_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! idx {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_add_index::<X>,
-            read_addr_and_inc_addr_low_and_set_addr_high,
-            read_addr_and_set_addr,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! idy_r {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_inc_addr_low_and_set_addr_high,
-            read_addr_and_add_y_and_set_addr::<READ>,
-            read_addr_and_fix_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! idy_w {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_inc_addr_low_and_set_addr_high,
-            read_addr_and_add_y_and_set_addr::<WRITE>,
-            read_addr_and_fix_addr_high,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! rel {
-    ($f:ident) => {
-        &[$f, read_pc_and_add_data, read_pc_and_fix_pch, read_pc_and_set_opc]
-    };
-}
-
-macro_rules! zpg {
-    ($f:ident) => {
-        &[read_pc_and_set_addr_low, $f, read_pc_and_set_opc]
-    };
-}
-
-macro_rules! zpg_rmw {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_set_data,
-            write_data_to_addr,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! zpx {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_add_index::<X>,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! zpx_rmw {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_add_index::<X>,
-            read_addr_and_set_data,
-            write_data_to_addr,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
-
-macro_rules! zpy {
-    ($f:ident) => {
-        &[
-            read_pc_and_set_addr_low,
-            read_addr_and_add_index::<Y>,
-            $f,
-            read_pc_and_set_opc,
-        ]
-    };
-}
+use crate::{
+    bus,
+    cpu::{
+        instr::{
+            beq, inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr,
+            lsr_accumulator, sta, stx, sty,
+        },
+        mode::{
+            abs, abs_rmw, abx_r, abx_rmw, abx_w, aby_r, aby_w, idx, idy_r,
+            idy_w, read_pc_and_set_opc, rel, zpg, zpg_rmw, zpx, zpx_rmw, zpy,
+        },
+    },
+    Emu,
+};
 
 static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x00
@@ -470,6 +277,19 @@ static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0xFF
 ];
 
+bitfield! {
+    pub struct Status(pub u8) {
+        c: bool @ 0,
+        z: bool @ 1,
+        i: bool @ 2,
+        d: bool @ 3,
+        b: bool @ 4,
+        u: bool @ 5,
+        v: bool @ 6,
+        n: bool @ 7,
+    }
+}
+
 pub struct Cpu {
     pub a: u8,
     pub x: u8,
@@ -515,180 +335,4 @@ fn next_byte(emu: &mut Emu) -> u8 {
     let byte = bus::read_byte(emu, emu.cpu.pc);
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
     byte
-}
-
-fn read_pc_and_set_opc(emu: &mut Emu) {
-    emu.cpu.opc = next_byte(emu);
-    emu.cpu.cyc = -1;
-}
-
-fn read_pc_and_set_addr_low(emu: &mut Emu) {
-    emu.cpu.addr = next_byte(emu) as u16;
-}
-
-fn read_pc_and_set_addr_high(emu: &mut Emu) {
-    emu.cpu.addr |= (next_byte(emu) as u16) << 8;
-}
-
-fn read_addr_and_add_index<const X: bool>(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.addr);
-    let index = if X { emu.cpu.x } else { emu.cpu.y };
-    emu.cpu.addr = (emu.cpu.addr as u8).wrapping_add(index) as u16
-}
-
-fn read_pc_and_set_addr_high_and_add_index<const X: bool, const R: bool>(
-    emu: &mut Emu,
-) {
-    let high = next_byte(emu);
-    let index = if X { emu.cpu.x } else { emu.cpu.y };
-    let (low, carry) = (emu.cpu.addr as u8).overflowing_add(index);
-    emu.cpu.addr = low as u16 | (high as u16) << 8;
-    emu.cpu.carry = carry;
-
-    if R && !carry {
-        emu.cpu.cyc += 1;
-    }
-}
-
-fn read_addr_and_fix_addr_high(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.addr);
-    if emu.cpu.carry {
-        let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
-        emu.cpu.addr &= 0x00FF;
-        emu.cpu.addr |= (high.wrapping_add(1) as u16) << 8;
-    }
-}
-
-fn read_addr_and_inc_addr_low_and_set_addr_high(emu: &mut Emu) {
-    let low = bus::read_byte(emu, emu.cpu.addr);
-    // TODO(zach): Explain why we don't incremet the page if ptr wraps.
-    let ptr = emu.cpu.addr as u8;
-    emu.cpu.addr = ptr.wrapping_add(1) as u16;
-    emu.cpu.addr |= (low as u16) << 8;
-}
-
-fn read_addr_and_add_y_and_set_addr<const R: bool>(emu: &mut Emu) {
-    let ptr = emu.cpu.addr as u8;
-    let high = bus::read_byte(emu, ptr as u16);
-    let low = (emu.cpu.addr >> 8) as u8;
-    let (low, carry) = low.overflowing_add(emu.cpu.y);
-    emu.cpu.addr = low as u16 | (high as u16) << 8;
-    emu.cpu.carry = carry;
-
-    if R && !carry {
-        emu.cpu.cyc += 1;
-    }
-}
-
-fn read_addr_and_set_addr(emu: &mut Emu) {
-    let ptr = emu.cpu.addr as u8;
-    let high = bus::read_byte(emu, ptr as u16);
-    let low = (emu.cpu.addr >> 8) as u8;
-    emu.cpu.addr = low as u16 | (high as u16) << 8;
-}
-
-fn read_addr_and_set_data(emu: &mut Emu) {
-    emu.cpu.data = bus::read_byte(emu, emu.cpu.addr);
-}
-
-fn write_data_to_addr(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
-}
-
-fn read_pc_and_add_data(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
-    emu.cpu.addr = emu.cpu.pc;
-    emu.cpu.pc = emu.cpu.pc.wrapping_add(emu.cpu.data as i8 as u16);
-
-    if emu.cpu.addr & 0xFF00 == emu.cpu.pc & 0xFF00 {
-        emu.cpu.cyc += 1;
-    }
-}
-
-fn read_pc_and_fix_pch(emu: &mut Emu) {
-    bus::read_byte(
-        emu,
-        (emu.cpu.addr & 0xFF00)
-            | (emu.cpu.addr as u8).wrapping_add(emu.cpu.data) as u16,
-    );
-}
-
-fn branch(emu: &mut Emu, cond: bool) {
-    emu.cpu.data = next_byte(emu);
-    if !cond {
-        emu.cpu.cyc += 2;
-    }
-}
-
-fn beq(emu: &mut Emu) {
-    branch(emu, emu.cpu.p.z());
-}
-
-fn imm(emu: &mut Emu) {
-    emu.cpu.addr = emu.cpu.pc;
-    emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
-}
-
-fn inc(emu: &mut Emu) {
-    emu.cpu.data = emu.cpu.data.wrapping_add(1);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
-    set_zn!(emu, data);
-}
-
-fn lda(emu: &mut Emu) {
-    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
-    set_zn!(emu, a);
-}
-
-fn lda_imm(emu: &mut Emu) {
-    imm(emu);
-    lda(emu);
-}
-
-fn ldx(emu: &mut Emu) {
-    emu.cpu.x = bus::read_byte(emu, emu.cpu.addr);
-    set_zn!(emu, x);
-}
-
-fn ldx_imm(emu: &mut Emu) {
-    imm(emu);
-    ldx(emu);
-}
-
-fn ldy(emu: &mut Emu) {
-    emu.cpu.y = bus::read_byte(emu, emu.cpu.addr);
-    set_zn!(emu, y);
-}
-
-fn ldy_imm(emu: &mut Emu) {
-    imm(emu);
-    ldy(emu);
-}
-
-fn lsr(emu: &mut Emu) {
-    let carry = emu.cpu.data & 0x01;
-    emu.cpu.data >>= 1;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
-    emu.cpu.p.set_c(carry != 0);
-    set_zn!(emu, data);
-}
-
-fn lsr_accumulator(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
-    let carry = emu.cpu.a & 0x01;
-    emu.cpu.a >>= 1;
-    emu.cpu.p.set_c(carry != 0);
-    set_zn!(emu, a);
-}
-
-fn sta(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
-}
-
-fn stx(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.x);
-}
-
-fn sty(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
 }
