@@ -13,8 +13,8 @@ use crate::{
 macro_rules! abs {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high,
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_set_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -24,8 +24,8 @@ macro_rules! abs {
 macro_rules! abs_rmw {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high,
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_set_high,
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
@@ -37,12 +37,12 @@ macro_rules! abs_rmw {
 macro_rules! abx_r {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high_and_add_index::<
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_add_index_to_low_and_set_high::<
                 true,
                 true,
             >,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -52,12 +52,12 @@ macro_rules! abx_r {
 macro_rules! abx_w {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high_and_add_index::<
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_add_index_to_low_and_set_high::<
                 true,
                 false,
             >,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -67,12 +67,12 @@ macro_rules! abx_w {
 macro_rules! abx_rmw {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high_and_add_index::<
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_add_index_to_low_and_set_high::<
                 true,
                 false,
             >,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
@@ -84,12 +84,12 @@ macro_rules! abx_rmw {
 macro_rules! aby_r {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high_and_add_index::<
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_add_index_to_low_and_set_high::<
                 false,
                 true,
             >,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -99,12 +99,12 @@ macro_rules! aby_r {
 macro_rules! aby_w {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_pc_and_set_addr_high_and_add_index::<
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_add_index_to_low_and_set_high::<
                 false,
                 false,
             >,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -114,10 +114,10 @@ macro_rules! aby_w {
 macro_rules! idx {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
+            $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_add_index::<true>,
-            $crate::cpu::mode::read_addr_and_inc_addr_low_and_set_addr_high,
-            $crate::cpu::mode::read_addr_and_set_addr,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::read_addr_and_set_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -127,10 +127,10 @@ macro_rules! idx {
 macro_rules! idy_r {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_addr_and_inc_addr_low_and_set_addr_high,
-            $crate::cpu::mode::read_addr_and_add_y_and_set_addr::<true>,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::read_addr_and_add_y_to_low_and_set_high::<true>,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -140,10 +140,10 @@ macro_rules! idy_r {
 macro_rules! idy_w {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
-            $crate::cpu::mode::read_addr_and_inc_addr_low_and_set_addr_high,
-            $crate::cpu::mode::read_addr_and_add_y_and_set_addr::<false>,
-            $crate::cpu::mode::read_addr_and_fix_addr_high,
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::read_addr_and_add_y_to_low_and_set_high::<false>,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -154,7 +154,7 @@ macro_rules! rel {
     ($f:ident) => {
         &[
             $f,
-            $crate::cpu::mode::read_pc_and_add_data,
+            $crate::cpu::mode::read_pc_and_add_data_to_pc,
             $crate::cpu::mode::read_pc_and_fix_pch,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -164,7 +164,7 @@ macro_rules! rel {
 macro_rules! zpg {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
+            $crate::cpu::mode::read_pc_and_set_low,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -174,7 +174,7 @@ macro_rules! zpg {
 macro_rules! zpg_rmw {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
+            $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
@@ -186,7 +186,7 @@ macro_rules! zpg_rmw {
 macro_rules! zpx {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
+            $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_add_index::<true>,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
@@ -197,7 +197,7 @@ macro_rules! zpx {
 macro_rules! zpx_rmw {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
+            $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_add_index::<true>,
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
@@ -210,7 +210,7 @@ macro_rules! zpx_rmw {
 macro_rules! zpy {
     ($f:ident) => {
         &[
-            $crate::cpu::mode::read_pc_and_set_addr_low,
+            $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_add_index::<false>,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
