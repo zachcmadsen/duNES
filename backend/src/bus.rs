@@ -27,6 +27,7 @@ impl<const N: usize> Bus<N> {
 
         let default_handler =
             Handler { read: read_default, _write: write_default };
+
         Bus {
             handlers: vec![default_handler; N].try_into().unwrap(),
             mem: vec![0; N].try_into().unwrap(),
