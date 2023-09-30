@@ -77,6 +77,34 @@ pub fn bpl(emu: &mut Emu) {
     branch(emu, !emu.cpu.p.n());
 }
 
+pub fn bvc(emu: &mut Emu) {
+    branch(emu, !emu.cpu.p.v());
+}
+
+pub fn bvs(emu: &mut Emu) {
+    branch(emu, emu.cpu.p.v());
+}
+
+pub fn clc(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_c(false);
+}
+
+pub fn cld(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_d(false);
+}
+
+pub fn cli(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_i(false);
+}
+
+pub fn clv(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_v(false);
+}
+
 pub fn inc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);

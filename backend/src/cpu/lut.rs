@@ -2,9 +2,10 @@ use crate::{
     cpu::{
         instr::{
             adc, adc_imm, and, and_imm, asl, asl_accumulator, bcc, bcs, beq,
-            bit, bmi, bne, bpl, inc, lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm,
-            lsr, lsr_accumulator, push_p, push_pch, push_pcl,
-            read_pc_and_inc_pc, set_pch, set_pcl, sta, stx, sty,
+            bit, bmi, bne, bpl, bvc, bvs, clc, cld, cli, clv, inc, lda,
+            lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_accumulator, push_p,
+            push_pch, push_pcl, read_pc_and_inc_pc, set_pch, set_pcl, sta,
+            stx, sty,
         },
         mode::read_pc_and_set_opc,
     },
@@ -252,7 +253,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x15
     zpx_rmw!(asl),                           // 0x16
     &[],                                     // 0x17
-    &[],                                     // 0x18
+    &[clc, read_pc_and_set_opc],             // 0x18
     &[],                                     // 0x19
     &[],                                     // 0x1A
     &[],                                     // 0x1B
@@ -308,7 +309,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x4D
     abs_rmw!(lsr),                           // 0x4E
     &[],                                     // 0x4F
-    &[],                                     // 0x50
+    rel!(bvc),                               // 0x50
     &[],                                     // 0x51
     &[],                                     // 0x52
     &[],                                     // 0x53
@@ -316,7 +317,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x55
     zpx_rmw!(lsr),                           // 0x56
     &[],                                     // 0x57
-    &[],                                     // 0x58
+    &[cli, read_pc_and_set_opc],             // 0x58
     &[],                                     // 0x59
     &[],                                     // 0x5A
     &[],                                     // 0x5B
@@ -340,7 +341,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abs!(adc),                               // 0x6D
     &[],                                     // 0x6E
     &[],                                     // 0x6F
-    &[],                                     // 0x70
+    rel!(bvs),                               // 0x70
     idy_r!(adc),                             // 0x71
     &[],                                     // 0x72
     &[],                                     // 0x73
@@ -412,7 +413,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(lda),                               // 0xB5
     zpy!(ldx),                               // 0xB6
     &[],                                     // 0xB7
-    &[],                                     // 0xB8
+    &[clv, read_pc_and_set_opc],             // 0xB8
     aby_r!(lda),                             // 0xB9
     &[],                                     // 0xBA
     &[],                                     // 0xBB
@@ -444,7 +445,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0xD5
     &[],                                     // 0xD6
     &[],                                     // 0xD7
-    &[],                                     // 0xD8
+    &[cld, read_pc_and_set_opc],             // 0xD8
     &[],                                     // 0xD9
     &[],                                     // 0xDA
     &[],                                     // 0xDB
