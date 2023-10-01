@@ -37,7 +37,7 @@ pub fn asl(emu: &mut Emu) {
     set_zn!(emu, data);
 }
 
-pub fn asl_accumulator(emu: &mut Emu) {
+pub fn asl_a(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x80 != 0;
     emu.cpu.a <<= 1;
@@ -216,7 +216,7 @@ pub fn lsr(emu: &mut Emu) {
     set_zn!(emu, data);
 }
 
-pub fn lsr_accumulator(emu: &mut Emu) {
+pub fn lsr_a(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x01 != 0;
     emu.cpu.a >>= 1;
