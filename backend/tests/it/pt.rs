@@ -75,11 +75,6 @@ fn opc_06() {
 }
 
 #[test]
-fn opc_10() {
-    run(0x10);
-}
-
-#[test]
 fn opc_0a() {
     run(0x0A);
 }
@@ -87,6 +82,11 @@ fn opc_0a() {
 #[test]
 fn opc_0e() {
     run(0x0E);
+}
+
+#[test]
+fn opc_10() {
+    run(0x10);
 }
 
 #[test]
@@ -160,13 +160,33 @@ fn opc_3d() {
 }
 
 #[test]
+fn opc_41() {
+    run(0x41);
+}
+
+#[test]
+fn opc_45() {
+    run(0x45);
+}
+
+#[test]
 fn opc_46() {
     run(0x46);
 }
 
 #[test]
+fn opc_49() {
+    run(0x49);
+}
+
+#[test]
 fn opc_4a() {
     run(0x4A);
+}
+
+#[test]
+fn opc_4d() {
+    run(0x4D);
 }
 
 #[test]
@@ -180,6 +200,16 @@ fn opc_50() {
 }
 
 #[test]
+fn opc_51() {
+    run(0x51);
+}
+
+#[test]
+fn opc_55() {
+    run(0x55);
+}
+
+#[test]
 fn opc_56() {
     run(0x56);
 }
@@ -187,6 +217,16 @@ fn opc_56() {
 #[test]
 fn opc_58() {
     run(0x58);
+}
+
+#[test]
+fn opc_59() {
+    run(0x59);
+}
+
+#[test]
+fn opc_5d() {
+    run(0x5D);
 }
 
 #[test]
@@ -260,13 +300,18 @@ fn opc_86() {
 }
 
 #[test]
+fn opc_88() {
+    run(0x88);
+}
+
+#[test]
 fn opc_8c() {
     run(0x8C);
 }
 
 #[test]
 fn opc_8d() {
-    run(0x8d);
+    run(0x8D);
 }
 
 #[test]
@@ -340,6 +385,11 @@ fn opc_a6() {
 }
 
 #[test]
+fn opc_a9() {
+    run(0xA9);
+}
+
+#[test]
 fn opc_ac() {
     run(0xAC);
 }
@@ -347,11 +397,6 @@ fn opc_ac() {
 #[test]
 fn opc_ad() {
     run(0xAD);
-}
-
-#[test]
-fn opc_a9() {
-    run(0xA9);
 }
 
 #[test]
@@ -430,8 +475,23 @@ fn opc_c5() {
 }
 
 #[test]
+fn opc_c6() {
+    run(0xC6);
+}
+
+#[test]
+fn opc_c8() {
+    run(0xC8);
+}
+
+#[test]
 fn opc_c9() {
     run(0xC9);
+}
+
+#[test]
+fn opc_ca() {
+    run(0xCA);
 }
 
 #[test]
@@ -442,6 +502,11 @@ fn opc_cc() {
 #[test]
 fn opc_cd() {
     run(0xCD);
+}
+
+#[test]
+fn opc_ce() {
+    run(0xCE);
 }
 
 #[test]
@@ -460,6 +525,11 @@ fn opc_d5() {
 }
 
 #[test]
+fn opc_d6() {
+    run(0xD6);
+}
+
+#[test]
 fn opc_d8() {
     run(0xD8);
 }
@@ -475,6 +545,11 @@ fn opc_dd() {
 }
 
 #[test]
+fn opc_de() {
+    run(0xDE);
+}
+
+#[test]
 fn opc_e0() {
     run(0xE0);
 }
@@ -487,6 +562,11 @@ fn opc_e4() {
 #[test]
 fn opc_e6() {
     run(0xE6);
+}
+
+#[test]
+fn opc_e8() {
+    run(0xE8);
 }
 
 #[test]
@@ -506,7 +586,7 @@ fn opc_f0() {
 
 #[test]
 fn opc_f6() {
-    run(0xE6);
+    run(0xF6);
 }
 
 #[test]

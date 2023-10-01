@@ -132,10 +132,50 @@ pub fn cpy_imm(emu: &mut Emu) {
     cpy(emu);
 }
 
+pub fn dec(emu: &mut Emu) {
+    emu.cpu.data = emu.cpu.data.wrapping_sub(1);
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    set_zn!(emu, data);
+}
+
+pub fn dex(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.x = emu.cpu.x.wrapping_sub(1);
+    set_zn!(emu, x);
+}
+
+pub fn dey(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.y = emu.cpu.y.wrapping_sub(1);
+    set_zn!(emu, y);
+}
+
+pub fn eor(emu: &mut Emu) {
+    emu.cpu.a ^= bus::read_byte(emu, emu.cpu.addr);
+    set_zn!(emu, a);
+}
+
+pub fn eor_imm(emu: &mut Emu) {
+    imm(emu);
+    eor(emu);
+}
+
 pub fn inc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
     set_zn!(emu, data);
+}
+
+pub fn inx(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.x = emu.cpu.x.wrapping_add(1);
+    set_zn!(emu, x);
+}
+
+pub fn iny(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.y = emu.cpu.y.wrapping_add(1);
+    set_zn!(emu, y);
 }
 
 pub fn lda(emu: &mut Emu) {
