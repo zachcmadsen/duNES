@@ -154,6 +154,12 @@ macro_rules! idy_w {
     };
 }
 
+macro_rules! imp {
+    ($f:ident) => {
+        &[$f, $crate::cpu::mode::read_pc_and_set_opc]
+    };
+}
+
 macro_rules! rel {
     ($f:ident) => {
         &[
@@ -255,7 +261,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0x15
     zpx_rmw!(asl),                           // 0x16
     &[],                                     // 0x17
-    &[clc, read_pc_and_set_opc],             // 0x18
+    imp!(clc),                               // 0x18
     &[],                                     // 0x19
     &[],                                     // 0x1A
     &[],                                     // 0x1B
@@ -319,7 +325,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(eor),                               // 0x55
     zpx_rmw!(lsr),                           // 0x56
     &[],                                     // 0x57
-    &[cli, read_pc_and_set_opc],             // 0x58
+    imp!(cli),                               // 0x58
     aby_r!(eor),                             // 0x59
     &[],                                     // 0x5A
     &[],                                     // 0x5B
@@ -367,7 +373,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpg!(sta),                               // 0x85
     zpg!(stx),                               // 0x86
     &[],                                     // 0x87
-    &[dey, read_pc_and_set_opc],             // 0x88
+    imp!(dey),                               // 0x88
     &[],                                     // 0x89
     &[],                                     // 0x8A
     &[],                                     // 0x8B
@@ -415,7 +421,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(lda),                               // 0xB5
     zpy!(ldx),                               // 0xB6
     &[],                                     // 0xB7
-    &[clv, read_pc_and_set_opc],             // 0xB8
+    imp!(clv),                               // 0xB8
     aby_r!(lda),                             // 0xB9
     &[],                                     // 0xBA
     &[],                                     // 0xBB
@@ -431,9 +437,9 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpg!(cmp),                               // 0xC5
     zpg_rmw!(dec),                           // 0xC6
     &[],                                     // 0xC7
-    &[iny, read_pc_and_set_opc],             // 0xC8
+    imp!(iny),                               // 0xC8
     &[cmp_imm, read_pc_and_set_opc],         // 0xC9
-    &[dex, read_pc_and_set_opc],             // 0xCA
+    imp!(dex),                               // 0xCA
     &[],                                     // 0xCB
     abs!(cpy),                               // 0xCC
     abs!(cmp),                               // 0xCD
@@ -447,7 +453,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(cmp),                               // 0xD5
     zpx_rmw!(dec),                           // 0xD6
     &[],                                     // 0xD7
-    &[cld, read_pc_and_set_opc],             // 0xD8
+    imp!(cld),                               // 0xD8
     aby_r!(cmp),                             // 0xD9
     &[],                                     // 0xDA
     &[],                                     // 0xDB
@@ -463,7 +469,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0xE5
     zpg_rmw!(inc),                           // 0xE6
     &[],                                     // 0xE7
-    &[inx, read_pc_and_set_opc],             // 0xE8
+    imp!(inx),                               // 0xE8
     &[],                                     // 0xE9
     &[],                                     // 0xEA
     &[],                                     // 0xEB
