@@ -6,6 +6,8 @@ use proc_bitfield::bitfield;
 
 use crate::{bus, cpu::lut::OPC_LUT, Emu};
 
+const IRQ_VECTOR: u16 = 0xFFFE;
+
 bitfield! {
     #[derive(Clone, Copy)]
     pub struct Status(pub u8) {

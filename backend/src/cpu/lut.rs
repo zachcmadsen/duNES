@@ -8,6 +8,7 @@ use crate::{
             read_pc_and_inc_pc, set_pch, set_pcl, sta, stx, sty,
         },
         mode::read_pc_and_set_opc,
+        IRQ_VECTOR,
     },
     Emu,
 };
@@ -226,8 +227,8 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
         push_pch,
         push_pcl,
         push_p,
-        set_pcl::<0xfffe>,
-        set_pch::<0xfffe>,
+        set_pcl::<IRQ_VECTOR>,
+        set_pch::<IRQ_VECTOR>,
         read_pc_and_set_opc,
     ], // 0x00
     &[],                                     // 0x01
