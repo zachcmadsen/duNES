@@ -105,6 +105,33 @@ pub fn clv(emu: &mut Emu) {
     emu.cpu.p.set_v(false);
 }
 
+pub fn cmp(emu: &mut Emu) {
+    compare(emu, emu.cpu.a);
+}
+
+pub fn cmp_imm(emu: &mut Emu) {
+    imm(emu);
+    cmp(emu);
+}
+
+pub fn cpx(emu: &mut Emu) {
+    compare(emu, emu.cpu.x);
+}
+
+pub fn cpx_imm(emu: &mut Emu) {
+    imm(emu);
+    cpx(emu);
+}
+
+pub fn cpy(emu: &mut Emu) {
+    compare(emu, emu.cpu.y);
+}
+
+pub fn cpy_imm(emu: &mut Emu) {
+    imm(emu);
+    cpy(emu);
+}
+
 pub fn inc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
@@ -210,6 +237,14 @@ fn branch(emu: &mut Emu, cond: bool) {
     if !cond {
         emu.cpu.cyc += 2;
     }
+}
+
+fn compare(emu: &mut Emu, reg: u8) {
+    let data = bus::read_byte(emu, emu.cpu.addr);
+    let (res, carry) = reg.overflowing_sub(data);
+    emu.cpu.p.set_c(!carry);
+    emu.cpu.p.set_z(res == 0);
+    emu.cpu.p.set_n(res & 0x80 != 0);
 }
 
 fn imm(emu: &mut Emu) {

@@ -2,10 +2,10 @@ use crate::{
     cpu::{
         instr::{
             adc, adc_imm, and, and_imm, asl, asl_accumulator, bcc, bcs, beq,
-            bit, bmi, bne, bpl, bvc, bvs, clc, cld, cli, clv, inc, lda,
-            lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_accumulator, push_p,
-            push_pch, push_pcl, read_pc_and_inc_pc, set_pch, set_pcl, sta,
-            stx, sty,
+            bit, bmi, bne, bpl, bvc, bvs, clc, cld, cli, clv, cmp, cmp_imm,
+            cpx, cpx_imm, cpy, cpy_imm, inc, lda, lda_imm, ldx, ldx_imm, ldy,
+            ldy_imm, lsr, lsr_accumulator, push_p, push_pch, push_pcl,
+            read_pc_and_inc_pc, set_pch, set_pcl, sta, stx, sty,
         },
         mode::read_pc_and_set_opc,
     },
@@ -421,43 +421,43 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abx_r!(lda),                             // 0xBD
     aby_r!(ldx),                             // 0xBE
     &[],                                     // 0xBF
-    &[],                                     // 0xC0
-    &[],                                     // 0xC1
+    &[cpy_imm, read_pc_and_set_opc],         // 0xC0
+    idx!(cmp),                               // 0xC1
     &[],                                     // 0xC2
     &[],                                     // 0xC3
-    &[],                                     // 0xC4
-    &[],                                     // 0xC5
+    zpg!(cpy),                               // 0xC4
+    zpg!(cmp),                               // 0xC5
     &[],                                     // 0xC6
     &[],                                     // 0xC7
     &[],                                     // 0xC8
-    &[],                                     // 0xC9
+    &[cmp_imm, read_pc_and_set_opc],         // 0xC9
     &[],                                     // 0xCA
     &[],                                     // 0xCB
-    &[],                                     // 0xCC
-    &[],                                     // 0xCD
+    abs!(cpy),                               // 0xCC
+    abs!(cmp),                               // 0xCD
     &[],                                     // 0xCE
     &[],                                     // 0xCF
     rel!(bne),                               // 0xD0
-    &[],                                     // 0xD1
+    idy_r!(cmp),                             // 0xD1
     &[],                                     // 0xD2
     &[],                                     // 0xD3
     &[],                                     // 0xD4
-    &[],                                     // 0xD5
+    zpx!(cmp),                               // 0xD5
     &[],                                     // 0xD6
     &[],                                     // 0xD7
     &[cld, read_pc_and_set_opc],             // 0xD8
-    &[],                                     // 0xD9
+    aby_r!(cmp),                             // 0xD9
     &[],                                     // 0xDA
     &[],                                     // 0xDB
     &[],                                     // 0xDC
-    &[],                                     // 0xDD
+    abx_r!(cmp),                             // 0xDD
     &[],                                     // 0xDE
     &[],                                     // 0xDF
-    &[],                                     // 0xE0
+    &[cpx_imm, read_pc_and_set_opc],         // 0xE0
     &[],                                     // 0xE1
     &[],                                     // 0xE2
     &[],                                     // 0xE3
-    &[],                                     // 0xE4
+    zpg!(cpx),                               // 0xE4
     &[],                                     // 0xE5
     zpg_rmw!(inc),                           // 0xE6
     &[],                                     // 0xE7
@@ -465,7 +465,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                     // 0xE9
     &[],                                     // 0xEA
     &[],                                     // 0xEB
-    &[],                                     // 0xEC
+    abs!(cpx),                               // 0xEC
     &[],                                     // 0xED
     abs_rmw!(inc),                           // 0xEE
     &[],                                     // 0xEF
