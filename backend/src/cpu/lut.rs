@@ -4,9 +4,9 @@ use crate::{
             adc, adc_imm, and, and_imm, asl, asl_a, bcc, bcs, beq, bit, bmi,
             bne, bpl, bvc, bvs, clc, cld, cli, clv, cmp, cmp_imm, cpx,
             cpx_imm, cpy, cpy_imm, dec, dex, dey, eor, eor_imm, inc, inx, iny,
-            lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_a, push_p,
-            push_pch, push_pcl, read_pc_and_inc_pc, set_pch, set_pcl, sta,
-            stx, sty,
+            lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_a, nop, ora,
+            ora_imm, push_p, push_pch, push_pcl, read_pc_and_inc_pc, set_pch,
+            set_pcl, sta, stx, sty,
         },
         mode::read_pc_and_set_opc,
         IRQ_VECTOR,
@@ -238,35 +238,35 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
         set_pch::<IRQ_VECTOR>,
         read_pc_and_set_opc,
     ], // 0x00
-    &[],           // 0x01
+    idx!(ora),     // 0x01
     &[],           // 0x02
     &[],           // 0x03
     &[],           // 0x04
-    &[],           // 0x05
+    zpg!(ora),     // 0x05
     zpg_rmw!(asl), // 0x06
     &[],           // 0x07
     &[],           // 0x08
-    &[],           // 0x09
+    imp!(ora_imm), // 0x09
     imp!(asl_a),   // 0x0A
     &[],           // 0x0B
     &[],           // 0x0C
-    &[],           // 0x0D
+    abs!(ora),     // 0x0D
     abs_rmw!(asl), // 0x0E
     &[],           // 0x0F
     rel!(bpl),     // 0x10
-    &[],           // 0x11
+    idy_r!(ora),   // 0x11
     &[],           // 0x12
     &[],           // 0x13
     &[],           // 0x14
-    &[],           // 0x15
+    zpx!(ora),     // 0x15
     zpx_rmw!(asl), // 0x16
     &[],           // 0x17
     imp!(clc),     // 0x18
-    &[],           // 0x19
+    aby_r!(ora),   // 0x19
     &[],           // 0x1A
     &[],           // 0x1B
     &[],           // 0x1C
-    &[],           // 0x1D
+    abx_r!(ora),   // 0x1D
     abx_rmw!(asl), // 0x1E
     &[],           // 0x1F
     &[],           // 0x20
@@ -471,7 +471,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],           // 0xE7
     imp!(inx),     // 0xE8
     &[],           // 0xE9
-    &[],           // 0xEA
+    imp!(nop),     // 0xEA
     &[],           // 0xEB
     abs!(cpx),     // 0xEC
     &[],           // 0xED

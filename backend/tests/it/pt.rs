@@ -70,13 +70,33 @@ fn opc_00() {
 }
 
 #[test]
+fn opc_01() {
+    run(0x01);
+}
+
+#[test]
+fn opc_05() {
+    run(0x05);
+}
+
+#[test]
 fn opc_06() {
     run(0x06);
 }
 
 #[test]
+fn opc_09() {
+    run(0x09);
+}
+
+#[test]
 fn opc_0a() {
     run(0x0A);
+}
+
+#[test]
+fn opc_0d() {
+    run(0x0D);
 }
 
 #[test]
@@ -90,6 +110,16 @@ fn opc_10() {
 }
 
 #[test]
+fn opc_11() {
+    run(0x11);
+}
+
+#[test]
+fn opc_15() {
+    run(0x15);
+}
+
+#[test]
 fn opc_16() {
     run(0x16);
 }
@@ -97,6 +127,16 @@ fn opc_16() {
 #[test]
 fn opc_18() {
     run(0x18);
+}
+
+#[test]
+fn opc_19() {
+    run(0x19);
+}
+
+#[test]
+fn opc_1d() {
+    run(0x1D);
 }
 
 #[test]
@@ -567,6 +607,11 @@ fn opc_e6() {
 #[test]
 fn opc_e8() {
     run(0xE8);
+}
+
+#[test]
+fn opc_ea() {
+    run(0xEA);
 }
 
 #[test]

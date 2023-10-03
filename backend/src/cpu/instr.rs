@@ -224,6 +224,20 @@ pub fn lsr_a(emu: &mut Emu) {
     set_zn!(emu, a);
 }
 
+pub fn nop(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+}
+
+pub fn ora(emu: &mut Emu) {
+    emu.cpu.a |= bus::read_byte(emu, emu.cpu.addr);
+    set_zn!(emu, a);
+}
+
+pub fn ora_imm(emu: &mut Emu) {
+    imm(emu);
+    ora(emu);
+}
+
 pub fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }
