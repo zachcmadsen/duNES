@@ -238,6 +238,23 @@ pub fn ora_imm(emu: &mut Emu) {
     ora(emu);
 }
 
+pub fn pha(emu: &mut Emu) {
+    push(emu, emu.cpu.a);
+}
+
+pub fn php(emu: &mut Emu) {
+    push(emu, emu.cpu.p.with_b(true).with_u(true).0);
+}
+
+pub fn pla(emu: &mut Emu) {
+    emu.cpu.a = pop(emu);
+    set_zn!(emu, a);
+}
+
+pub fn plp(emu: &mut Emu) {
+    emu.cpu.p = Status(pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
+}
+
 pub fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }
@@ -275,6 +292,10 @@ pub fn set_pch<const V: u16>(emu: &mut Emu) {
     emu.cpu.pc |= (bus::read_byte(emu, V + 1) as u16) << 8;
 }
 
+pub fn read_pc(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+}
+
 fn add(emu: &mut Emu, val: u8) {
     let prev_a = emu.cpu.a;
     let res = (emu.cpu.a as u16)
@@ -309,4 +330,13 @@ fn imm(emu: &mut Emu) {
 fn push(emu: &mut Emu, data: u8) {
     bus::write_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16, data);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
+}
+
+fn pop(emu: &mut Emu) -> u8 {
+    emu.cpu.s = emu.cpu.s.wrapping_add(1);
+    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16)
+}
+
+pub fn peek(emu: &mut Emu) {
+    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
 }
