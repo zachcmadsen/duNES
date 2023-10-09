@@ -5,16 +5,15 @@ use crate::{
             bne, bpl, bvc, bvs, clc, cld, cli, clv, cmp, cmp_imm, cpx,
             cpx_imm, cpy, cpy_imm, dec, dex, dey, eor, eor_imm, inc, inx, iny,
             lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_a, nop, ora,
-            ora_imm, push_p, push_pch, push_pcl, read_pc_and_inc_pc, set_pch,
-            set_pcl, sta, stx, sty,
+            ora_imm, peek, pha, php, pla, plp, push_p, push_pch, push_pcl,
+            read_pc, read_pc_and_inc_pc, rol, rol_a, set_pch, set_pcl, sta,
+            stx, sty,
         },
         mode::read_pc_and_set_opc,
         IRQ_VECTOR,
     },
     Emu,
 };
-
-use super::instr::{peek, pha, php, pla, plp, read_pc};
 
 macro_rules! abs {
     ($f:ident) => {
@@ -277,15 +276,15 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                        // 0x23
     zpg!(bit),                                  // 0x24
     zpg!(and),                                  // 0x25
-    &[],                                        // 0x26
+    zpg_rmw!(rol),                              // 0x26
     &[],                                        // 0x27
     &[read_pc, peek, plp, read_pc_and_set_opc], // 0x28
     imp!(and_imm),                              // 0x29
-    &[],                                        // 0x2A
+    imp!(rol_a),                                // 0x2A
     &[],                                        // 0x2B
     abs!(bit),                                  // 0x2C
     abs!(and),                                  // 0x2D
-    &[],                                        // 0x2E
+    abs_rmw!(rol),                              // 0x2E
     &[],                                        // 0x2F
     rel!(bmi),                                  // 0x30
     idy_r!(and),                                // 0x31
@@ -293,7 +292,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                        // 0x33
     &[],                                        // 0x34
     zpx!(and),                                  // 0x35
-    &[],                                        // 0x36
+    zpx_rmw!(rol),                              // 0x36
     &[],                                        // 0x37
     &[],                                        // 0x38
     aby_r!(and),                                // 0x39
@@ -301,7 +300,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                        // 0x3B
     &[],                                        // 0x3C
     abx_r!(and),                                // 0x3D
-    &[],                                        // 0x3E
+    abx_rmw!(rol),                              // 0x3E
     &[],                                        // 0x3F
     &[],                                        // 0x40
     idx!(eor),                                  // 0x41

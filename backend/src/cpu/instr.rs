@@ -255,6 +255,22 @@ pub fn plp(emu: &mut Emu) {
     emu.cpu.p = Status(pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
 }
 
+pub fn rol(emu: &mut Emu) {
+    let carry = emu.cpu.data & 0x80 != 0;
+    emu.cpu.data = ((emu.cpu.data << 1) & 0xfe) | emu.cpu.p.c() as u8;
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, data);
+}
+
+pub fn rol_a(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    let carry = emu.cpu.a & 0x80 != 0;
+    emu.cpu.a = ((emu.cpu.a << 1) & 0xfe) | emu.cpu.p.c() as u8;
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
 pub fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }
