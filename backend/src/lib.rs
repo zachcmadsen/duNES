@@ -1,3 +1,4 @@
+mod bit;
 mod bus;
 mod cpu;
 mod emu;
