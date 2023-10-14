@@ -225,6 +225,15 @@ pub fn lsr_a(emu: &mut Emu) {
 }
 
 pub fn nop(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.addr);
+}
+
+pub fn nop_imm(emu: &mut Emu) {
+    imm(emu);
+    nop(emu);
+}
+
+pub fn nop_imp(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
 }
 
