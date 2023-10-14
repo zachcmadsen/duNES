@@ -280,6 +280,22 @@ pub fn rol_a(emu: &mut Emu) {
     set_zn!(emu, a);
 }
 
+pub fn ror(emu: &mut Emu) {
+    let carry = emu.cpu.data & 0x01 != 0;
+    emu.cpu.data = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.data >> 1) & 0x7f);
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, data);
+}
+
+pub fn ror_a(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    let carry = emu.cpu.a & 0x01 != 0;
+    emu.cpu.a = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.a >> 1) & 0x7f);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
 pub fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }
@@ -307,6 +323,18 @@ pub fn push_pch(emu: &mut Emu) {
 pub fn push_p(emu: &mut Emu) {
     push(emu, emu.cpu.p.with_b(true).0);
     emu.cpu.p.set_i(true);
+}
+
+pub fn pull_p(emu: &mut Emu) {
+    emu.cpu.p = Status(pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
+}
+
+pub fn pull_pcl(emu: &mut Emu) {
+    emu.cpu.pc = pop(emu) as u16;
+}
+
+pub fn pull_pch(emu: &mut Emu) {
+    emu.cpu.pc |= (pop(emu) as u16) << 8;
 }
 
 pub fn set_pcl<const V: u16>(emu: &mut Emu) {
