@@ -8,8 +8,8 @@ use crate::{
             nop_imm, nop_imp, ora, ora_imm, peek, pha, php, pla, plp, pull_p,
             pull_pch, pull_pcl, push_p, push_pch, push_pcl, read_pc,
             read_pc_and_inc_pc, rol, rol_a, ror, ror_a, sbc, sbc_imm, sec,
-            sed, sei, set_pch, set_pcl, sta, stx, sty, tax, tay, tsx, txa,
-            txs, tya,
+            sed, sei, set_pch, set_pcl, slo, sta, stx, sty, tax, tay, tsx,
+            txa, txs, tya,
         },
         mode::read_pc_and_set_opc,
         IRQ_VECTOR,
@@ -118,6 +118,23 @@ macro_rules! aby_w {
     };
 }
 
+macro_rules! aby_rmw {
+    ($f:ident) => {
+        &[
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_pc_and_add_index_to_low_and_set_high::<
+                false,
+                false,
+            >,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::write_data_to_addr,
+            $f,
+            $crate::cpu::mode::read_pc_and_set_opc,
+        ]
+    };
+}
+
 macro_rules! idx {
     ($f:ident) => {
         &[
@@ -125,6 +142,21 @@ macro_rules! idx {
             $crate::cpu::mode::read_addr_and_add_index::<true>,
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::read_addr_and_set_high,
+            $f,
+            $crate::cpu::mode::read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! idx_rmw {
+    ($f:ident) => {
+        &[
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_addr_and_add_index::<true>,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::read_addr_and_set_high,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::write_data_to_addr,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -151,6 +183,21 @@ macro_rules! idy_w {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::read_addr_and_add_y_to_low_and_set_high::<false>,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
+            $f,
+            $crate::cpu::mode::read_pc_and_set_opc,
+        ]
+    };
+}
+
+macro_rules! idy_rmw {
+    ($f:ident) => {
+        &[
+            $crate::cpu::mode::read_pc_and_set_low,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::read_addr_and_add_y_to_low_and_set_high::<false>,
+            $crate::cpu::mode::read_addr_and_opt_fix_high,
+            $crate::cpu::mode::read_addr_and_set_data,
+            $crate::cpu::mode::write_data_to_addr,
             $f,
             $crate::cpu::mode::read_pc_and_set_opc,
         ]
@@ -243,11 +290,11 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     ], // 0x00
     idx!(ora),                                  // 0x01
     &[],                                        // 0x02
-    &[],                                        // 0x03
+    idx_rmw!(slo),                              // 0x03
     zpg!(nop),                                  // 0x04
     zpg!(ora),                                  // 0x05
     zpg_rmw!(asl),                              // 0x06
-    &[],                                        // 0x07
+    zpg_rmw!(slo),                              // 0x07
     &[read_pc, php, read_pc_and_set_opc],       // 0x08
     imp!(ora_imm),                              // 0x09
     imp!(asl_a),                                // 0x0A
@@ -255,23 +302,23 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abs!(nop),                                  // 0x0C
     abs!(ora),                                  // 0x0D
     abs_rmw!(asl),                              // 0x0E
-    &[],                                        // 0x0F
+    abs_rmw!(slo),                              // 0x0F
     rel!(bpl),                                  // 0x10
     idy_r!(ora),                                // 0x11
     &[],                                        // 0x12
-    &[],                                        // 0x13
+    idy_rmw!(slo),                              // 0x13
     zpx!(nop),                                  // 0x14
     zpx!(ora),                                  // 0x15
     zpx_rmw!(asl),                              // 0x16
-    &[],                                        // 0x17
+    zpx_rmw!(slo),                              // 0x17
     imp!(clc),                                  // 0x18
     aby_r!(ora),                                // 0x19
     imp!(nop_imp),                              // 0x1A
-    &[],                                        // 0x1B
+    aby_rmw!(slo),                              // 0x1B
     abx_r!(nop),                                // 0x1C
     abx_r!(ora),                                // 0x1D
     abx_rmw!(asl),                              // 0x1E
-    &[],                                        // 0x1F
+    abx_rmw!(slo),                              // 0x1F
     &[],                                        // 0x20
     idx!(and),                                  // 0x21
     &[],                                        // 0x22

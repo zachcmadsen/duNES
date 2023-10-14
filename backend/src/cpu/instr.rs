@@ -321,6 +321,15 @@ pub fn sei(emu: &mut Emu) {
     emu.cpu.p.set_i(true);
 }
 
+pub fn slo(emu: &mut Emu) {
+    let carry = emu.cpu.data & 0x80 != 0;
+    emu.cpu.data <<= 1;
+    emu.cpu.a |= emu.cpu.data;
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
 pub fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }
