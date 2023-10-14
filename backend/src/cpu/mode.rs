@@ -13,6 +13,10 @@ pub fn read_pc_and_set_high(emu: &mut Emu) {
     emu.cpu.addr |= (next_byte(emu) as u16) << 8;
 }
 
+pub fn read_pc_and_set_high_and_tpc(emu: &mut Emu) {
+    emu.cpu.pc = (next_byte(emu) as u16) << 8 | emu.cpu.addr;
+}
+
 pub fn read_addr_and_add_index<const X: bool>(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.addr);
     let index = if X { emu.cpu.x } else { emu.cpu.y };
@@ -60,13 +64,24 @@ pub fn read_addr_and_add_y_to_low_and_set_high<const R: bool>(emu: &mut Emu) {
 
 pub fn read_addr_and_set_high(emu: &mut Emu) {
     let low = emu.cpu.data;
-    let high =
-        bus::read_byte(emu, (emu.cpu.addr as u8).wrapping_add(1) as u16);
+    let high = bus::read_byte(
+        emu,
+        (emu.cpu.addr & 0xFF00) | (emu.cpu.addr as u8).wrapping_add(1) as u16,
+    );
     emu.cpu.addr = low as u16 | (high as u16) << 8;
 }
 
 pub fn read_addr_and_set_data(emu: &mut Emu) {
     emu.cpu.data = bus::read_byte(emu, emu.cpu.addr);
+}
+
+pub fn read_addr_and_set_pc(emu: &mut Emu) {
+    let pcl = emu.cpu.data;
+    let pch = bus::read_byte(
+        emu,
+        (emu.cpu.addr & 0xFF00) | (emu.cpu.addr as u8).wrapping_add(1) as u16,
+    );
+    emu.cpu.pc = pcl as u16 | (pch as u16) << 8;
 }
 
 pub fn write_data_to_addr(emu: &mut Emu) {
