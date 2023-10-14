@@ -296,6 +296,31 @@ pub fn ror_a(emu: &mut Emu) {
     set_zn!(emu, a);
 }
 
+pub fn sbc(emu: &mut Emu) {
+    let val = bus::read_byte(emu, emu.cpu.addr);
+    add(emu, val ^ 0xFF);
+}
+
+pub fn sbc_imm(emu: &mut Emu) {
+    imm(emu);
+    sbc(emu);
+}
+
+pub fn sec(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_c(true);
+}
+
+pub fn sed(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_d(true);
+}
+
+pub fn sei(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.p.set_i(true);
+}
+
 pub fn sta(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
 }

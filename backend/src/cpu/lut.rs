@@ -7,8 +7,8 @@ use crate::{
             lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_a, nop,
             nop_imm, nop_imp, ora, ora_imm, peek, pha, php, pla, plp, pull_p,
             pull_pch, pull_pcl, push_p, push_pch, push_pcl, read_pc,
-            read_pc_and_inc_pc, rol, rol_a, ror, ror_a, set_pch, set_pcl, sta,
-            stx, sty,
+            read_pc_and_inc_pc, rol, rol_a, ror, ror_a, sbc, sbc_imm, sec,
+            sed, sei, set_pch, set_pcl, sta, stx, sty,
         },
         mode::read_pc_and_set_opc,
         IRQ_VECTOR,
@@ -295,7 +295,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(and),                                  // 0x35
     zpx_rmw!(rol),                              // 0x36
     &[],                                        // 0x37
-    &[],                                        // 0x38
+    imp!(sec),                                  // 0x38
     aby_r!(and),                                // 0x39
     imp!(nop_imp),                              // 0x3A
     &[],                                        // 0x3B
@@ -366,7 +366,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(adc),                                  // 0x75
     zpx_rmw!(ror),                              // 0x76
     &[],                                        // 0x77
-    &[],                                        // 0x78
+    imp!(sei),                                  // 0x78
     aby_r!(adc),                                // 0x79
     imp!(nop_imp),                              // 0x7A
     &[],                                        // 0x7B
@@ -471,35 +471,35 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abx_rmw!(dec),                              // 0xDE
     &[],                                        // 0xDF
     imp!(cpx_imm),                              // 0xE0
-    &[],                                        // 0xE1
+    idx!(sbc),                                  // 0xE1
     imp!(nop_imm),                              // 0xE2
     &[],                                        // 0xE3
     zpg!(cpx),                                  // 0xE4
-    &[],                                        // 0xE5
+    zpg!(sbc),                                  // 0xE5
     zpg_rmw!(inc),                              // 0xE6
     &[],                                        // 0xE7
     imp!(inx),                                  // 0xE8
-    &[],                                        // 0xE9
+    imp!(sbc_imm),                              // 0xE9
     imp!(nop_imp),                              // 0xEA
     &[],                                        // 0xEB
     abs!(cpx),                                  // 0xEC
-    &[],                                        // 0xED
+    abs!(sbc),                                  // 0xED
     abs_rmw!(inc),                              // 0xEE
     &[],                                        // 0xEF
     rel!(beq),                                  // 0xF0
-    &[],                                        // 0xF1
+    idy_r!(sbc),                                // 0xF1
     &[],                                        // 0xF2
     &[],                                        // 0xF3
     zpx!(nop),                                  // 0xF4
-    &[],                                        // 0xF5
+    zpx!(sbc),                                  // 0xF5
     zpx_rmw!(inc),                              // 0xF6
     &[],                                        // 0xF7
-    &[],                                        // 0xF8
-    &[],                                        // 0xF9
+    imp!(sed),                                  // 0xF8
+    aby_r!(sbc),                                // 0xF9
     imp!(nop_imp),                              // 0xFA
     &[],                                        // 0xFB
     abx_r!(nop),                                // 0xFC
-    &[],                                        // 0xFD
+    abx_r!(sbc),                                // 0xFD
     abx_rmw!(inc),                              // 0xFE
     &[],                                        // 0xFF
 ];
