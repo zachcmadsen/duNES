@@ -333,6 +333,41 @@ pub fn sty(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
 }
 
+pub fn tax(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.x = emu.cpu.a;
+    set_zn!(emu, x);
+}
+
+pub fn tay(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.y = emu.cpu.a;
+    set_zn!(emu, y);
+}
+
+pub fn tsx(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.x = emu.cpu.s;
+    set_zn!(emu, x);
+}
+
+pub fn txa(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.a = emu.cpu.x;
+    set_zn!(emu, a);
+}
+
+pub fn txs(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.s = emu.cpu.x;
+}
+
+pub fn tya(emu: &mut Emu) {
+    bus::read_byte(emu, emu.cpu.pc);
+    emu.cpu.a = emu.cpu.y;
+    set_zn!(emu, a);
+}
+
 pub fn read_pc_and_inc_pc(emu: &mut Emu) {
     next_byte(emu);
 }

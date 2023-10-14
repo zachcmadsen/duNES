@@ -8,7 +8,8 @@ use crate::{
             nop_imm, nop_imp, ora, ora_imm, peek, pha, php, pla, plp, pull_p,
             pull_pch, pull_pcl, push_p, push_pch, push_pcl, read_pc,
             read_pc_and_inc_pc, rol, rol_a, ror, ror_a, sbc, sbc_imm, sec,
-            sed, sei, set_pch, set_pcl, sta, stx, sty,
+            sed, sei, set_pch, set_pcl, sta, stx, sty, tax, tay, tsx, txa,
+            txs, tya,
         },
         mode::read_pc_and_set_opc,
         IRQ_VECTOR,
@@ -384,7 +385,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                        // 0x87
     imp!(dey),                                  // 0x88
     imp!(nop_imm),                              // 0x89
-    &[],                                        // 0x8A
+    imp!(txa),                                  // 0x8A
     &[],                                        // 0x8B
     abs!(sty),                                  // 0x8C
     abs!(sta),                                  // 0x8D
@@ -398,9 +399,9 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpx!(sta),                                  // 0x95
     zpy!(stx),                                  // 0x96
     &[],                                        // 0x97
-    &[],                                        // 0x98
+    imp!(tya),                                  // 0x98
     aby_w!(sta),                                // 0x99
-    &[],                                        // 0x9A
+    imp!(txs),                                  // 0x9A
     &[],                                        // 0x9B
     &[],                                        // 0x9C
     abx_w!(sta),                                // 0x9D
@@ -414,9 +415,9 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     zpg!(lda),                                  // 0xA5
     zpg!(ldx),                                  // 0xA6
     &[],                                        // 0xA7
-    &[],                                        // 0xA8
+    imp!(tay),                                  // 0xA8
     imp!(lda_imm),                              // 0xA9
-    &[],                                        // 0xAA
+    imp!(tax),                                  // 0xAA
     &[],                                        // 0xAB
     abs!(ldy),                                  // 0xAC
     abs!(lda),                                  // 0xAD
@@ -432,7 +433,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[],                                        // 0xB7
     imp!(clv),                                  // 0xB8
     aby_r!(lda),                                // 0xB9
-    &[],                                        // 0xBA
+    imp!(tsx),                                  // 0xBA
     &[],                                        // 0xBB
     abx_r!(ldy),                                // 0xBC
     abx_r!(lda),                                // 0xBD
