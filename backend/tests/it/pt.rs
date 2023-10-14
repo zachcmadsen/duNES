@@ -1,3 +1,7 @@
+//! Tests for Tom Harte's ProcessorTests.
+//!
+//! The following opcodes aren't tested: JAM.
+
 use std::fs;
 
 use backend::{Emu, Status};
@@ -72,11 +76,6 @@ fn opc_00() {
 #[test]
 fn opc_01() {
     run(0x01);
-}
-
-#[test]
-fn opc_02() {
-    run(0x02);
 }
 
 #[test]
@@ -155,11 +154,6 @@ fn opc_11() {
 }
 
 #[test]
-fn opc_12() {
-    run(0x12);
-}
-
-#[test]
 fn opc_13() {
     run(0x13);
 }
@@ -232,11 +226,6 @@ fn opc_20() {
 #[test]
 fn opc_21() {
     run(0x21);
-}
-
-#[test]
-fn opc_22() {
-    run(0x22);
 }
 
 #[test]
@@ -315,11 +304,6 @@ fn opc_31() {
 }
 
 #[test]
-fn opc_32() {
-    run(0x32);
-}
-
-#[test]
 fn opc_33() {
     run(0x33);
 }
@@ -392,11 +376,6 @@ fn opc_40() {
 #[test]
 fn opc_41() {
     run(0x41);
-}
-
-#[test]
-fn opc_42() {
-    run(0x42);
 }
 
 #[test]
@@ -475,11 +454,6 @@ fn opc_51() {
 }
 
 #[test]
-fn opc_52() {
-    run(0x52);
-}
-
-#[test]
 fn opc_53() {
     run(0x53);
 }
@@ -555,11 +529,6 @@ fn opc_61() {
 }
 
 #[test]
-fn opc_62() {
-    run(0x62);
-}
-
-#[test]
 fn opc_63() {
     run(0x63);
 }
@@ -632,11 +601,6 @@ fn opc_70() {
 #[test]
 fn opc_71() {
     run(0x71);
-}
-
-#[test]
-fn opc_72() {
-    run(0x72);
 }
 
 #[test]
@@ -795,11 +759,6 @@ fn opc_91() {
 }
 
 #[test]
-fn opc_92() {
-    run(0x92);
-}
-
-#[test]
 fn opc_93() {
     run(0x93);
 }
@@ -952,11 +911,6 @@ fn opc_b0() {
 #[test]
 fn opc_b1() {
     run(0xB1);
-}
-
-#[test]
-fn opc_b2() {
-    run(0xB2);
 }
 
 #[test]
@@ -1115,11 +1069,6 @@ fn opc_d1() {
 }
 
 #[test]
-fn opc_d2() {
-    run(0xD2);
-}
-
-#[test]
 fn opc_d3() {
     run(0xD3);
 }
@@ -1272,11 +1221,6 @@ fn opc_f0() {
 #[test]
 fn opc_f1() {
     run(0xF1);
-}
-
-#[test]
-fn opc_f2() {
-    run(0xF2);
 }
 
 #[test]
