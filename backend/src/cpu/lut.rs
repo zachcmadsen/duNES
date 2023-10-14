@@ -1,8 +1,8 @@
 use crate::{
     cpu::{
         instr::{
-            adc, adc_imm, and, and_imm, asl, asl_a, bcc, bcs, beq, bit, bmi,
-            bne, bpl, bvc, bvs, clc, cld, cli, clv, cmp, cmp_imm, cpx,
+            adc, adc_imm, anc, and, and_imm, asl, asl_a, bcc, bcs, beq, bit,
+            bmi, bne, bpl, bvc, bvs, clc, cld, cli, clv, cmp, cmp_imm, cpx,
             cpx_imm, cpy, cpy_imm, dec, dex, dey, eor, eor_imm, inc, inx, iny,
             lda, lda_imm, ldx, ldx_imm, ldy, ldy_imm, lsr, lsr_a, nop,
             nop_imm, nop_imp, ora, ora_imm, peek, pha, php, pla, plp, pull_p,
@@ -298,7 +298,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[read_pc, php, read_pc_and_set_opc],       // 0x08
     imp!(ora_imm),                              // 0x09
     imp!(asl_a),                                // 0x0A
-    &[],                                        // 0x0B
+    imp!(anc),                                  // 0x0B
     abs!(nop),                                  // 0x0C
     abs!(ora),                                  // 0x0D
     abs_rmw!(asl),                              // 0x0E
@@ -330,7 +330,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[read_pc, peek, plp, read_pc_and_set_opc], // 0x28
     imp!(and_imm),                              // 0x29
     imp!(rol_a),                                // 0x2A
-    &[],                                        // 0x2B
+    imp!(anc),                                  // 0x2B
     abs!(bit),                                  // 0x2C
     abs!(and),                                  // 0x2D
     abs_rmw!(rol),                              // 0x2E
