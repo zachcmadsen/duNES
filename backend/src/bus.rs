@@ -3,7 +3,7 @@ use crate::Emu;
 #[derive(Clone, Debug)]
 struct Handler {
     read: fn(&mut Emu, u16) -> u8,
-    _write: fn(&mut Emu, u16, u8),
+    write: fn(&mut Emu, u16, u8),
 }
 
 pub struct Bus<const N: usize> {
@@ -26,7 +26,7 @@ impl<const N: usize> Bus<N> {
         }
 
         let default_handler =
-            Handler { read: read_default, _write: write_default };
+            Handler { read: read_default, write: write_default };
 
         Bus {
             handlers: vec![default_handler; N].try_into().unwrap(),
@@ -48,5 +48,5 @@ pub fn read_byte(emu: &mut Emu, addr: u16) -> u8 {
 pub fn write_byte(emu: &mut Emu, addr: u16, data: u8) {
     emu.bus.addr = addr;
     emu.bus.data = data;
-    (emu.bus.handlers[addr as usize]._write)(emu, addr, data);
+    (emu.bus.handlers[addr as usize].write)(emu, addr, data);
 }
