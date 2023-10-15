@@ -5,36 +5,41 @@
 use std::fs;
 
 use backend::{Emu, Status};
-use serde::Deserialize;
+use rkyv::Archive;
 
-#[derive(Deserialize)]
-#[serde(bound(deserialize = "'de: 'a"))]
-struct TestCase<'a> {
+#[derive(Archive)]
+struct Test {
     initial: CpuState,
     r#final: CpuState,
-    cycles: Vec<(u16, u8, &'a str)>,
+    cycles: Vec<(u16, u8, CycleKind)>,
 }
 
-#[derive(Deserialize)]
+#[derive(Archive)]
 struct CpuState {
+    pc: u16,
+    s: u8,
     a: u8,
     x: u8,
     y: u8,
-    pc: u16,
-    s: u8,
     p: u8,
     ram: Vec<(u16, u8)>,
 }
 
+#[derive(Archive)]
+enum CycleKind {
+    Read,
+    Write,
+}
+
 fn run(opcode: u8) {
     let bytes =
-        fs::read(format!("../roms/processor_tests/{:02x}.json", opcode))
+        fs::read(format!("../roms/processor_tests/{:02x}.rkyv", opcode))
             .unwrap();
-    let tests: Vec<TestCase> = serde_json::from_slice(&bytes).unwrap();
+    let tests = unsafe { rkyv::archived_root::<Vec<Test>>(&bytes) };
 
     let mut emu = Emu::new();
 
-    for test in tests {
+    for test in tests.iter() {
         emu.cpu.a = test.initial.a;
         emu.cpu.x = test.initial.x;
         emu.cpu.y = test.initial.y;
@@ -46,11 +51,11 @@ fn run(opcode: u8) {
         unsafe {
             libc::memset(emu.bus.mem.as_mut_ptr() as _, 0, emu.bus.mem.len());
         };
-        for (addr, data) in test.initial.ram {
+        for &(addr, data) in test.initial.ram.iter() {
             emu.bus.mem[addr as usize] = data;
         }
 
-        for (addr, data, _) in test.cycles {
+        for &(addr, data, _) in test.cycles.iter() {
             emu.step();
             assert_eq!(emu.bus.addr, addr);
             assert_eq!(emu.bus.data, data);
@@ -62,7 +67,7 @@ fn run(opcode: u8) {
         assert_eq!(emu.cpu.pc, test.r#final.pc);
         assert_eq!(emu.cpu.s, test.r#final.s);
         assert_eq!(emu.cpu.p.0, test.r#final.p);
-        for (addr, data) in test.r#final.ram {
+        for &(addr, data) in test.r#final.ram.iter() {
             assert_eq!(emu.bus.mem[addr as usize], data);
         }
     }
