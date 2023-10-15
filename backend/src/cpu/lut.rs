@@ -18,7 +18,7 @@ use crate::{
 };
 
 use super::{
-    instr::{rla, rra},
+    instr::{alr, rla, rra, sre},
     mode::{
         read_addr_and_set_data, read_addr_and_set_pc, read_pc_and_set_high,
         read_pc_and_set_high_and_tpc, read_pc_and_set_low,
@@ -369,35 +369,35 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     &[read_pc, peek, pull_p, pull_pcl, pull_pch, read_pc_and_set_opc], // 0x40
     idx!(eor),                            // 0x41
     &[],                                  // 0x42
-    &[],                                  // 0x43
+    idx_rmw!(sre),                        // 0x43
     zpg!(nop),                            // 0x44
     zpg!(eor),                            // 0x45
     zpg_rmw!(lsr),                        // 0x46
-    &[],                                  // 0x47
+    zpg_rmw!(sre),                        // 0x47
     &[read_pc, pha, read_pc_and_set_opc], // 0x48
     imp!(eor_imm),                        // 0x49
     imp!(lsr_a),                          // 0x4A
-    &[],                                  // 0x4B
+    imp!(alr),                            // 0x4B
     &[read_pc_and_set_low, read_pc_and_set_high_and_tpc, read_pc_and_set_opc], // 0x4C
     abs!(eor),     // 0x4D
     abs_rmw!(lsr), // 0x4E
-    &[],           // 0x4F
+    abs_rmw!(sre), // 0x4F
     rel!(bvc),     // 0x50
     idy_r!(eor),   // 0x51
     &[],           // 0x52
-    &[],           // 0x53
+    idy_rmw!(sre), // 0x53
     zpx!(nop),     // 0x54
     zpx!(eor),     // 0x55
     zpx_rmw!(lsr), // 0x56
-    &[],           // 0x57
+    zpx_rmw!(sre), // 0x57
     imp!(cli),     // 0x58
     aby_r!(eor),   // 0x59
     imp!(nop_imp), // 0x5A
-    &[],           // 0x5B
+    aby_rmw!(sre), // 0x5B
     abx_r!(nop),   // 0x5C
     abx_r!(eor),   // 0x5D
     abx_rmw!(lsr), // 0x5E
-    &[],           // 0x5F
+    abx_rmw!(sre), // 0x5F
     &[
         read_pc,
         peek,

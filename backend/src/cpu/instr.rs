@@ -19,6 +19,15 @@ pub fn adc_imm(emu: &mut Emu) {
     adc(emu);
 }
 
+pub fn alr(emu: &mut Emu) {
+    imm(emu);
+    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    let carry = emu.cpu.a.lsb();
+    emu.cpu.a >>= 1;
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
 pub fn anc(emu: &mut Emu) {
     imm(emu);
     emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
@@ -350,6 +359,15 @@ pub fn slo(emu: &mut Emu) {
     emu.cpu.data <<= 1;
     emu.cpu.a |= emu.cpu.data;
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
+pub fn sre(emu: &mut Emu) {
+    let carry = emu.cpu.data.lsb();
+    emu.cpu.data >>= 1;
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.a ^= emu.cpu.data;
     emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
 }
