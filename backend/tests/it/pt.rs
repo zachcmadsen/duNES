@@ -26,6 +26,7 @@ struct CpuState {
 }
 
 #[derive(Archive)]
+#[allow(dead_code)]
 enum CycleKind {
     Read,
     Write,
