@@ -45,6 +45,16 @@ pub fn and_imm(emu: &mut Emu) {
     and(emu);
 }
 
+pub fn arr(emu: &mut Emu) {
+    imm(emu);
+    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.a >> 1) & 0x7F);
+    // TODO(zach): Explain how the flags are set.
+    emu.cpu.p.set_c(emu.cpu.a & 0x40 != 0);
+    emu.cpu.p.set_v(((emu.cpu.p.c() as u8) ^ ((emu.cpu.a >> 5) & 0x01)) != 0);
+    set_zn!(emu, a);
+}
+
 pub fn asl(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x80 != 0;
     emu.cpu.data <<= 1;
@@ -154,6 +164,12 @@ pub fn dec(emu: &mut Emu) {
     set_zn!(emu, data);
 }
 
+pub fn dcp(emu: &mut Emu) {
+    emu.cpu.data = emu.cpu.data.wrapping_sub(1);
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    compare(emu, emu.cpu.a);
+}
+
 pub fn dex(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
     emu.cpu.x = emu.cpu.x.wrapping_sub(1);
@@ -192,6 +208,12 @@ pub fn iny(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
     emu.cpu.y = emu.cpu.y.wrapping_add(1);
     set_zn!(emu, y);
+}
+
+pub fn isc(emu: &mut Emu) {
+    emu.cpu.data = emu.cpu.data.wrapping_add(1);
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    add(emu, emu.cpu.data ^ 0xFF);
 }
 
 pub fn lda(emu: &mut Emu) {
