@@ -55,6 +55,7 @@ fn run(opcode: u8) {
             emu.bus.mem[addr as usize] = data;
         }
 
+        // TODO(zach): Assert read/write cycles.
         for &(addr, data, _) in test.cycles.iter() {
             emu.step();
             assert_eq!(emu.bus.addr, addr);
