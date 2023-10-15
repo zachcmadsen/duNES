@@ -1,4 +1,4 @@
-use crate::{bus, cpu::next_byte, Emu, Status};
+use crate::{bit::BitPos, bus, cpu::next_byte, Emu, Status};
 
 const STACK_BASE_ADDR: u16 = 0x0100;
 
@@ -271,6 +271,15 @@ pub fn plp(emu: &mut Emu) {
     emu.cpu.p = Status(pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
 }
 
+pub fn rla(emu: &mut Emu) {
+    let carry = emu.cpu.data.msb();
+    emu.cpu.data = ((emu.cpu.data << 1) & 0xFE) | emu.cpu.p.c() as u8;
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.a &= emu.cpu.data;
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, a);
+}
+
 pub fn rol(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x80 != 0;
     emu.cpu.data = ((emu.cpu.data << 1) & 0xfe) | emu.cpu.p.c() as u8;
@@ -289,7 +298,7 @@ pub fn rol_a(emu: &mut Emu) {
 
 pub fn ror(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x01 != 0;
-    emu.cpu.data = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.data >> 1) & 0x7f);
+    emu.cpu.data = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.data >> 1) & 0x7F);
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, data);
@@ -298,9 +307,17 @@ pub fn ror(emu: &mut Emu) {
 pub fn ror_a(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x01 != 0;
-    emu.cpu.a = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.a >> 1) & 0x7f);
+    emu.cpu.a = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.a >> 1) & 0x7F);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
+}
+
+pub fn rra(emu: &mut Emu) {
+    let carry = emu.cpu.data.lsb();
+    emu.cpu.data = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.data >> 1) & 0x7F);
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    emu.cpu.p.set_c(carry);
+    add(emu, emu.cpu.data);
 }
 
 pub fn sbc(emu: &mut Emu) {
