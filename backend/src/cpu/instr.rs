@@ -351,6 +351,10 @@ pub fn rra(emu: &mut Emu) {
     add(emu, emu.cpu.data);
 }
 
+pub fn sax(emu: &mut Emu) {
+    bus::write_byte(emu, emu.cpu.addr, emu.cpu.a & emu.cpu.x);
+}
+
 pub fn sbc(emu: &mut Emu) {
     let val = bus::read_byte(emu, emu.cpu.addr);
     add(emu, val ^ 0xFF);
@@ -374,6 +378,47 @@ pub fn sed(emu: &mut Emu) {
 pub fn sei(emu: &mut Emu) {
     bus::read_byte(emu, emu.cpu.pc);
     emu.cpu.p.set_i(true);
+}
+
+pub fn sha(emu: &mut Emu) {
+    let high_byte = (emu.cpu.addr & 0xff00) >> 8;
+    let low_byte = emu.cpu.addr & 0x00ff;
+    let value = emu.cpu.a & emu.cpu.x & (high_byte as u8).wrapping_add(1);
+
+    // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
+    bus::write_byte(
+        emu,
+        ((emu.cpu.a as u16 & emu.cpu.x as u16 & (high_byte.wrapping_add(1)))
+            << 8)
+            | low_byte,
+        value,
+    );
+}
+
+pub fn shx(emu: &mut Emu) {
+    let high_byte = (emu.cpu.addr & 0xff00) >> 8;
+    let low_byte = emu.cpu.addr & 0x00ff;
+    let value = emu.cpu.x & (high_byte as u8).wrapping_add(1);
+
+    // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
+    bus::write_byte(
+        emu,
+        ((emu.cpu.x as u16 & (high_byte.wrapping_add(1))) << 8) | low_byte,
+        value,
+    );
+}
+
+pub fn shy(emu: &mut Emu) {
+    let high_byte = (emu.cpu.addr & 0xff00) >> 8;
+    let low_byte = emu.cpu.addr & 0x00ff;
+    let value = emu.cpu.y & (high_byte as u8).wrapping_add(1);
+
+    // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
+    bus::write_byte(
+        emu,
+        ((emu.cpu.y as u16 & (high_byte.wrapping_add(1))) << 8) | low_byte,
+        value,
+    );
 }
 
 pub fn slo(emu: &mut Emu) {

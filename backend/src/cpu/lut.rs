@@ -18,7 +18,7 @@ use crate::{
 };
 
 use super::{
-    instr::{alr, arr, dcp, isc, rla, rra, sre},
+    instr::{alr, arr, dcp, isc, rla, rra, sax, sha, shx, shy, sre},
     mode::{
         read_addr_and_set_data, read_addr_and_set_pc, read_pc_and_set_high,
         read_pc_and_set_high_and_tpc, read_pc_and_set_low,
@@ -446,11 +446,11 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     imp!(nop_imm), // 0x80
     idx!(sta),     // 0x81
     imp!(nop_imm), // 0x82
-    &[],           // 0x83
+    idx!(sax),     // 0x83
     zpg!(sty),     // 0x84
     zpg!(sta),     // 0x85
     zpg!(stx),     // 0x86
-    &[],           // 0x87
+    zpg!(sax),     // 0x87
     imp!(dey),     // 0x88
     imp!(nop_imm), // 0x89
     imp!(txa),     // 0x8A
@@ -458,23 +458,23 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abs!(sty),     // 0x8C
     abs!(sta),     // 0x8D
     abs!(stx),     // 0x8E
-    &[],           // 0x8F
+    abs!(sax),     // 0x8F
     rel!(bcc),     // 0x90
     idy_w!(sta),   // 0x91
     &[],           // 0x92
-    &[],           // 0x93
+    idy_w!(sha),   // 0x93
     zpx!(sty),     // 0x94
     zpx!(sta),     // 0x95
     zpy!(stx),     // 0x96
-    &[],           // 0x97
+    zpy!(sax),     // 0x97
     imp!(tya),     // 0x98
     aby_w!(sta),   // 0x99
     imp!(txs),     // 0x9A
     &[],           // 0x9B
-    &[],           // 0x9C
+    abx_w!(shy),   // 0x9C
     abx_w!(sta),   // 0x9D
-    &[],           // 0x9E
-    &[],           // 0x9F
+    aby_w!(shx),   // 0x9E
+    aby_w!(sha),   // 0x9F
     imp!(ldy_imm), // 0xA0
     idx!(lda),     // 0xA1
     imp!(ldx_imm), // 0xA2
