@@ -18,11 +18,15 @@ use crate::{
 };
 
 use super::{
-    instr::{alr, arr, dcp, isc, rla, rra, sax, sha, shx, shy, sre},
+    instr::{
+        alr, arr, dcp, isc, lax, lxa, peek_and_dec_s,
+        peek_and_dec_s_and_set_i, rla, rra, sax, sbx, sha, shx, shy, sre,
+    },
     mode::{
         read_addr_and_set_data, read_addr_and_set_pc, read_pc_and_set_high,
         read_pc_and_set_high_and_tpc, read_pc_and_set_low,
     },
+    RESET_VECTOR,
 };
 
 macro_rules! abs {
@@ -286,7 +290,7 @@ macro_rules! zpy {
     };
 }
 
-pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
+pub static OPC_LUT: [&[fn(&mut Emu)]; 0x101] = [
     &[
         read_pc_and_inc_pc,
         push_pch,
@@ -478,27 +482,27 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     imp!(ldy_imm), // 0xA0
     idx!(lda),     // 0xA1
     imp!(ldx_imm), // 0xA2
-    &[],           // 0xA3
+    idx!(lax),     // 0xA3
     zpg!(ldy),     // 0xA4
     zpg!(lda),     // 0xA5
     zpg!(ldx),     // 0xA6
-    &[],           // 0xA7
+    zpg!(lax),     // 0xA7
     imp!(tay),     // 0xA8
     imp!(lda_imm), // 0xA9
     imp!(tax),     // 0xAA
-    &[],           // 0xAB
+    imp!(lxa),     // 0xAB
     abs!(ldy),     // 0xAC
     abs!(lda),     // 0xAD
     abs!(ldx),     // 0xAE
-    &[],           // 0xAF
+    abs!(lax),     // 0xAF
     rel!(bcs),     // 0xB0
     idy_r!(lda),   // 0xB1
     &[],           // 0xB2
-    &[],           // 0xB3
+    idy_r!(lax),   // 0xB3
     zpx!(ldy),     // 0xB4
     zpx!(lda),     // 0xB5
     zpy!(ldx),     // 0xB6
-    &[],           // 0xB7
+    zpy!(lax),     // 0xB7
     imp!(clv),     // 0xB8
     aby_r!(lda),   // 0xB9
     imp!(tsx),     // 0xBA
@@ -506,7 +510,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abx_r!(ldy),   // 0xBC
     abx_r!(lda),   // 0xBD
     aby_r!(ldx),   // 0xBE
-    &[],           // 0xBF
+    aby_r!(lax),   // 0xBF
     imp!(cpy_imm), // 0xC0
     idx!(cmp),     // 0xC1
     imp!(nop_imm), // 0xC2
@@ -518,7 +522,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     imp!(iny),     // 0xC8
     imp!(cmp_imm), // 0xC9
     imp!(dex),     // 0xCA
-    &[],           // 0xCB
+    imp!(sbx),     // 0xCB
     abs!(cpy),     // 0xCC
     abs!(cmp),     // 0xCD
     abs_rmw!(dec), // 0xCE
@@ -550,7 +554,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     imp!(inx),     // 0xE8
     imp!(sbc_imm), // 0xE9
     imp!(nop_imp), // 0xEA
-    &[],           // 0xEB
+    imp!(sbc_imm), // 0xEB
     abs!(cpx),     // 0xEC
     abs!(sbc),     // 0xED
     abs_rmw!(inc), // 0xEE
@@ -571,4 +575,13 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x100] = [
     abx_r!(sbc),   // 0xFD
     abx_rmw!(inc), // 0xFE
     abx_rmw!(isc), // 0xFF
+    &[
+        read_pc,
+        peek_and_dec_s,
+        peek_and_dec_s,
+        peek_and_dec_s_and_set_i,
+        set_pcl::<RESET_VECTOR>,
+        set_pch::<RESET_VECTOR>,
+        read_pc_and_set_opc,
+    ],
 ];

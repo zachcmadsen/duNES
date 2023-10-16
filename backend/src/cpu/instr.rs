@@ -216,6 +216,12 @@ pub fn isc(emu: &mut Emu) {
     add(emu, emu.cpu.data ^ 0xFF);
 }
 
+pub fn lax(emu: &mut Emu) {
+    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.x = emu.cpu.a;
+    set_zn!(emu, x);
+}
+
 pub fn lda(emu: &mut Emu) {
     emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
     set_zn!(emu, a);
@@ -260,6 +266,13 @@ pub fn lsr_a(emu: &mut Emu) {
     emu.cpu.a >>= 1;
     emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
+}
+
+pub fn lxa(emu: &mut Emu) {
+    imm(emu);
+    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.x = emu.cpu.a;
+    set_zn!(emu, x);
 }
 
 pub fn nop(emu: &mut Emu) {
@@ -363,6 +376,15 @@ pub fn sbc(emu: &mut Emu) {
 pub fn sbc_imm(emu: &mut Emu) {
     imm(emu);
     sbc(emu);
+}
+
+pub fn sbx(emu: &mut Emu) {
+    imm(emu);
+    let data = bus::read_byte(emu, emu.cpu.addr);
+    let carry = (emu.cpu.a & emu.cpu.x) >= data;
+    emu.cpu.x = (emu.cpu.a & emu.cpu.x).wrapping_sub(data);
+    emu.cpu.p.set_c(carry);
+    set_zn!(emu, x);
 }
 
 pub fn sec(emu: &mut Emu) {
@@ -570,4 +592,15 @@ fn pop(emu: &mut Emu) -> u8 {
 
 pub fn peek(emu: &mut Emu) {
     bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
+}
+
+pub fn peek_and_dec_s(emu: &mut Emu) {
+    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
+    emu.cpu.s = emu.cpu.s.wrapping_sub(1);
+}
+
+pub fn peek_and_dec_s_and_set_i(emu: &mut Emu) {
+    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
+    emu.cpu.s = emu.cpu.s.wrapping_sub(1);
+    emu.cpu.p.set_i(true);
 }
