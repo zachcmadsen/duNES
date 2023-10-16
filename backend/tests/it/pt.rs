@@ -1,10 +1,14 @@
 //! Tests for Tom Harte's ProcessorTests.
 //!
-//! The following opcodes aren't tested: JAM.
+//! The following opcodes aren't tested (because they're unstable or
+//! unimplemented): ANE, JAM, LXA.
 
 use std::fs;
 
-use backend::{Emu, Status};
+use backend::{
+    cpu::{self, Status},
+    Emu,
+};
 use rkyv::Archive;
 
 #[derive(Archive)]
@@ -38,7 +42,12 @@ fn run(opcode: u8) {
             .unwrap();
     let tests = unsafe { rkyv::archived_root::<Vec<Test>>(&bytes) };
 
-    let mut emu = Emu::new();
+    let mut emu = Emu::default();
+
+    // Get through the reset sequence.
+    for _ in 0..6 {
+        cpu::step(&mut emu);
+    }
 
     for test in tests.iter() {
         emu.cpu.a = test.initial.a;
@@ -58,7 +67,7 @@ fn run(opcode: u8) {
 
         // TODO(zach): Assert read/write cycles.
         for &(addr, data, _) in test.cycles.iter() {
-            emu.step();
+            cpu::step(&mut emu);
             assert_eq!(emu.bus.addr, addr);
             assert_eq!(emu.bus.data, data);
         }
@@ -731,11 +740,6 @@ fn opc_8a() {
 }
 
 #[test]
-fn opc_8b() {
-    run(0x8B);
-}
-
-#[test]
 fn opc_8c() {
     run(0x8C);
 }
@@ -883,11 +887,6 @@ fn opc_a9() {
 #[test]
 fn opc_aa() {
     run(0xAA);
-}
-
-#[test]
-fn opc_ab() {
-    run(0xAB);
 }
 
 #[test]
