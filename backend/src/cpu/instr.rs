@@ -216,6 +216,13 @@ pub fn isc(emu: &mut Emu) {
     add(emu, emu.cpu.data ^ 0xFF);
 }
 
+pub fn las(emu: &mut Emu) {
+    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr) & emu.cpu.s;
+    emu.cpu.x = emu.cpu.a;
+    emu.cpu.s = emu.cpu.a;
+    set_zn!(emu, s);
+}
+
 pub fn lax(emu: &mut Emu) {
     emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
     emu.cpu.x = emu.cpu.a;
@@ -403,44 +410,29 @@ pub fn sei(emu: &mut Emu) {
 }
 
 pub fn sha(emu: &mut Emu) {
-    let high_byte = (emu.cpu.addr & 0xff00) >> 8;
-    let low_byte = emu.cpu.addr & 0x00ff;
-    let value = emu.cpu.a & emu.cpu.x & (high_byte as u8).wrapping_add(1);
+    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
+    let data = emu.cpu.a
+        & emu.cpu.x
+        & (high as u8).wrapping_add(!emu.cpu.carry as u8);
+    let high = if emu.cpu.carry { data } else { high };
 
-    // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
-    bus::write_byte(
-        emu,
-        ((emu.cpu.a as u16 & emu.cpu.x as u16 & (high_byte.wrapping_add(1)))
-            << 8)
-            | low_byte,
-        value,
-    );
+    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
 pub fn shx(emu: &mut Emu) {
-    let high_byte = (emu.cpu.addr & 0xff00) >> 8;
-    let low_byte = emu.cpu.addr & 0x00ff;
-    let value = emu.cpu.x & (high_byte as u8).wrapping_add(1);
+    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
+    let data = emu.cpu.x & (high as u8).wrapping_add(!emu.cpu.carry as u8);
+    let high = if emu.cpu.carry { data } else { high };
 
-    // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
-    bus::write_byte(
-        emu,
-        ((emu.cpu.x as u16 & (high_byte.wrapping_add(1))) << 8) | low_byte,
-        value,
-    );
+    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
 pub fn shy(emu: &mut Emu) {
-    let high_byte = (emu.cpu.addr & 0xff00) >> 8;
-    let low_byte = emu.cpu.addr & 0x00ff;
-    let value = emu.cpu.y & (high_byte as u8).wrapping_add(1);
+    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
+    let data = emu.cpu.y & (high as u8).wrapping_add(!emu.cpu.carry as u8);
+    let high = if emu.cpu.carry { data } else { high };
 
-    // https://forums.nesdev.org/viewtopic.php?f=3&t=3831&start=30
-    bus::write_byte(
-        emu,
-        ((emu.cpu.y as u16 & (high_byte.wrapping_add(1))) << 8) | low_byte,
-        value,
-    );
+    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
 pub fn slo(emu: &mut Emu) {
