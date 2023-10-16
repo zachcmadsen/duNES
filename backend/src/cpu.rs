@@ -31,8 +31,6 @@ pub struct Cpu {
     pub s: u8,
     pub p: Status,
 
-    pub(crate) sync: bool,
-
     opc: u16,
     cyc: i8,
     addr: u16,
@@ -51,8 +49,6 @@ impl Cpu {
             s: 0xFD,
             p: Status(0x34),
 
-            sync: false,
-
             // TODO(zach): Explain the initial values of `opc` and `cyc`.
             opc: 0x100,
             cyc: -1,
@@ -64,12 +60,7 @@ impl Cpu {
 }
 
 pub fn step(emu: &mut Emu) {
-    // println!("opc: 0x{:02X}", emu.cpu.opc);
     emu.cpu.cyc += 1;
-    emu.cpu.sync = false;
-    if (OPC_LUT[emu.cpu.opc as usize].len() == 0) {
-        println!("missing opc: {:02X}", emu.cpu.opc);
-    }
     OPC_LUT[emu.cpu.opc as usize][emu.cpu.cyc as usize](emu);
 }
 
