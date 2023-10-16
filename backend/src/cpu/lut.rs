@@ -20,7 +20,7 @@ use crate::{
 use super::{
     instr::{
         alr, arr, dcp, isc, las, lax, lxa, peek_and_dec_s,
-        peek_and_dec_s_and_set_i, rla, rra, sax, sbx, sha, shx, shy, sre,
+        peek_and_dec_s_and_set_i, rla, rra, sax, sbx, sha, shx, shy, sre, tas,
     },
     mode::{
         read_addr_and_set_data, read_addr_and_set_pc, read_pc_and_set_high,
@@ -474,7 +474,7 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x101] = [
     imp!(tya),     // 0x98
     aby_w!(sta),   // 0x99
     imp!(txs),     // 0x9A
-    &[],           // 0x9B
+    aby_w!(tas),   // 0x9B
     abx_w!(shy),   // 0x9C
     abx_w!(sta),   // 0x9D
     aby_w!(shx),   // 0x9E

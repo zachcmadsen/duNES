@@ -1,4 +1,9 @@
-use crate::{bit::BitPos, bus, cpu::next_byte, Emu, Status};
+use crate::{
+    bit::BitPos,
+    bus,
+    cpu::{next_byte, Status},
+    Emu,
+};
 
 const STACK_BASE_ADDR: u16 = 0x0100;
 
@@ -415,7 +420,6 @@ pub fn sha(emu: &mut Emu) {
         & emu.cpu.x
         & (high as u8).wrapping_add(!emu.cpu.carry as u8);
     let high = if emu.cpu.carry { data } else { high };
-
     bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
@@ -423,7 +427,6 @@ pub fn shx(emu: &mut Emu) {
     let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
     let data = emu.cpu.x & (high as u8).wrapping_add(!emu.cpu.carry as u8);
     let high = if emu.cpu.carry { data } else { high };
-
     bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
@@ -431,7 +434,6 @@ pub fn shy(emu: &mut Emu) {
     let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
     let data = emu.cpu.y & (high as u8).wrapping_add(!emu.cpu.carry as u8);
     let high = if emu.cpu.carry { data } else { high };
-
     bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
@@ -463,6 +465,14 @@ pub fn stx(emu: &mut Emu) {
 
 pub fn sty(emu: &mut Emu) {
     bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
+}
+
+pub fn tas(emu: &mut Emu) {
+    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
+    emu.cpu.s = emu.cpu.a & emu.cpu.x;
+    let data = emu.cpu.s & (high as u8).wrapping_add(!emu.cpu.carry as u8);
+    let high = if emu.cpu.carry { data } else { high };
+    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
 
 pub fn tax(emu: &mut Emu) {
