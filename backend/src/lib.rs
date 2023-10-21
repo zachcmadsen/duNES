@@ -1,8 +1,9 @@
 mod bit;
 mod bus;
-mod cpu;
+mod cartridge;
 mod emu;
 
-pub use bus::Bus;
-pub use cpu::{Cpu, Status};
+pub mod cpu;
+
+pub use bus::{read_byte, write_byte, Bus};
 pub use emu::Emu;

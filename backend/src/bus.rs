@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use crate::Emu;
 
 #[derive(Clone, Debug)]
@@ -34,6 +36,20 @@ impl<const N: usize> Bus<N> {
 
             addr: 0,
             data: 0,
+        }
+    }
+
+    pub fn register(
+        &mut self,
+        read_handler: fn(&mut Emu, u16) -> u8,
+        write_handler: fn(&mut Emu, u16, u8),
+        range: RangeInclusive<u16>,
+    ) {
+        for handler in &mut self.handlers
+            [(*range.start() as usize)..=(*range.end() as usize)]
+        {
+            handler.read = read_handler;
+            handler.write = write_handler;
         }
     }
 }

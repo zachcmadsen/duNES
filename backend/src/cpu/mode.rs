@@ -1,7 +1,7 @@
 use crate::{bus, cpu::next_byte, Emu};
 
 pub fn read_pc_and_set_opc(emu: &mut Emu) {
-    emu.cpu.opc = next_byte(emu);
+    emu.cpu.opc = next_byte(emu) as u16;
     emu.cpu.cyc = -1;
 }
 
