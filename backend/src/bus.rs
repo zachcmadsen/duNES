@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use crate::Emu;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct Handler {
     read: fn(&mut Emu, u16) -> u8,
     write: fn(&mut Emu, u16, u8),
@@ -10,7 +10,6 @@ struct Handler {
 
 pub struct Bus<const N: usize> {
     handlers: Box<[Handler; N]>,
-    pub mem: Box<[u8; N]>,
 
     // The last address and data values on the bus.
     pub addr: u16,
@@ -19,24 +18,21 @@ pub struct Bus<const N: usize> {
 
 impl<const N: usize> Bus<N> {
     pub fn new() -> Bus<N> {
-        fn read_default(emu: &mut Emu, addr: u16) -> u8 {
-            emu.bus.mem[addr as usize]
+        fn default_read_handler(emu: &mut Emu, _: u16) -> u8 {
+            emu.bus.data
         }
 
-        fn write_default(emu: &mut Emu, addr: u16, data: u8) {
-            emu.bus.mem[addr as usize] = data;
-        }
+        fn default_write_handler(_: &mut Emu, _: u16, _: u8) {}
 
-        let default_handler =
-            Handler { read: read_default, write: write_default };
+        let default_handler = Handler {
+            read: default_read_handler,
+            write: default_write_handler,
+        };
+        let Ok(handlers) = vec![default_handler; N].try_into() else {
+            panic!("the conversion to a boxed array failed")
+        };
 
-        Bus {
-            handlers: vec![default_handler; N].try_into().unwrap(),
-            mem: vec![0; N].try_into().unwrap(),
-
-            addr: 0,
-            data: 0,
-        }
+        Bus { handlers, addr: 0, data: 0 }
     }
 
     pub fn register(

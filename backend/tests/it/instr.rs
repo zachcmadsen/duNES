@@ -1,6 +1,6 @@
 use std::fs;
 
-use backend::{read_byte, Emu};
+use backend::Emu;
 
 const STATUS_ADDR: u16 = 0x6000;
 const OUTPUT_ADDR: u16 = 0x6004;
@@ -10,24 +10,24 @@ fn run(filename: &str) {
     let rom = fs::read(format!("../roms/instr_test-v5/{}", filename)).unwrap();
     let mut emu = Emu::new(&rom);
 
-    let mut status = read_byte(&mut emu, STATUS_ADDR);
+    let mut status = emu.read(STATUS_ADDR);
     while status != RUNNING_STATUS {
         emu.step();
-        status = read_byte(&mut emu, STATUS_ADDR);
+        status = emu.read(STATUS_ADDR);
     }
 
     while status == RUNNING_STATUS {
         emu.step();
-        status = read_byte(&mut emu, STATUS_ADDR);
+        status = emu.read(STATUS_ADDR);
     }
 
     let mut output = Vec::new();
     let mut addr = OUTPUT_ADDR;
-    let mut byte = read_byte(&mut emu, addr);
+    let mut byte = emu.read(addr);
     while byte != b'\0' {
         output.push(byte);
         addr += 1;
-        byte = read_byte(&mut emu, addr);
+        byte = emu.read(addr);
     }
 
     assert!(String::from_utf8_lossy(&output).contains("Passed"));
