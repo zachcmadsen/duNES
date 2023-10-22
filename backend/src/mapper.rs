@@ -8,8 +8,8 @@ const PRG_RAM_BANK_SIZE: usize = 8192;
 const PRG_ROM_BANK_SIZE: usize = 16384;
 
 pub struct Nrom {
-    pub prg_ram: Box<[u8]>,
-    pub prg_rom: Box<[u8]>,
+    pub(crate) prg_ram: Box<[u8]>,
+    pub(crate) prg_rom: Box<[u8]>,
 }
 
 impl Nrom {

@@ -39,12 +39,12 @@ bitfield! {
 }
 
 pub struct Cpu {
-    pub a: u8,
-    pub x: u8,
-    pub y: u8,
-    pub pc: u16,
-    pub s: u8,
-    pub p: Status,
+    a: u8,
+    x: u8,
+    y: u8,
+    pc: u16,
+    s: u8,
+    p: Status,
 
     opc: u16,
     cyc: i8,
@@ -159,6 +159,8 @@ mod tests {
         let mut emu = Emu {
             bus,
             cpu: Cpu::new(),
+            // TODO(zach): Use a dummy mapper if we go with trait objects for
+            // mappers?
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
@@ -208,8 +210,8 @@ mod tests {
                 // TODO(zach): Assert read/write cycles.
                 for &(addr, data, _) in test.cycles.iter() {
                     step(&mut emu);
-                    assert_eq!(emu.bus.addr, addr);
-                    assert_eq!(emu.bus.data, data);
+                    assert_eq!(emu.bus.addr(), addr);
+                    assert_eq!(emu.bus.data(), data);
                 }
 
                 assert_eq!(emu.cpu.a, test.r#final.a);

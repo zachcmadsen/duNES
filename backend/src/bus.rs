@@ -12,8 +12,8 @@ pub struct Bus<const N: usize> {
     handlers: Box<[Handler; N]>,
 
     // The last address and data values on the bus.
-    pub addr: u16,
-    pub data: u8,
+    addr: u16,
+    data: u8,
 }
 
 impl<const N: usize> Bus<N> {
@@ -33,6 +33,14 @@ impl<const N: usize> Bus<N> {
         };
 
         Bus { handlers, addr: 0, data: 0 }
+    }
+
+    pub fn addr(&self) -> u16 {
+        self.addr
+    }
+
+    pub fn data(&self) -> u8 {
+        self.data
     }
 
     pub fn register(
