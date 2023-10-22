@@ -35,14 +35,6 @@ impl<const N: usize> Bus<N> {
         Bus { handlers, addr: 0, data: 0 }
     }
 
-    pub fn addr(&self) -> u16 {
-        self.addr
-    }
-
-    pub fn data(&self) -> u8 {
-        self.data
-    }
-
     pub fn register(
         &mut self,
         read_handler: fn(&mut Emu, u16) -> u8,
@@ -55,6 +47,16 @@ impl<const N: usize> Bus<N> {
             handler.read = read_handler;
             handler.write = write_handler;
         }
+    }
+
+    #[cfg(test)]
+    pub fn addr(&self) -> u16 {
+        self.addr
+    }
+
+    #[cfg(test)]
+    pub fn data(&self) -> u8 {
+        self.data
     }
 }
 
