@@ -1,7 +1,8 @@
 mod bit;
 mod bus;
-mod cartridge;
 mod emu;
+mod header;
+mod mapper;
 
 pub mod cpu;
 
