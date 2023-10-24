@@ -118,6 +118,14 @@ mod tests {
 
     use super::{super::mapper::Nrom, *};
 
+    fn ram_read_handler(emu: &mut Emu, addr: u16) -> u8 {
+        emu.cpu.ram[addr as usize]
+    }
+
+    fn ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
+        emu.cpu.ram[addr as usize] = data;
+    }
+
     #[test]
     fn processor_tests() {
         #[derive(Archive)]
@@ -145,14 +153,6 @@ mod tests {
             Write,
         }
 
-        fn ram_read_handler(emu: &mut Emu, addr: u16) -> u8 {
-            emu.cpu.ram[addr as usize]
-        }
-
-        fn ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
-            emu.cpu.ram[addr as usize] = data;
-        }
-
         let mut bus = Bus::new();
         bus.register(ram_read_handler, ram_write_handler, 0x0000..=0xFFFF);
 
@@ -167,7 +167,6 @@ mod tests {
             },
         };
 
-        // Get through the reset sequence.
         for _ in 0..6 {
             step(&mut emu);
         }
@@ -223,6 +222,51 @@ mod tests {
                 for &(addr, data) in test.r#final.ram.iter() {
                     assert_eq!(emu.cpu.ram[addr as usize], data);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn klaus_functional() {
+        let rom = fs::read("../roms/klaus/6502_functional_test.bin").unwrap();
+
+        let mut bus = Bus::new();
+        bus.register(ram_read_handler, ram_write_handler, 0x0000..=0xFFFF);
+
+        let mut cpu = Cpu::new();
+        cpu.ram[0x000A..].copy_from_slice(&rom);
+
+        let mut emu = Emu {
+            bus,
+            cpu,
+            mapper: Nrom {
+                prg_rom: vec![].into_boxed_slice(),
+                prg_ram: vec![].into_boxed_slice(),
+            },
+        };
+
+        for _ in 0..6 {
+            step(&mut emu);
+        }
+
+        emu.cpu.pc = 0x0400;
+        let mut prev_pc = emu.cpu.pc;
+
+        loop {
+            step(&mut emu);
+
+            let is_start_of_instr = emu.cpu.cyc as usize
+                == OPC_LUT[emu.cpu.opc as usize].len() - 2;
+            if is_start_of_instr {
+                if prev_pc == emu.cpu.pc {
+                    if emu.cpu.pc == 0x336D {
+                        break;
+                    }
+
+                    panic!("trapped at 0x{:04X}", emu.cpu.pc);
+                }
+
+                prev_pc = emu.cpu.pc;
             }
         }
     }
