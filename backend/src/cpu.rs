@@ -206,14 +206,6 @@ mod tests {
                 emu.cpu.s = test.initial.s;
                 emu.cpu.p = Status(test.initial.p);
 
-                // Use `memset` since `fill` is too slow in debug builds.
-                unsafe {
-                    libc::memset(
-                        emu.cpu.ram.as_mut_ptr() as _,
-                        0,
-                        emu.cpu.ram.len(),
-                    );
-                };
                 for &(addr, data) in test.initial.ram.iter() {
                     emu.cpu.ram[addr as usize] = data;
                 }
