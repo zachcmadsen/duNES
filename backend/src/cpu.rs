@@ -17,13 +17,6 @@ pub const CPU_ADDR_SPACE_SIZE: usize = 0x10000;
 #[allow(dead_code)]
 const CPU_RAM_SIZE: usize = 2048;
 
-/// The address of the NMI vector.
-const _NMI_VECTOR: u16 = 0xFFFA;
-/// The address of the reset vector.
-const RESET_VECTOR: u16 = 0xFFFC;
-/// The address of the IRQ vector.
-const IRQ_VECTOR: u16 = 0xFFFE;
-
 bitfield! {
     #[derive(Clone, Copy)]
     pub struct Status(pub u8) {
@@ -52,6 +45,14 @@ pub struct Cpu {
     carry: bool,
     data: u8,
 
+    nmi: bool,
+    irq: bool,
+
+    prev_nmi: bool,
+    pending_nmi: bool,
+    pending_irq: bool,
+
+    // TODO(zach): Move this to Emu (with a cfg).
     #[cfg(not(test))]
     ram: Box<[u8; CPU_RAM_SIZE]>,
 
@@ -78,6 +79,13 @@ impl Cpu {
             carry: false,
             data: 0,
 
+            nmi: false,
+            irq: false,
+
+            prev_nmi: false,
+            pending_nmi: false,
+            pending_irq: false,
+
             #[cfg(not(test))]
             ram: vec![0; CPU_RAM_SIZE].try_into().unwrap(),
 
@@ -102,6 +110,10 @@ pub fn register<const N: usize>(bus: &mut Bus<N>) {
 pub fn step(emu: &mut Emu) {
     emu.cpu.cyc += 1;
     OPC_LUT[emu.cpu.opc as usize][emu.cpu.cyc as usize](emu);
+
+    emu.cpu.pending_nmi |= !emu.cpu.prev_nmi && emu.cpu.nmi;
+    emu.cpu.prev_nmi = emu.cpu.nmi;
+    emu.cpu.pending_irq = emu.cpu.irq && !emu.cpu.p.i();
 }
 
 fn next_byte(emu: &mut Emu) -> u8 {
@@ -260,6 +272,67 @@ mod tests {
             if is_start_of_instr {
                 if prev_pc == emu.cpu.pc {
                     if emu.cpu.pc == 0x336D {
+                        break;
+                    }
+
+                    panic!("trapped at 0x{:04X}", emu.cpu.pc);
+                }
+
+                prev_pc = emu.cpu.pc;
+            }
+        }
+    }
+
+    #[test]
+    fn klaus_interrupt() {
+        let rom = fs::read("../roms/klaus/6502_interrupt_test.bin").unwrap();
+
+        const IRQ_MASK: u8 = 0x1;
+        const NMI_MASK: u8 = 0x2;
+
+        fn new_ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
+            if addr == 0xBFFC {
+                let prev_data = emu.cpu.ram[addr as usize];
+                let prev_nmi = prev_data & NMI_MASK != 0;
+                let new_nmi = data & NMI_MASK != 0;
+
+                emu.cpu.irq = data & IRQ_MASK != 0;
+                emu.cpu.nmi = !prev_nmi && new_nmi;
+            }
+
+            emu.cpu.ram[addr as usize] = data;
+        }
+
+        let mut bus = Bus::new();
+        bus.register(ram_read_handler, new_ram_write_handler, 0x0000..=0xFFFF);
+
+        let mut cpu = Cpu::new();
+        cpu.ram[0x000A..].copy_from_slice(&rom);
+
+        let mut emu = Emu {
+            bus,
+            cpu,
+            mapper: Nrom {
+                prg_rom: vec![].into_boxed_slice(),
+                prg_ram: vec![].into_boxed_slice(),
+            },
+        };
+
+        for _ in 0..6 {
+            step(&mut emu);
+        }
+
+        emu.cpu.pc = 0x0400;
+        let mut prev_pc = emu.cpu.pc;
+
+        loop {
+            step(&mut emu);
+
+            let is_start_of_instr = emu.cpu.cyc as usize
+                == OPC_LUT[emu.cpu.opc as usize].len() - 2;
+            if is_start_of_instr {
+                if prev_pc == emu.cpu.pc {
+                    if emu.cpu.pc == 0x06F5 {
                         break;
                     }
 

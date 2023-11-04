@@ -522,9 +522,8 @@ pub fn push_pch(emu: &mut Emu) {
     push(emu, (emu.cpu.pc >> 8) as u8);
 }
 
-pub fn push_p(emu: &mut Emu) {
-    push(emu, emu.cpu.p.with_b(true).0);
-    emu.cpu.p.set_i(true);
+pub fn push_p<const B: bool>(emu: &mut Emu) {
+    push(emu, emu.cpu.p.with_b(B).0);
 }
 
 pub fn pull_p(emu: &mut Emu) {
@@ -541,6 +540,7 @@ pub fn pull_pch(emu: &mut Emu) {
 
 pub fn set_pcl<const V: u16>(emu: &mut Emu) {
     emu.cpu.pc = bus::read_byte(emu, V) as u16;
+    emu.cpu.p.set_i(true);
 }
 
 pub fn set_pch<const V: u16>(emu: &mut Emu) {

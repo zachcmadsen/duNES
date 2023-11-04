@@ -11,8 +11,7 @@ use crate::{
             sed, sei, set_pch, set_pcl, slo, sta, stx, sty, tax, tay, tsx,
             txa, txs, tya,
         },
-        mode::read_pc_and_set_opc,
-        IRQ_VECTOR,
+        mode::poll_ints_and_set_opc,
     },
     Emu,
 };
@@ -24,9 +23,8 @@ use super::{
     },
     mode::{
         read_addr_and_set_data, read_addr_and_set_pc, read_pc_and_set_high,
-        read_pc_and_set_high_and_tpc, read_pc_and_set_low,
+        read_pc_and_set_high_and_tpc, read_pc_and_set_low, set_opc,
     },
-    RESET_VECTOR,
 };
 
 macro_rules! abs {
@@ -35,7 +33,7 @@ macro_rules! abs {
             $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_pc_and_set_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -48,7 +46,7 @@ macro_rules! abs_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -63,7 +61,7 @@ macro_rules! abx_r {
             >,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -78,7 +76,7 @@ macro_rules! abx_w {
             >,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -95,7 +93,7 @@ macro_rules! abx_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -110,7 +108,7 @@ macro_rules! aby_r {
             >,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -125,7 +123,7 @@ macro_rules! aby_w {
             >,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -142,7 +140,7 @@ macro_rules! aby_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -155,7 +153,7 @@ macro_rules! idx {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::read_addr_and_set_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -170,7 +168,7 @@ macro_rules! idx_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -183,7 +181,7 @@ macro_rules! idy_r {
             $crate::cpu::mode::read_addr_and_add_y_to_low_and_set_high::<true>,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -196,7 +194,7 @@ macro_rules! idy_w {
             $crate::cpu::mode::read_addr_and_add_y_to_low_and_set_high::<false>,
             $crate::cpu::mode::read_addr_and_opt_fix_high,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -211,14 +209,14 @@ macro_rules! idy_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
 
 macro_rules! imp {
     ($f:ident) => {
-        &[$f, $crate::cpu::mode::read_pc_and_set_opc]
+        &[$f, $crate::cpu::mode::poll_ints_and_set_opc]
     };
 }
 
@@ -228,7 +226,7 @@ macro_rules! rel {
             $f,
             $crate::cpu::mode::read_pc_and_add_data_to_pc,
             $crate::cpu::mode::read_pc_and_fix_pch,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -238,7 +236,7 @@ macro_rules! zpg {
         &[
             $crate::cpu::mode::read_pc_and_set_low,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -250,7 +248,7 @@ macro_rules! zpg_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -261,7 +259,7 @@ macro_rules! zpx {
             $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_add_index::<true>,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -274,7 +272,7 @@ macro_rules! zpx_rmw {
             $crate::cpu::mode::read_addr_and_set_data,
             $crate::cpu::mode::write_data_to_addr,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
@@ -285,296 +283,310 @@ macro_rules! zpy {
             $crate::cpu::mode::read_pc_and_set_low,
             $crate::cpu::mode::read_addr_and_add_index::<false>,
             $f,
-            $crate::cpu::mode::read_pc_and_set_opc,
+            $crate::cpu::mode::poll_ints_and_set_opc,
         ]
     };
 }
 
-pub static OPC_LUT: [&[fn(&mut Emu)]; 0x101] = [
+/// The address of the NMI vector.
+const NMI_VECTOR: u16 = 0xFFFA;
+/// The address of the reset vector.
+const RESET_VECTOR: u16 = 0xFFFC;
+/// The address of the IRQ vector.
+const IRQ_VECTOR: u16 = 0xFFFE;
+
+const WITH_B_FLAG: bool = true;
+const WITHOUT_B_FLAG: bool = false;
+
+pub static OPC_LUT: [&[fn(&mut Emu)]; 0x103] = [
     &[
         read_pc_and_inc_pc,
         push_pch,
         push_pcl,
-        push_p,
+        push_p::<WITH_B_FLAG>,
         set_pcl::<IRQ_VECTOR>,
         set_pch::<IRQ_VECTOR>,
-        read_pc_and_set_opc,
+        set_opc,
     ], // 0x00
-    idx!(ora),                            // 0x01
-    &[],                                  // 0x02
-    idx_rmw!(slo),                        // 0x03
-    zpg!(nop),                            // 0x04
-    zpg!(ora),                            // 0x05
-    zpg_rmw!(asl),                        // 0x06
-    zpg_rmw!(slo),                        // 0x07
-    &[read_pc, php, read_pc_and_set_opc], // 0x08
-    imp!(ora_imm),                        // 0x09
-    imp!(asl_a),                          // 0x0A
-    imp!(anc),                            // 0x0B
-    abs!(nop),                            // 0x0C
-    abs!(ora),                            // 0x0D
-    abs_rmw!(asl),                        // 0x0E
-    abs_rmw!(slo),                        // 0x0F
-    rel!(bpl),                            // 0x10
-    idy_r!(ora),                          // 0x11
-    &[],                                  // 0x12
-    idy_rmw!(slo),                        // 0x13
-    zpx!(nop),                            // 0x14
-    zpx!(ora),                            // 0x15
-    zpx_rmw!(asl),                        // 0x16
-    zpx_rmw!(slo),                        // 0x17
-    imp!(clc),                            // 0x18
-    aby_r!(ora),                          // 0x19
-    imp!(nop_imp),                        // 0x1A
-    aby_rmw!(slo),                        // 0x1B
-    abx_r!(nop),                          // 0x1C
-    abx_r!(ora),                          // 0x1D
-    abx_rmw!(asl),                        // 0x1E
-    abx_rmw!(slo),                        // 0x1F
+    idx!(ora),                              // 0x01
+    &[],                                    // 0x02
+    idx_rmw!(slo),                          // 0x03
+    zpg!(nop),                              // 0x04
+    zpg!(ora),                              // 0x05
+    zpg_rmw!(asl),                          // 0x06
+    zpg_rmw!(slo),                          // 0x07
+    &[read_pc, php, poll_ints_and_set_opc], // 0x08
+    imp!(ora_imm),                          // 0x09
+    imp!(asl_a),                            // 0x0A
+    imp!(anc),                              // 0x0B
+    abs!(nop),                              // 0x0C
+    abs!(ora),                              // 0x0D
+    abs_rmw!(asl),                          // 0x0E
+    abs_rmw!(slo),                          // 0x0F
+    rel!(bpl),                              // 0x10
+    idy_r!(ora),                            // 0x11
+    &[],                                    // 0x12
+    idy_rmw!(slo),                          // 0x13
+    zpx!(nop),                              // 0x14
+    zpx!(ora),                              // 0x15
+    zpx_rmw!(asl),                          // 0x16
+    zpx_rmw!(slo),                          // 0x17
+    imp!(clc),                              // 0x18
+    aby_r!(ora),                            // 0x19
+    imp!(nop_imp),                          // 0x1A
+    aby_rmw!(slo),                          // 0x1B
+    abx_r!(nop),                            // 0x1C
+    abx_r!(ora),                            // 0x1D
+    abx_rmw!(asl),                          // 0x1E
+    abx_rmw!(slo),                          // 0x1F
     &[
         read_pc_and_set_low,
         peek,
         push_pch,
         push_pcl,
         read_pc_and_set_high_and_tpc,
-        read_pc_and_set_opc,
+        poll_ints_and_set_opc,
     ], // 0x20
-    idx!(and),                            // 0x21
-    &[],                                  // 0x22
-    idx_rmw!(rla),                        // 0x23
-    zpg!(bit),                            // 0x24
-    zpg!(and),                            // 0x25
-    zpg_rmw!(rol),                        // 0x26
-    zpg_rmw!(rla),                        // 0x27
-    &[read_pc, peek, plp, read_pc_and_set_opc], // 0x28
-    imp!(and_imm),                        // 0x29
-    imp!(rol_a),                          // 0x2A
-    imp!(anc),                            // 0x2B
-    abs!(bit),                            // 0x2C
-    abs!(and),                            // 0x2D
-    abs_rmw!(rol),                        // 0x2E
-    abs_rmw!(rla),                        // 0x2F
-    rel!(bmi),                            // 0x30
-    idy_r!(and),                          // 0x31
-    &[],                                  // 0x32
-    idy_rmw!(rla),                        // 0x33
-    zpx!(nop),                            // 0x34
-    zpx!(and),                            // 0x35
-    zpx_rmw!(rol),                        // 0x36
-    zpx_rmw!(rla),                        // 0x37
-    imp!(sec),                            // 0x38
-    aby_r!(and),                          // 0x39
-    imp!(nop_imp),                        // 0x3A
-    aby_rmw!(rla),                        // 0x3B
-    abx_r!(nop),                          // 0x3C
-    abx_r!(and),                          // 0x3D
-    abx_rmw!(rol),                        // 0x3E
-    abx_rmw!(rla),                        // 0x3F
-    &[read_pc, peek, pull_p, pull_pcl, pull_pch, read_pc_and_set_opc], // 0x40
-    idx!(eor),                            // 0x41
-    &[],                                  // 0x42
-    idx_rmw!(sre),                        // 0x43
-    zpg!(nop),                            // 0x44
-    zpg!(eor),                            // 0x45
-    zpg_rmw!(lsr),                        // 0x46
-    zpg_rmw!(sre),                        // 0x47
-    &[read_pc, pha, read_pc_and_set_opc], // 0x48
-    imp!(eor_imm),                        // 0x49
-    imp!(lsr_a),                          // 0x4A
-    imp!(alr),                            // 0x4B
-    &[read_pc_and_set_low, read_pc_and_set_high_and_tpc, read_pc_and_set_opc], // 0x4C
-    abs!(eor),     // 0x4D
-    abs_rmw!(lsr), // 0x4E
-    abs_rmw!(sre), // 0x4F
-    rel!(bvc),     // 0x50
-    idy_r!(eor),   // 0x51
-    &[],           // 0x52
-    idy_rmw!(sre), // 0x53
-    zpx!(nop),     // 0x54
-    zpx!(eor),     // 0x55
-    zpx_rmw!(lsr), // 0x56
-    zpx_rmw!(sre), // 0x57
-    imp!(cli),     // 0x58
-    aby_r!(eor),   // 0x59
-    imp!(nop_imp), // 0x5A
-    aby_rmw!(sre), // 0x5B
-    abx_r!(nop),   // 0x5C
-    abx_r!(eor),   // 0x5D
-    abx_rmw!(lsr), // 0x5E
-    abx_rmw!(sre), // 0x5F
+    idx!(and),                              // 0x21
+    &[],                                    // 0x22
+    idx_rmw!(rla),                          // 0x23
+    zpg!(bit),                              // 0x24
+    zpg!(and),                              // 0x25
+    zpg_rmw!(rol),                          // 0x26
+    zpg_rmw!(rla),                          // 0x27
+    &[read_pc, peek, plp, poll_ints_and_set_opc], // 0x28
+    imp!(and_imm),                          // 0x29
+    imp!(rol_a),                            // 0x2A
+    imp!(anc),                              // 0x2B
+    abs!(bit),                              // 0x2C
+    abs!(and),                              // 0x2D
+    abs_rmw!(rol),                          // 0x2E
+    abs_rmw!(rla),                          // 0x2F
+    rel!(bmi),                              // 0x30
+    idy_r!(and),                            // 0x31
+    &[],                                    // 0x32
+    idy_rmw!(rla),                          // 0x33
+    zpx!(nop),                              // 0x34
+    zpx!(and),                              // 0x35
+    zpx_rmw!(rol),                          // 0x36
+    zpx_rmw!(rla),                          // 0x37
+    imp!(sec),                              // 0x38
+    aby_r!(and),                            // 0x39
+    imp!(nop_imp),                          // 0x3A
+    aby_rmw!(rla),                          // 0x3B
+    abx_r!(nop),                            // 0x3C
+    abx_r!(and),                            // 0x3D
+    abx_rmw!(rol),                          // 0x3E
+    abx_rmw!(rla),                          // 0x3F
+    &[read_pc, peek, pull_p, pull_pcl, pull_pch, poll_ints_and_set_opc], // 0x40
+    idx!(eor),                              // 0x41
+    &[],                                    // 0x42
+    idx_rmw!(sre),                          // 0x43
+    zpg!(nop),                              // 0x44
+    zpg!(eor),                              // 0x45
+    zpg_rmw!(lsr),                          // 0x46
+    zpg_rmw!(sre),                          // 0x47
+    &[read_pc, pha, poll_ints_and_set_opc], // 0x48
+    imp!(eor_imm),                          // 0x49
+    imp!(lsr_a),                            // 0x4A
+    imp!(alr),                              // 0x4B
+    &[
+        read_pc_and_set_low,
+        read_pc_and_set_high_and_tpc,
+        poll_ints_and_set_opc,
+    ], // 0x4C
+    abs!(eor),                              // 0x4D
+    abs_rmw!(lsr),                          // 0x4E
+    abs_rmw!(sre),                          // 0x4F
+    rel!(bvc),                              // 0x50
+    idy_r!(eor),                            // 0x51
+    &[],                                    // 0x52
+    idy_rmw!(sre),                          // 0x53
+    zpx!(nop),                              // 0x54
+    zpx!(eor),                              // 0x55
+    zpx_rmw!(lsr),                          // 0x56
+    zpx_rmw!(sre),                          // 0x57
+    imp!(cli),                              // 0x58
+    aby_r!(eor),                            // 0x59
+    imp!(nop_imp),                          // 0x5A
+    aby_rmw!(sre),                          // 0x5B
+    abx_r!(nop),                            // 0x5C
+    abx_r!(eor),                            // 0x5D
+    abx_rmw!(lsr),                          // 0x5E
+    abx_rmw!(sre),                          // 0x5F
     &[
         read_pc,
         peek,
         pull_pcl,
         pull_pch,
         read_pc_and_inc_pc,
-        read_pc_and_set_opc,
+        poll_ints_and_set_opc,
     ], // 0x60
-    idx!(adc),     // 0x61
-    &[],           // 0x62
-    idx_rmw!(rra), // 0x63
-    zpg!(nop),     // 0x64
-    zpg!(adc),     // 0x65
-    zpg_rmw!(ror), // 0x66
-    zpg_rmw!(rra), // 0x67
-    &[read_pc, peek, pla, read_pc_and_set_opc], // 0x68
-    imp!(adc_imm), // 0x69
-    imp!(ror_a),   // 0x6A
-    imp!(arr),     // 0x6B
+    idx!(adc),                              // 0x61
+    &[],                                    // 0x62
+    idx_rmw!(rra),                          // 0x63
+    zpg!(nop),                              // 0x64
+    zpg!(adc),                              // 0x65
+    zpg_rmw!(ror),                          // 0x66
+    zpg_rmw!(rra),                          // 0x67
+    &[read_pc, peek, pla, poll_ints_and_set_opc], // 0x68
+    imp!(adc_imm),                          // 0x69
+    imp!(ror_a),                            // 0x6A
+    imp!(arr),                              // 0x6B
     &[
         read_pc_and_set_low,
         read_pc_and_set_high,
         read_addr_and_set_data,
         read_addr_and_set_pc,
-        read_pc_and_set_opc,
+        poll_ints_and_set_opc,
     ], // 0x6C
-    abs!(adc),     // 0x6D
-    abs_rmw!(ror), // 0x6E
-    abs_rmw!(rra), // 0x6F
-    rel!(bvs),     // 0x70
-    idy_r!(adc),   // 0x71
-    &[],           // 0x72
-    idy_rmw!(rra), // 0x73
-    zpx!(nop),     // 0x74
-    zpx!(adc),     // 0x75
-    zpx_rmw!(ror), // 0x76
-    zpx_rmw!(rra), // 0x77
-    imp!(sei),     // 0x78
-    aby_r!(adc),   // 0x79
-    imp!(nop_imp), // 0x7A
-    aby_rmw!(rra), // 0x7B
-    abx_r!(nop),   // 0x7C
-    abx_r!(adc),   // 0x7D
-    abx_rmw!(ror), // 0x7E
-    abx_rmw!(rra), // 0x7F
-    imp!(nop_imm), // 0x80
-    idx!(sta),     // 0x81
-    imp!(nop_imm), // 0x82
-    idx!(sax),     // 0x83
-    zpg!(sty),     // 0x84
-    zpg!(sta),     // 0x85
-    zpg!(stx),     // 0x86
-    zpg!(sax),     // 0x87
-    imp!(dey),     // 0x88
-    imp!(nop_imm), // 0x89
-    imp!(txa),     // 0x8A
-    &[],           // 0x8B
-    abs!(sty),     // 0x8C
-    abs!(sta),     // 0x8D
-    abs!(stx),     // 0x8E
-    abs!(sax),     // 0x8F
-    rel!(bcc),     // 0x90
-    idy_w!(sta),   // 0x91
-    &[],           // 0x92
-    idy_w!(sha),   // 0x93
-    zpx!(sty),     // 0x94
-    zpx!(sta),     // 0x95
-    zpy!(stx),     // 0x96
-    zpy!(sax),     // 0x97
-    imp!(tya),     // 0x98
-    aby_w!(sta),   // 0x99
-    imp!(txs),     // 0x9A
-    aby_w!(tas),   // 0x9B
-    abx_w!(shy),   // 0x9C
-    abx_w!(sta),   // 0x9D
-    aby_w!(shx),   // 0x9E
-    aby_w!(sha),   // 0x9F
-    imp!(ldy_imm), // 0xA0
-    idx!(lda),     // 0xA1
-    imp!(ldx_imm), // 0xA2
-    idx!(lax),     // 0xA3
-    zpg!(ldy),     // 0xA4
-    zpg!(lda),     // 0xA5
-    zpg!(ldx),     // 0xA6
-    zpg!(lax),     // 0xA7
-    imp!(tay),     // 0xA8
-    imp!(lda_imm), // 0xA9
-    imp!(tax),     // 0xAA
-    imp!(lxa),     // 0xAB
-    abs!(ldy),     // 0xAC
-    abs!(lda),     // 0xAD
-    abs!(ldx),     // 0xAE
-    abs!(lax),     // 0xAF
-    rel!(bcs),     // 0xB0
-    idy_r!(lda),   // 0xB1
-    &[],           // 0xB2
-    idy_r!(lax),   // 0xB3
-    zpx!(ldy),     // 0xB4
-    zpx!(lda),     // 0xB5
-    zpy!(ldx),     // 0xB6
-    zpy!(lax),     // 0xB7
-    imp!(clv),     // 0xB8
-    aby_r!(lda),   // 0xB9
-    imp!(tsx),     // 0xBA
-    aby_r!(las),   // 0xBB
-    abx_r!(ldy),   // 0xBC
-    abx_r!(lda),   // 0xBD
-    aby_r!(ldx),   // 0xBE
-    aby_r!(lax),   // 0xBF
-    imp!(cpy_imm), // 0xC0
-    idx!(cmp),     // 0xC1
-    imp!(nop_imm), // 0xC2
-    idx_rmw!(dcp), // 0xC3
-    zpg!(cpy),     // 0xC4
-    zpg!(cmp),     // 0xC5
-    zpg_rmw!(dec), // 0xC6
-    zpg_rmw!(dcp), // 0xC7
-    imp!(iny),     // 0xC8
-    imp!(cmp_imm), // 0xC9
-    imp!(dex),     // 0xCA
-    imp!(sbx),     // 0xCB
-    abs!(cpy),     // 0xCC
-    abs!(cmp),     // 0xCD
-    abs_rmw!(dec), // 0xCE
-    abs_rmw!(dcp), // 0xCF
-    rel!(bne),     // 0xD0
-    idy_r!(cmp),   // 0xD1
-    &[],           // 0xD2
-    idy_rmw!(dcp), // 0xD3
-    zpx!(nop),     // 0xD4
-    zpx!(cmp),     // 0xD5
-    zpx_rmw!(dec), // 0xD6
-    zpx_rmw!(dcp), // 0xD7
-    imp!(cld),     // 0xD8
-    aby_r!(cmp),   // 0xD9
-    imp!(nop_imp), // 0xDA
-    aby_rmw!(dcp), // 0xDB
-    abx_r!(nop),   // 0xDC
-    abx_r!(cmp),   // 0xDD
-    abx_rmw!(dec), // 0xDE
-    abx_rmw!(dcp), // 0xDF
-    imp!(cpx_imm), // 0xE0
-    idx!(sbc),     // 0xE1
-    imp!(nop_imm), // 0xE2
-    idx_rmw!(isc), // 0xE3
-    zpg!(cpx),     // 0xE4
-    zpg!(sbc),     // 0xE5
-    zpg_rmw!(inc), // 0xE6
-    zpg_rmw!(isc), // 0xE7
-    imp!(inx),     // 0xE8
-    imp!(sbc_imm), // 0xE9
-    imp!(nop_imp), // 0xEA
-    imp!(sbc_imm), // 0xEB
-    abs!(cpx),     // 0xEC
-    abs!(sbc),     // 0xED
-    abs_rmw!(inc), // 0xEE
-    abs_rmw!(isc), // 0xEF
-    rel!(beq),     // 0xF0
-    idy_r!(sbc),   // 0xF1
-    &[],           // 0xF2
-    idy_rmw!(isc), // 0xF3
-    zpx!(nop),     // 0xF4
-    zpx!(sbc),     // 0xF5
-    zpx_rmw!(inc), // 0xF6
-    zpx_rmw!(isc), // 0xF7
-    imp!(sed),     // 0xF8
-    aby_r!(sbc),   // 0xF9
-    imp!(nop_imp), // 0xFA
-    aby_rmw!(isc), // 0xFB
-    abx_r!(nop),   // 0xFC
-    abx_r!(sbc),   // 0xFD
-    abx_rmw!(inc), // 0xFE
-    abx_rmw!(isc), // 0xFF
+    abs!(adc),                              // 0x6D
+    abs_rmw!(ror),                          // 0x6E
+    abs_rmw!(rra),                          // 0x6F
+    rel!(bvs),                              // 0x70
+    idy_r!(adc),                            // 0x71
+    &[],                                    // 0x72
+    idy_rmw!(rra),                          // 0x73
+    zpx!(nop),                              // 0x74
+    zpx!(adc),                              // 0x75
+    zpx_rmw!(ror),                          // 0x76
+    zpx_rmw!(rra),                          // 0x77
+    imp!(sei),                              // 0x78
+    aby_r!(adc),                            // 0x79
+    imp!(nop_imp),                          // 0x7A
+    aby_rmw!(rra),                          // 0x7B
+    abx_r!(nop),                            // 0x7C
+    abx_r!(adc),                            // 0x7D
+    abx_rmw!(ror),                          // 0x7E
+    abx_rmw!(rra),                          // 0x7F
+    imp!(nop_imm),                          // 0x80
+    idx!(sta),                              // 0x81
+    imp!(nop_imm),                          // 0x82
+    idx!(sax),                              // 0x83
+    zpg!(sty),                              // 0x84
+    zpg!(sta),                              // 0x85
+    zpg!(stx),                              // 0x86
+    zpg!(sax),                              // 0x87
+    imp!(dey),                              // 0x88
+    imp!(nop_imm),                          // 0x89
+    imp!(txa),                              // 0x8A
+    &[],                                    // 0x8B
+    abs!(sty),                              // 0x8C
+    abs!(sta),                              // 0x8D
+    abs!(stx),                              // 0x8E
+    abs!(sax),                              // 0x8F
+    rel!(bcc),                              // 0x90
+    idy_w!(sta),                            // 0x91
+    &[],                                    // 0x92
+    idy_w!(sha),                            // 0x93
+    zpx!(sty),                              // 0x94
+    zpx!(sta),                              // 0x95
+    zpy!(stx),                              // 0x96
+    zpy!(sax),                              // 0x97
+    imp!(tya),                              // 0x98
+    aby_w!(sta),                            // 0x99
+    imp!(txs),                              // 0x9A
+    aby_w!(tas),                            // 0x9B
+    abx_w!(shy),                            // 0x9C
+    abx_w!(sta),                            // 0x9D
+    aby_w!(shx),                            // 0x9E
+    aby_w!(sha),                            // 0x9F
+    imp!(ldy_imm),                          // 0xA0
+    idx!(lda),                              // 0xA1
+    imp!(ldx_imm),                          // 0xA2
+    idx!(lax),                              // 0xA3
+    zpg!(ldy),                              // 0xA4
+    zpg!(lda),                              // 0xA5
+    zpg!(ldx),                              // 0xA6
+    zpg!(lax),                              // 0xA7
+    imp!(tay),                              // 0xA8
+    imp!(lda_imm),                          // 0xA9
+    imp!(tax),                              // 0xAA
+    imp!(lxa),                              // 0xAB
+    abs!(ldy),                              // 0xAC
+    abs!(lda),                              // 0xAD
+    abs!(ldx),                              // 0xAE
+    abs!(lax),                              // 0xAF
+    rel!(bcs),                              // 0xB0
+    idy_r!(lda),                            // 0xB1
+    &[],                                    // 0xB2
+    idy_r!(lax),                            // 0xB3
+    zpx!(ldy),                              // 0xB4
+    zpx!(lda),                              // 0xB5
+    zpy!(ldx),                              // 0xB6
+    zpy!(lax),                              // 0xB7
+    imp!(clv),                              // 0xB8
+    aby_r!(lda),                            // 0xB9
+    imp!(tsx),                              // 0xBA
+    aby_r!(las),                            // 0xBB
+    abx_r!(ldy),                            // 0xBC
+    abx_r!(lda),                            // 0xBD
+    aby_r!(ldx),                            // 0xBE
+    aby_r!(lax),                            // 0xBF
+    imp!(cpy_imm),                          // 0xC0
+    idx!(cmp),                              // 0xC1
+    imp!(nop_imm),                          // 0xC2
+    idx_rmw!(dcp),                          // 0xC3
+    zpg!(cpy),                              // 0xC4
+    zpg!(cmp),                              // 0xC5
+    zpg_rmw!(dec),                          // 0xC6
+    zpg_rmw!(dcp),                          // 0xC7
+    imp!(iny),                              // 0xC8
+    imp!(cmp_imm),                          // 0xC9
+    imp!(dex),                              // 0xCA
+    imp!(sbx),                              // 0xCB
+    abs!(cpy),                              // 0xCC
+    abs!(cmp),                              // 0xCD
+    abs_rmw!(dec),                          // 0xCE
+    abs_rmw!(dcp),                          // 0xCF
+    rel!(bne),                              // 0xD0
+    idy_r!(cmp),                            // 0xD1
+    &[],                                    // 0xD2
+    idy_rmw!(dcp),                          // 0xD3
+    zpx!(nop),                              // 0xD4
+    zpx!(cmp),                              // 0xD5
+    zpx_rmw!(dec),                          // 0xD6
+    zpx_rmw!(dcp),                          // 0xD7
+    imp!(cld),                              // 0xD8
+    aby_r!(cmp),                            // 0xD9
+    imp!(nop_imp),                          // 0xDA
+    aby_rmw!(dcp),                          // 0xDB
+    abx_r!(nop),                            // 0xDC
+    abx_r!(cmp),                            // 0xDD
+    abx_rmw!(dec),                          // 0xDE
+    abx_rmw!(dcp),                          // 0xDF
+    imp!(cpx_imm),                          // 0xE0
+    idx!(sbc),                              // 0xE1
+    imp!(nop_imm),                          // 0xE2
+    idx_rmw!(isc),                          // 0xE3
+    zpg!(cpx),                              // 0xE4
+    zpg!(sbc),                              // 0xE5
+    zpg_rmw!(inc),                          // 0xE6
+    zpg_rmw!(isc),                          // 0xE7
+    imp!(inx),                              // 0xE8
+    imp!(sbc_imm),                          // 0xE9
+    imp!(nop_imp),                          // 0xEA
+    imp!(sbc_imm),                          // 0xEB
+    abs!(cpx),                              // 0xEC
+    abs!(sbc),                              // 0xED
+    abs_rmw!(inc),                          // 0xEE
+    abs_rmw!(isc),                          // 0xEF
+    rel!(beq),                              // 0xF0
+    idy_r!(sbc),                            // 0xF1
+    &[],                                    // 0xF2
+    idy_rmw!(isc),                          // 0xF3
+    zpx!(nop),                              // 0xF4
+    zpx!(sbc),                              // 0xF5
+    zpx_rmw!(inc),                          // 0xF6
+    zpx_rmw!(isc),                          // 0xF7
+    imp!(sed),                              // 0xF8
+    aby_r!(sbc),                            // 0xF9
+    imp!(nop_imp),                          // 0xFA
+    aby_rmw!(isc),                          // 0xFB
+    abx_r!(nop),                            // 0xFC
+    abx_r!(sbc),                            // 0xFD
+    abx_rmw!(inc),                          // 0xFE
+    abx_rmw!(isc),                          // 0xFF
     &[
         read_pc,
         peek_and_dec_s,
@@ -582,6 +594,24 @@ pub static OPC_LUT: [&[fn(&mut Emu)]; 0x101] = [
         peek_and_dec_s_and_set_i,
         set_pcl::<RESET_VECTOR>,
         set_pch::<RESET_VECTOR>,
-        read_pc_and_set_opc,
-    ],
+        set_opc,
+    ], // 0x100
+    &[
+        read_pc,
+        push_pch,
+        push_pcl,
+        push_p::<WITHOUT_B_FLAG>,
+        set_pcl::<NMI_VECTOR>,
+        set_pch::<NMI_VECTOR>,
+        set_opc,
+    ], // 0x101
+    &[
+        read_pc,
+        push_pch,
+        push_pcl,
+        push_p::<WITHOUT_B_FLAG>,
+        set_pcl::<IRQ_VECTOR>,
+        set_pch::<IRQ_VECTOR>,
+        set_opc,
+    ], // 0x102
 ];

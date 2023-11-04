@@ -1,7 +1,22 @@
 use crate::{bus, cpu::next_byte, Emu};
 
-pub fn read_pc_and_set_opc(emu: &mut Emu) {
+pub fn set_opc(emu: &mut Emu) {
     emu.cpu.opc = next_byte(emu) as u16;
+    emu.cpu.cyc = -1;
+}
+
+pub fn poll_ints_and_set_opc(emu: &mut Emu) {
+    const NMI_LUT_INDEX: u16 = 0x101;
+    const IRQ_LUT_INDEX: u16 = 0x102;
+
+    emu.cpu.opc = if emu.cpu.pending_nmi {
+        emu.cpu.pending_nmi = false;
+        NMI_LUT_INDEX
+    } else if emu.cpu.pending_irq {
+        IRQ_LUT_INDEX
+    } else {
+        next_byte(emu) as u16
+    };
     emu.cpu.cyc = -1;
 }
 
