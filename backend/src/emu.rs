@@ -2,11 +2,13 @@ use crate::{
     bus::{self, Bus},
     cpu::{self, Cpu, CPU_ADDR_SPACE_SIZE},
     mapper::{self, Nrom},
+    ppu::Ppu,
 };
 
 pub struct Emu {
     pub(crate) bus: Bus<CPU_ADDR_SPACE_SIZE>,
     pub(crate) cpu: Cpu,
+    pub(crate) ppu: Ppu,
     pub(crate) mapper: Nrom,
 }
 
@@ -16,7 +18,7 @@ impl Emu {
         cpu::register(&mut bus);
         mapper::register(&mut bus);
 
-        Emu { bus, cpu: Cpu::new(), mapper: Nrom::new(rom) }
+        Emu { bus, cpu: Cpu::new(), ppu: Ppu::new(), mapper: Nrom::new(rom) }
     }
 
     pub fn step(&mut self) {

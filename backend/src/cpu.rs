@@ -128,6 +128,8 @@ mod tests {
 
     use rkyv::Archive;
 
+    use crate::ppu::Ppu;
+
     use super::{super::mapper::Nrom, *};
 
     fn ram_read_handler(emu: &mut Emu, addr: u16) -> u8 {
@@ -171,6 +173,7 @@ mod tests {
         let mut emu = Emu {
             bus,
             cpu: Cpu::new(),
+            ppu: Ppu::new(),
             // TODO(zach): Use a dummy mapper if we go with trait objects for
             // mappers?
             mapper: Nrom {
@@ -243,6 +246,7 @@ mod tests {
         let mut emu = Emu {
             bus,
             cpu,
+            ppu: Ppu::new(),
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
@@ -304,6 +308,7 @@ mod tests {
         let mut emu = Emu {
             bus,
             cpu,
+            ppu: Ppu::new(),
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
