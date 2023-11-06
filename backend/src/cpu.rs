@@ -32,12 +32,12 @@ bitfield! {
 }
 
 pub struct Cpu {
-    a: u8,
-    x: u8,
-    y: u8,
-    pc: u16,
-    s: u8,
-    p: Status,
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
+    pub pc: u16,
+    pub s: u8,
+    pub p: Status,
 
     opc: u16,
     cyc: i8,
@@ -45,7 +45,7 @@ pub struct Cpu {
     carry: bool,
     data: u8,
 
-    nmi: bool,
+    pub(crate) nmi: bool,
     irq: bool,
 
     prev_nmi: bool,
@@ -170,6 +170,8 @@ mod tests {
         let mut bus = Bus::new();
         bus.register(ram_read_handler, ram_write_handler, 0x0000..=0xFFFF);
 
+        // TODO(zach): Move code shared by the the tests, like Emu
+        // construction, into a function.
         let mut emu = Emu {
             bus,
             cpu: Cpu::new(),
@@ -179,6 +181,8 @@ mod tests {
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
+                chr_rom: vec![].into_boxed_slice(),
+                mirroring: crate::mapper::Mirroring::Horizontal,
             },
         };
 
@@ -250,6 +254,8 @@ mod tests {
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
+                chr_rom: vec![].into_boxed_slice(),
+                mirroring: crate::mapper::Mirroring::Horizontal,
             },
         };
 
@@ -312,6 +318,8 @@ mod tests {
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
+                chr_rom: vec![].into_boxed_slice(),
+                mirroring: crate::mapper::Mirroring::Horizontal,
             },
         };
 

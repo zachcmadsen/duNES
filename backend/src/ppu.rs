@@ -3,8 +3,10 @@ mod control;
 mod mask;
 mod status;
 
-use crate::ppu::{
-    address::Address, control::Control, mask::Mask, status::Status,
+use crate::{
+    mapper::Mirroring,
+    ppu::{address::Address, control::Control, mask::Mask, status::Status},
+    Emu,
 };
 
 /// The size of a nametable in bytes.
@@ -107,33 +109,33 @@ impl Ppu {
         }
     }
 
-    pub fn read_register(&mut self, address: u16) -> u8 {
+    pub fn read_register(emu: &mut Emu, address: u16) -> u8 {
         match address {
             0x2002 => {
                 // TODO: Using the read buffer here isn't accurate. It should
                 // be the data bus, which isn't emulated yet.
-                let data = self.status.0 | (self.read_buffer & 0x1f);
-                // TODO: Should self.nmi be set to false? Also, reading the
+                let data = emu.ppu.status.0 | (emu.ppu.read_buffer & 0x1f);
+                // TODO: Should emu.ppu.nmi be set to false? Also, reading the
                 // status register within two cycles of vblank causes an NMI
                 // not to occur?
-                self.status.set_vblank(false);
-                self.w = false;
+                emu.ppu.status.set_vblank(false);
+                emu.ppu.w = false;
 
                 data
             }
-            0x2004 => self.oam[self.oam_address as usize],
+            0x2004 => emu.ppu.oam[emu.ppu.oam_address as usize],
             0x2007 => {
                 let data = if address < BASE_PALETTE_ADDRESS {
-                    self.read_buffer
+                    emu.ppu.read_buffer
                 } else {
-                    self.read_data(address)
+                    Ppu::read_data(emu, address)
                 };
 
                 // TODO: The data in the buffer should be different when
                 // reading palette data.
-                self.read_buffer = self.read_data(address);
+                emu.ppu.read_buffer = Ppu::read_data(emu, address);
 
-                self.v.increment(self.control.increment_mode());
+                emu.ppu.v.increment(emu.ppu.control.increment_mode());
 
                 data
             }
@@ -141,107 +143,107 @@ impl Ppu {
         }
     }
 
-    pub fn write_register(&mut self, address: u16, data: u8) {
+    pub fn write_register(emu: &mut Emu, address: u16, data: u8) {
         match address {
             0x2000 => {
-                self.control = Control(data);
-                self.t.set_nametable(self.control.nametable());
+                emu.ppu.control = Control(data);
+                emu.ppu.t.set_nametable(emu.ppu.control.nametable());
             }
-            0x2001 => self.mask = Mask(data),
-            0x2003 => self.oam_address = data,
+            0x2001 => emu.ppu.mask = Mask(data),
+            0x2003 => emu.ppu.oam_address = data,
             0x2004 => {
-                self.oam[self.oam_address as usize] = data;
-                self.oam_address = self.oam_address.wrapping_add(1);
+                emu.ppu.oam[emu.ppu.oam_address as usize] = data;
+                emu.ppu.oam_address = emu.ppu.oam_address.wrapping_add(1);
             }
             0x2005 => {
-                if !self.w {
-                    self.fine_x_scroll = data & 0x7;
-                    self.t.set_coarse_x_scroll(data >> 3);
+                if !emu.ppu.w {
+                    emu.ppu.fine_x_scroll = data & 0x7;
+                    emu.ppu.t.set_coarse_x_scroll(data >> 3);
                 } else {
-                    self.t.set_fine_y_scroll(data & 0x7);
-                    self.t.set_coarse_y_scroll(data >> 3);
+                    emu.ppu.t.set_fine_y_scroll(data & 0x7);
+                    emu.ppu.t.set_coarse_y_scroll(data >> 3);
                 }
 
-                self.w = !self.w;
+                emu.ppu.w = !emu.ppu.w;
             }
             0x2006 => {
-                if !self.w {
-                    self.t.set_high(data & 0x3f);
+                if !emu.ppu.w {
+                    emu.ppu.t.set_high(data & 0x3f);
                 } else {
-                    self.t.set_low(data);
-                    self.v = Address(self.t.0);
+                    emu.ppu.t.set_low(data);
+                    emu.ppu.v = Address(emu.ppu.t.0);
                 }
 
-                self.w = !self.w;
+                emu.ppu.w = !emu.ppu.w;
             }
             0x2007 => {
-                // TODO: Should self.v.0 be mirrored down?
-                self.write_data(self.v.0, data);
-                self.v.increment(self.control.increment_mode());
+                // TODO: Should emu.ppu.v.0 be mirrored down?
+                Ppu::write_data(emu, emu.ppu.v.0, data);
+                emu.ppu.v.increment(emu.ppu.control.increment_mode());
             }
             _ => (),
         }
     }
 
-    pub fn tick(&mut self) {
-        if self.on_prerender_scanline() {
-            if self.cycle == 1 {
-                self.status.set_sprite_overflow(false);
-                self.status.set_sprite_0_hit(false);
-                self.status.set_vblank(false);
-                self.nmi = false;
+    pub fn tick(emu: &mut Emu) {
+        if emu.ppu.on_prerender_scanline() {
+            if emu.ppu.cycle == 1 {
+                emu.ppu.status.set_sprite_overflow(false);
+                emu.ppu.status.set_sprite_0_hit(false);
+                emu.ppu.status.set_vblank(false);
+                emu.ppu.nmi = false;
             }
 
             // The vertical scroll bits are reloaded during pixels 280 to 304,
             // if rendering is enabled.
-            if self.cycle >= 280
-                && self.cycle <= 304
-                && self.rendering_enabled()
+            if emu.ppu.cycle >= 280
+                && emu.ppu.cycle <= 304
+                && emu.ppu.rendering_enabled()
             {
-                self.v.load_y_scroll(&self.t);
+                emu.ppu.v.load_y_scroll(&emu.ppu.t);
             }
         }
 
-        if self.on_visible_scanline() || self.on_prerender_scanline() {
-            if (self.cycle >= 1 && self.cycle <= 256)
-                || (self.cycle >= 321 && self.cycle <= 337)
+        if emu.ppu.on_visible_scanline() || emu.ppu.on_prerender_scanline() {
+            if (emu.ppu.cycle >= 1 && emu.ppu.cycle <= 256)
+                || (emu.ppu.cycle >= 321 && emu.ppu.cycle <= 337)
             {
-                self.shift_background_shifters();
-                self.fetch_tile_data();
+                emu.ppu.shift_background_shifters();
+                Ppu::fetch_tile_data(emu);
             }
 
-            if self.cycle == 256 && self.rendering_enabled() {
-                self.v.increment_y_scroll();
+            if emu.ppu.cycle == 256 && emu.ppu.rendering_enabled() {
+                emu.ppu.v.increment_y_scroll();
             }
 
-            if self.cycle == 257 && self.rendering_enabled() {
-                self.v.load_x_scroll(&self.t);
+            if emu.ppu.cycle == 257 && emu.ppu.rendering_enabled() {
+                emu.ppu.v.load_x_scroll(&emu.ppu.t);
             }
 
-            if self.cycle == 339 {
-                self.nametable_latch = self.fetch_nametable_byte();
+            if emu.ppu.cycle == 339 {
+                emu.ppu.nametable_latch = Ppu::fetch_nametable_byte(emu);
             }
         }
 
-        if self.start_of_vblank() {
-            self.status.set_vblank(true);
-            self.nmi = self.control.nmi();
+        if emu.ppu.start_of_vblank() {
+            emu.ppu.status.set_vblank(true);
+            emu.ppu.nmi = emu.ppu.control.nmi();
         }
 
-        if self.rendering_enabled() && self.on_screen() {
-            let (pixel, palette) = self.fetch_pixel();
-            self.scratch_frame
-                [self.scanline as usize * 256 + self.cycle as usize] =
+        if emu.ppu.rendering_enabled() && emu.ppu.on_screen() {
+            let (pixel, palette) = emu.ppu.fetch_pixel();
+            emu.ppu.scratch_frame
+                [emu.ppu.scanline as usize * 256 + emu.ppu.cycle as usize] =
                 (pixel, palette);
         }
 
-        self.cycle = (self.cycle + 1) % 341;
-        if self.cycle == 0 {
-            self.scanline = (self.scanline + 1) % 262;
+        emu.ppu.cycle = (emu.ppu.cycle + 1) % 341;
+        if emu.ppu.cycle == 0 {
+            emu.ppu.scanline = (emu.ppu.scanline + 1) % 262;
 
-            if self.on_prerender_scanline() {
-                self.is_frame_ready = true;
-                self.frame.copy_from_slice(&self.scratch_frame);
+            if emu.ppu.on_prerender_scanline() {
+                emu.ppu.is_frame_ready = true;
+                emu.ppu.frame.copy_from_slice(&emu.ppu.scratch_frame);
             }
         }
     }
@@ -249,35 +251,37 @@ impl Ppu {
     // TODO: Make this private, and provide other public functions for accessing
     // sections of PPU memory all at once, e.g.,
     // fn pattern_tables(&self) -> &[u8] { ... }
-    pub fn read_data(&self, address: u16) -> u8 {
+    pub fn read_data(emu: &Emu, address: u16) -> u8 {
         match address {
-            0x0000..=0x1fff => self.cartridge.borrow().read_chr(address),
+            0x0000..=0x1fff => emu.mapper.read_chr(address),
             0x2000..=0x3eff => {
-                let mirrored_address = self.mirror_nametable_address(address);
-                self.nametables
+                let mirrored_address =
+                    Ppu::mirror_nametable_address(emu, address);
+                emu.ppu.nametables
                     [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize]
             }
             0x3f00..=0x3fff => {
-                let mirrored_address = self.mirror_palette_address(address);
-                self.palettes
+                let mirrored_address = emu.ppu.mirror_palette_address(address);
+                emu.ppu.palettes
                     [(mirrored_address - BASE_PALETTE_ADDRESS) as usize]
             }
             _ => unreachable!(),
         }
     }
 
-    fn write_data(&mut self, address: u16, data: u8) {
+    fn write_data(emu: &mut Emu, address: u16, data: u8) {
         match address {
             0x0000..=0x1fff => unimplemented!(),
             0x2000..=0x3eff => {
-                let mirrored_address = self.mirror_nametable_address(address);
-                self.nametables
+                let mirrored_address =
+                    Ppu::mirror_nametable_address(emu, address);
+                emu.ppu.nametables
                     [(mirrored_address - BASE_NAMETABLE_ADDRESS) as usize] =
                     data;
             }
             0x3f00..=0x3fff => {
-                let mirrored_address = self.mirror_palette_address(address);
-                self.palettes
+                let mirrored_address = emu.ppu.mirror_palette_address(address);
+                emu.ppu.palettes
                     [(mirrored_address - BASE_PALETTE_ADDRESS) as usize] =
                     data;
             }
@@ -285,8 +289,8 @@ impl Ppu {
         }
     }
 
-    fn mirror_nametable_address(&self, address: u16) -> u16 {
-        match self.cartridge.borrow().mirroring() {
+    fn mirror_nametable_address(emu: &Emu, address: u16) -> u16 {
+        match emu.mapper.mirroring() {
             // The second and fourth nametables map to the first and second
             // nametables, respectively.
             Mirroring::Horizontal => match address {
@@ -315,30 +319,32 @@ impl Ppu {
         }
     }
 
-    fn fetch_nametable_byte(&self) -> u8 {
+    fn fetch_nametable_byte(emu: &Emu) -> u8 {
         // The bottom 12 bits of v are the address of the next tile in
         // nametable memory.
-        self.read_data(BASE_NAMETABLE_ADDRESS | (self.v.0 & 0x0fff))
+        Ppu::read_data(emu, BASE_NAMETABLE_ADDRESS | (emu.ppu.v.0 & 0x0fff))
     }
 
-    fn fetch_attribute_bits(&self) -> u8 {
+    fn fetch_attribute_bits(emu: &mut Emu) -> u8 {
         // Divide the coarse offsets by four since each attribute byte applies
         // to a 4x4 group of tiles.
         let attribute_address = BASE_ATTRIBUTE_ADDRESS
-            | ((self.v.nametable() as u16) << 10)
-            | (((self.v.coarse_y_scroll() as u16) / 4) << 3)
-            | ((self.v.coarse_x_scroll() as u16) / 4);
-        let mut attribute_byte = self.read_data(attribute_address);
+            | ((emu.ppu.v.nametable() as u16) << 10)
+            | (((emu.ppu.v.coarse_y_scroll() as u16) / 4) << 3)
+            | ((emu.ppu.v.coarse_x_scroll() as u16) / 4);
+        let mut attribute_byte = Ppu::read_data(emu, attribute_address);
 
         // The attribute byte is divided into four 2-bit areas that specify the
         // palettes for four 2x2 tile groups.
         //
         // The bottom row of a 2x2 group is covered by the four leftmost
         // bits.
-        attribute_byte >>= ((self.v.coarse_y_scroll() & 0x02) != 0) as u8 * 4;
+        attribute_byte >>=
+            ((emu.ppu.v.coarse_y_scroll() & 0x02) != 0) as u8 * 4;
         // The right column of a 2x2 group is covered by the two leftmost
         // bits.
-        attribute_byte >>= ((self.v.coarse_x_scroll() & 0x02) != 0) as u8 * 2;
+        attribute_byte >>=
+            ((emu.ppu.v.coarse_x_scroll() & 0x02) != 0) as u8 * 2;
 
         // Mask off the rest of the bits.
         attribute_byte & 0x03
@@ -352,33 +358,35 @@ impl Ppu {
         }
     }
 
-    fn fetch_tile_data(&mut self) {
-        match (self.cycle) % 8 {
+    fn fetch_tile_data(emu: &mut Emu) {
+        match (emu.ppu.cycle) % 8 {
             1 => {
-                self.reload_background_shifters();
-                self.nametable_latch = self.fetch_nametable_byte();
+                emu.ppu.reload_background_shifters();
+                emu.ppu.nametable_latch = Ppu::fetch_nametable_byte(emu);
             }
             3 => {
-                self.attribute_bits = self.fetch_attribute_bits();
+                emu.ppu.attribute_bits = Ppu::fetch_attribute_bits(emu);
             }
             5 => {
-                self.tile_latch_low = self.read_data(
-                    self.background_pattern_table_address()
-                        + (self.nametable_latch as u16 * TILE_SIZE as u16)
-                        + self.v.fine_y_scroll() as u16,
+                emu.ppu.tile_latch_low = Ppu::read_data(
+                    emu,
+                    emu.ppu.background_pattern_table_address()
+                        + (emu.ppu.nametable_latch as u16 * TILE_SIZE as u16)
+                        + emu.ppu.v.fine_y_scroll() as u16,
                 );
             }
             7 => {
-                self.tile_latch_high = self.read_data(
-                    self.background_pattern_table_address()
-                        + ((self.nametable_latch as u16) << 4)
-                        + self.v.fine_y_scroll() as u16
+                emu.ppu.tile_latch_high = Ppu::read_data(
+                    emu,
+                    emu.ppu.background_pattern_table_address()
+                        + ((emu.ppu.nametable_latch as u16) << 4)
+                        + emu.ppu.v.fine_y_scroll() as u16
                         + TILE_PLANE_SIZE as u16,
                 )
             }
             0 => {
-                if self.rendering_enabled() {
-                    self.v.increment_coarse_x_scroll();
+                if emu.ppu.rendering_enabled() {
+                    emu.ppu.v.increment_coarse_x_scroll();
                 }
             }
             _ => (),

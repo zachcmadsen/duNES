@@ -6,7 +6,10 @@ use eframe::{
     App, CreationContext,
 };
 
-use backend::{Cpu, DuNesBus, NromCartridge};
+use backend::{
+    ppu::{self, Ppu},
+    Emu,
+};
 
 /// The width of the pattern table image in pixels.
 const PATTERN_TABLE_WIDTH: usize = 128;
@@ -101,7 +104,7 @@ const PALLETE: [(u8, u8, u8); 64] = [
 ];
 
 pub struct DuNes {
-    cpu: Cpu<DuNesBus>,
+    emu: Emu,
 
     pattern_table_texture: TextureHandle,
     screen_texture: TextureHandle,
@@ -113,42 +116,42 @@ pub struct DuNes {
 impl App for DuNes {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         let container = CentralPanel::default().show(ctx, |ui| {
-            self.cpu.bus.controller = 0;
+            // self.cpu.bus.controller = 0;
 
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::J)) { 0x80 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::K)) { 0x40 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::U)) { 0x20 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::Y)) { 0x10 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::W)) { 0x08 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::S)) { 0x04 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::A)) { 0x02 } else { 0 };
-            self.cpu.bus.controller |=
-                if ui.input(|i| i.key_down(Key::D)) { 0x01 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::J)) { 0x80 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::K)) { 0x40 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::U)) { 0x20 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::Y)) { 0x10 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::W)) { 0x08 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::S)) { 0x04 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::A)) { 0x02 } else { 0 };
+            // self.cpu.bus.controller |=
+            //     if ui.input(|i| i.key_down(Key::D)) { 0x01 } else { 0 };
 
             if ui.input(|i| i.key_pressed(Key::P)) {
                 self.paused = !self.paused;
             }
 
             if !self.paused {
-                while !self.cpu.bus.ppu.is_frame_ready {
-                    self.cpu.step();
+                while !self.emu.ppu.is_frame_ready {
+                    self.emu.step();
                 }
-                self.cpu.bus.ppu.is_frame_ready = false
+                self.emu.ppu.is_frame_ready = false
             } else if ui.input(|i| i.key_pressed(Key::Space)) {
-                self.cpu.step();
+                self.emu.step();
             }
 
             ui.horizontal_top(|ui| {
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
-                    self.draw_disassembly(ui);
+                    // self.draw_disassembly(ui);
                 });
                 self.draw_screen(ui);
                 self.draw_pattern_table(ui);
@@ -166,9 +169,11 @@ impl App for DuNes {
 
 impl DuNes {
     pub fn new(rom: &[u8], cc: &CreationContext) -> DuNes {
-        let cartridge = NromCartridge::new(rom);
-        let bus = DuNesBus::new(cartridge);
-        let cpu = Cpu::new(bus);
+        // let cartridge = NromCartridge::new(rom);
+        // let bus = DuNesBus::new(cartridge);
+        // let cpu = Cpu::new(bus);
+
+        let mut emu = Emu::new(&rom);
 
         let pattern_table_texture = cc.egui_ctx.load_texture(
             "pattern-table",
@@ -185,7 +190,7 @@ impl DuNes {
         );
 
         DuNes {
-            cpu,
+            emu,
             pattern_table_texture,
             screen_texture,
             paused: true,
@@ -196,52 +201,62 @@ impl DuNes {
     fn draw_registers(&self, ui: &mut Ui) {
         CollapsingHeader::new("Registers").default_open(true).show(ui, |ui| {
             ui.label(
-                RichText::new(format!("A: 0x{a:02X} ({a})", a = self.cpu.a,))
+                RichText::new(format!(
+                    "A: 0x{a:02X} ({a})",
+                    a = self.emu.cpu.a,
+                ))
+                .monospace(),
+            );
+            ui.label(
+                RichText::new(format!(
+                    "X: 0x{x:02X} ({x})",
+                    x = self.emu.cpu.x
+                ))
+                .monospace(),
+            );
+            ui.label(
+                RichText::new(format!(
+                    "Y: 0x{y:02X} ({y})",
+                    y = self.emu.cpu.y
+                ))
+                .monospace(),
+            );
+            ui.label(
+                RichText::new(format!("PC: 0x{:04X}", self.emu.cpu.pc))
                     .monospace(),
             );
             ui.label(
-                RichText::new(format!("X: 0x{x:02X} ({x})", x = self.cpu.x))
+                RichText::new(format!("SP: 0x{:02X}", self.emu.cpu.s))
                     .monospace(),
-            );
-            ui.label(
-                RichText::new(format!("Y: 0x{y:02X} ({y})", y = self.cpu.y))
-                    .monospace(),
-            );
-            ui.label(
-                RichText::new(format!("PC: 0x{:04X}", self.cpu.pc))
-                    .monospace(),
-            );
-            ui.label(
-                RichText::new(format!("SP: 0x{:02X}", self.cpu.s)).monospace(),
             );
             // TODO: Show which flags are on/off.
             ui.label(
                 RichText::new(format!(
                     "Status: 0x{:02X}",
-                    u8::from(self.cpu.p),
+                    u8::from(self.emu.cpu.p.0),
                 ))
                 .monospace(),
             );
         });
     }
 
-    fn draw_disassembly(&self, ui: &mut Ui) {
-        CollapsingHeader::new("Disassembly").default_open(true).show(
-            ui,
-            |ui| {
-                let disasm = self.cpu.disassemble();
-                let mut disasm_iter = disasm.iter();
+    // fn draw_disassembly(&self, ui: &mut Ui) {
+    //     CollapsingHeader::new("Disassembly").default_open(true).show(
+    //         ui,
+    //         |ui| {
+    //             let disasm = self.emu.disassemble();
+    //             let mut disasm_iter = disasm.iter();
 
-                // Use strong text for the current instruction.
-                if let Some(instruction) = disasm_iter.next() {
-                    ui.label(RichText::new(instruction).monospace().strong());
-                }
-                for instruction in disasm_iter {
-                    ui.label(RichText::new(instruction).monospace());
-                }
-            },
-        );
-    }
+    //             // Use strong text for the current instruction.
+    //             if let Some(instruction) = disasm_iter.next() {
+    //                 ui.label(RichText::new(instruction).monospace().strong());
+    //             }
+    //             for instruction in disasm_iter {
+    //                 ui.label(RichText::new(instruction).monospace());
+    //             }
+    //         },
+    //     );
+    // }
 
     fn draw_pattern_table(&mut self, ui: &mut Ui) {
         let image = self.generate_pattern_table_image();
@@ -270,7 +285,7 @@ impl DuNes {
         });
     }
 
-    fn generate_pattern_table_image(&self) -> ColorImage {
+    fn generate_pattern_table_image(&mut self) -> ColorImage {
         let mut pixels =
             vec![Color32::BLACK; PATTERN_TABLE_WIDTH * PATTERN_TABLE_HEIGHT];
 
@@ -282,12 +297,10 @@ impl DuNes {
                 tile_row * PIXELS_PER_TILE_ROW + preceding_cols_pixel_width;
 
             for row in 0..TILE_WIDTH {
-                let mut low = self
-                    .cpu
-                    .bus
-                    .ppu
-                    .read_data((tile * TILE_SIZE + row) as u16);
-                let mut high = self.cpu.bus.ppu.read_data(
+                let mut low =
+                    Ppu::read_data(&self.emu, (tile * TILE_SIZE + row) as u16);
+                let mut high = Ppu::read_data(
+                    &self.emu,
                     (tile * TILE_SIZE + TILE_PLANE_SIZE + row) as u16,
                 );
 
@@ -316,8 +329,7 @@ impl DuNes {
 
     fn generate_screen_image(&self) -> ColorImage {
         let pixels = self
-            .cpu
-            .bus
+            .emu
             .ppu
             .frame
             .iter()
@@ -330,11 +342,10 @@ impl DuNes {
     }
 
     fn get_color(&self, pixel_value: u8, palette: u8) -> Color32 {
-        let palette_index = self
-            .cpu
-            .bus
-            .ppu
-            .read_data(0x3f00 + (palette * 4) as u16 + pixel_value as u16);
+        let palette_index = Ppu::read_data(
+            &self.emu,
+            0x3f00 + (palette * 4) as u16 + pixel_value as u16,
+        );
         let (r, g, b) = PALLETE[palette_index as usize];
         Color32::from_rgb(r, g, b)
     }

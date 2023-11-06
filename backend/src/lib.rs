@@ -4,6 +4,6 @@ mod cpu;
 mod emu;
 mod header;
 mod mapper;
-mod ppu;
+pub mod ppu;
 
 pub use emu::Emu;
