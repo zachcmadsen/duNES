@@ -2,7 +2,7 @@ use crate::{
     bus::{self, Bus},
     cpu::{self, Cpu, CPU_ADDR_SPACE_SIZE},
     mapper::{self, Nrom},
-    ppu::{self, Ppu},
+    ppu::Ppu,
 };
 
 pub struct Emu {

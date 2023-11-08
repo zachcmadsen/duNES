@@ -6,10 +6,7 @@ use eframe::{
     App, CreationContext,
 };
 
-use backend::{
-    ppu::{self, Ppu},
-    Emu,
-};
+use backend::{ppu::Ppu, Emu};
 
 /// The width of the pattern table image in pixels.
 const PATTERN_TABLE_WIDTH: usize = 128;
@@ -173,7 +170,7 @@ impl DuNes {
         // let bus = DuNesBus::new(cartridge);
         // let cpu = Cpu::new(bus);
 
-        let mut emu = Emu::new(&rom);
+        let emu = Emu::new(&rom);
 
         let pattern_table_texture = cc.egui_ctx.load_texture(
             "pattern-table",
