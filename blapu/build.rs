@@ -1,4 +1,5 @@
 fn main() {
+    // TODO: Move Nes_Snd_Emu-0.1.7 to a submodule (hosted in a repo by me?)
     cxx_build::bridge("src/lib.rs")
         .cpp(true)
         .include("Nes_Snd_Emu-0.1.7")
