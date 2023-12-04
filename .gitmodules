@@ -1,0 +1,3 @@
+[submodule "backend/Nes_Snd_Emu"]
+	path = backend/Nes_Snd_Emu
+	url = https://github.com/zachcmadsen/Nes_Snd_Emu.git

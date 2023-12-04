@@ -1,3 +1,4 @@
+mod apu;
 mod bit;
 mod bus;
 mod cpu;

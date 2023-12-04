@@ -3,8 +3,8 @@ use cxx::UniquePtr;
 #[cxx::bridge]
 mod ffi {
     unsafe extern "C++" {
-        include!("blapu/Nes_Snd_Emu-0.1.7/nes_apu/Nes_Apu.h");
-        include!("blapu/include/shim.h");
+        include!("backend/Nes_Snd_Emu/nes_apu/Nes_Apu.h");
+        include!("backend/include/shim.h");
 
         #[cxx_name = "Nes_Apu"]
         type NesApu;
@@ -14,14 +14,16 @@ mod ffi {
     }
 }
 
-pub struct NesApu(UniquePtr<ffi::NesApu>);
+pub struct Apu {
+    nes_apu: UniquePtr<ffi::NesApu>,
+}
 
-impl NesApu {
-    pub fn new() -> NesApu {
-        NesApu(ffi::new_nes_apu())
+impl Apu {
+    pub fn new() -> Apu {
+        Apu { nes_apu: ffi::new_nes_apu() }
     }
 
     pub fn end_frame(&mut self, end_time: i64) {
-        self.0.pin_mut().end_frame(end_time);
+        self.nes_apu.pin_mut().end_frame(end_time);
     }
 }
