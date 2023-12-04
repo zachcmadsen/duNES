@@ -1,4 +1,8 @@
 fn main() {
+    println!("cargo:rerun-if-changed=include/shim.h");
+    println!("cargo:rerun-if-changed=src/shim.cpp");
+    println!("cargo:rerun-if-changed=src/lib.rs");
+
     // TODO: Move Nes_Snd_Emu-0.1.7 to a submodule (hosted in a repo by me?)
     cxx_build::bridge("src/lib.rs")
         .cpp(true)
