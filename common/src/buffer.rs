@@ -47,7 +47,7 @@ impl<T> Writer<T> {
     pub fn swap(&mut self) {
         let new_back_index = self.idx | UPDATE_FLAG;
         let old_back_index =
-            self.buf.back_idx.swap(new_back_index, Ordering::AcqRel);
+            self.buf.back_idx.swap(new_back_index, Ordering::SeqCst);
         self.idx = old_back_index & INDEX_MASK;
     }
 }
@@ -62,10 +62,10 @@ unsafe impl<T: Send> Send for Reader<T> {}
 impl<T> Reader<T> {
     pub fn get(&self) -> &T {
         // Update the reader index if the writer updated the back buffer.
-        if self.buf.back_idx.load(Ordering::Relaxed) & UPDATE_FLAG != 0 {
+        if self.buf.back_idx.load(Ordering::SeqCst) & UPDATE_FLAG != 0 {
             let new_back_index = self.idx.get();
             let old_back_index =
-                self.buf.back_idx.swap(new_back_index, Ordering::AcqRel);
+                self.buf.back_idx.swap(new_back_index, Ordering::SeqCst);
             self.idx.set(old_back_index & INDEX_MASK);
         }
         unsafe { &*self.buf.bufs[self.idx.get() as usize].get() }
