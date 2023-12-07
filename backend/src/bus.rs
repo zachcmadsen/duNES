@@ -2,10 +2,13 @@ use std::ops::RangeInclusive;
 
 use crate::Emu;
 
+type ReadHandler = fn(&mut Emu, u16) -> u8;
+type WriteHandler = fn(&mut Emu, u16, u8);
+
 #[derive(Clone)]
 struct Handler {
-    read: fn(&mut Emu, u16) -> u8,
-    write: fn(&mut Emu, u16, u8),
+    read: ReadHandler,
+    write: WriteHandler,
 }
 
 pub struct Bus<const N: usize> {
@@ -35,17 +38,21 @@ impl<const N: usize> Bus<N> {
         Bus { handlers, addr: 0, data: 0 }
     }
 
-    pub fn register(
+    pub fn set(
         &mut self,
-        read_handler: fn(&mut Emu, u16) -> u8,
-        write_handler: fn(&mut Emu, u16, u8),
         range: RangeInclusive<u16>,
+        read: Option<ReadHandler>,
+        write: Option<WriteHandler>,
     ) {
         for handler in &mut self.handlers
             [(*range.start() as usize)..=(*range.end() as usize)]
         {
-            handler.read = read_handler;
-            handler.write = write_handler;
+            if let Some(read) = read {
+                handler.read = read;
+            }
+            if let Some(write) = write {
+                handler.write = write;
+            }
         }
     }
 
