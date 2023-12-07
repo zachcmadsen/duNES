@@ -1,6 +1,7 @@
 use std::fs;
 
-use backend::Emu;
+use backend::{ppu, Emu};
+use common::TripleBuffer;
 
 const STATUS_ADDR: u16 = 0x6000;
 const OUTPUT_ADDR: u16 = 0x6004;
@@ -8,7 +9,10 @@ const RUNNING_STATUS: u8 = 0x80;
 
 fn run(filename: &str) {
     let rom = fs::read(format!("../roms/instr_test-v5/{}", filename)).unwrap();
-    let mut emu = Emu::new(&rom);
+    let buffer: Box<[u8; ppu::BUFFER_SIZE]> =
+        vec![0u8; ppu::BUFFER_SIZE].try_into().unwrap();
+    let (writer, _) = TripleBuffer::new(buffer);
+    let mut emu = Emu::new(&rom, writer);
 
     let mut status = emu.read(STATUS_ADDR);
     while status != RUNNING_STATUS {

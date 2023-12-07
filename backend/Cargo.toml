@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+common = { path = "../common" }
 cxx = "1.0"
 proc-bitfield = "0.3"
 
 [dev-dependencies]
-libc = "0.2"
 rkyv = "0.7.42"
 
 [build-dependencies]

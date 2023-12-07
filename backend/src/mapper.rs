@@ -1,4 +1,4 @@
-use crate::{bus::Bus, header::INesHeader, Emu};
+use crate::{header::INesHeader, Emu};
 
 /// The size of the iNES file header in bytes.
 const INES_HEADER_SIZE: usize = 16;
@@ -52,22 +52,17 @@ impl Nrom {
     }
 }
 
-pub fn register<const N: usize>(bus: &mut Bus<N>) {
-    fn prg_ram_read_handler(emu: &mut Emu, addr: u16) -> u8 {
-        emu.mapper.prg_ram[(addr - 0x6000) as usize % emu.mapper.prg_ram.len()]
-    }
-
-    fn prg_ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
-        emu.mapper.prg_ram
-            [(addr - 0x6000) as usize % emu.mapper.prg_ram.len()] = data;
-    }
-
-    fn prg_rom_read_handler(emu: &mut Emu, addr: u16) -> u8 {
-        emu.mapper.prg_rom[(addr - 0x8000) as usize % emu.mapper.prg_rom.len()]
-    }
-
-    fn prg_rom_write_handler(_: &mut Emu, _: u16, _: u8) {}
-
-    bus.register(prg_ram_read_handler, prg_ram_write_handler, 0x6000..=0x7FFF);
-    bus.register(prg_rom_read_handler, prg_rom_write_handler, 0x8000..=0xFFFF);
+pub fn read_prg_ram(emu: &mut Emu, addr: u16) -> u8 {
+    emu.mapper.prg_ram[(addr - 0x6000) as usize % emu.mapper.prg_ram.len()]
 }
+
+pub fn write_prg_ram(emu: &mut Emu, addr: u16, data: u8) {
+    emu.mapper.prg_ram[(addr - 0x6000) as usize % emu.mapper.prg_ram.len()] =
+        data;
+}
+
+pub fn read_prg_rom(emu: &mut Emu, addr: u16) -> u8 {
+    emu.mapper.prg_rom[(addr - 0x8000) as usize % emu.mapper.prg_rom.len()]
+}
+
+pub fn write_prg_rom(_: &mut Emu, _: u16, _: u8) {}

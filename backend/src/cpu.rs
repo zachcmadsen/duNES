@@ -4,18 +4,7 @@ mod mode;
 
 use proc_bitfield::bitfield;
 
-use crate::{
-    bus::{self, Bus},
-    cpu::lut::OPC_LUT,
-    Emu,
-};
-
-/// The size of the CPU address space in bytes;
-pub const CPU_ADDR_SPACE_SIZE: usize = 0x10000;
-
-/// The size of the CPU RAM in bytes.
-#[allow(dead_code)]
-const CPU_RAM_SIZE: usize = 2048;
+use crate::{bus, cpu::lut::OPC_LUT, Emu};
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -52,13 +41,9 @@ pub struct Cpu {
     pending_nmi: bool,
     pending_irq: bool,
 
-    // TODO(zach): Move this to Emu (with a cfg).
-    #[cfg(not(test))]
-    ram: Box<[u8; CPU_RAM_SIZE]>,
-
     // Some CPU tests assume 64 KB of RAM.
     #[cfg(test)]
-    ram: Box<[u8; CPU_ADDR_SPACE_SIZE]>,
+    ram: Box<[u8; crate::emu::CPU_ADDR_SPACE_SIZE]>,
 }
 
 impl Cpu {
@@ -86,25 +71,10 @@ impl Cpu {
             pending_nmi: false,
             pending_irq: false,
 
-            #[cfg(not(test))]
-            ram: vec![0; CPU_RAM_SIZE].try_into().unwrap(),
-
             #[cfg(test)]
-            ram: vec![0; CPU_ADDR_SPACE_SIZE].try_into().unwrap(),
+            ram: vec![0; crate::emu::CPU_ADDR_SPACE_SIZE].try_into().unwrap(),
         }
     }
-}
-
-pub fn register<const N: usize>(bus: &mut Bus<N>) {
-    fn ram_read_handler(emu: &mut Emu, addr: u16) -> u8 {
-        emu.cpu.ram[(addr & 0x07FF) as usize]
-    }
-
-    fn ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
-        emu.cpu.ram[(addr & 0x07FF) as usize] = data;
-    }
-
-    bus.register(ram_read_handler, ram_write_handler, 0x0000..=0x1FFF);
 }
 
 pub fn step(emu: &mut Emu) {
@@ -126,18 +96,48 @@ fn next_byte(emu: &mut Emu) -> u8 {
 mod tests {
     use std::fs;
 
+    use common::TripleBuffer;
     use rkyv::Archive;
 
-    use crate::ppu::Ppu;
+    use crate::{
+        apu::Apu,
+        bus::Bus,
+        emu::CPU_RAM_SIZE,
+        mapper::{Mirroring, Nrom},
+        ppu::{self, Ppu},
+        Emu,
+    };
 
-    use super::{super::mapper::Nrom, *};
+    use super::*;
 
-    fn ram_read_handler(emu: &mut Emu, addr: u16) -> u8 {
-        emu.cpu.ram[addr as usize]
-    }
+    fn create_emu() -> Emu {
+        fn read_ram(emu: &mut Emu, addr: u16) -> u8 {
+            emu.cpu.ram[addr as usize]
+        }
 
-    fn ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
-        emu.cpu.ram[addr as usize] = data;
+        fn write_ram(emu: &mut Emu, addr: u16, data: u8) {
+            emu.cpu.ram[addr as usize] = data;
+        }
+
+        let mut bus = Bus::new();
+        bus.set(0x0000..=0xFFFF, Some(read_ram), Some(write_ram));
+
+        let buffer = vec![0u8; ppu::BUFFER_SIZE].try_into().unwrap();
+        let (writer, _) = TripleBuffer::new(buffer);
+
+        Emu {
+            apu: Apu::new(),
+            bus,
+            cpu: Cpu::new(),
+            ppu: Ppu::new(writer),
+            mapper: Nrom {
+                prg_rom: vec![].into_boxed_slice(),
+                prg_ram: vec![].into_boxed_slice(),
+                chr_rom: vec![].into_boxed_slice(),
+                mirroring: Mirroring::Horizontal,
+            },
+            ram: vec![0; CPU_RAM_SIZE].try_into().unwrap(),
+        }
     }
 
     #[test]
@@ -167,24 +167,7 @@ mod tests {
             Write,
         }
 
-        let mut bus = Bus::new();
-        bus.register(ram_read_handler, ram_write_handler, 0x0000..=0xFFFF);
-
-        // TODO(zach): Move code shared by the the tests, like Emu
-        // construction, into a function.
-        let mut emu = Emu {
-            bus,
-            cpu: Cpu::new(),
-            ppu: Ppu::new(),
-            // TODO(zach): Use a dummy mapper if we go with trait objects for
-            // mappers?
-            mapper: Nrom {
-                prg_rom: vec![].into_boxed_slice(),
-                prg_ram: vec![].into_boxed_slice(),
-                chr_rom: vec![].into_boxed_slice(),
-                mirroring: crate::mapper::Mirroring::Horizontal,
-            },
-        };
+        let mut emu = create_emu();
 
         for _ in 0..6 {
             step(&mut emu);
@@ -241,23 +224,8 @@ mod tests {
     fn klaus_functional() {
         let rom = fs::read("../roms/klaus/6502_functional_test.bin").unwrap();
 
-        let mut bus = Bus::new();
-        bus.register(ram_read_handler, ram_write_handler, 0x0000..=0xFFFF);
-
-        let mut cpu = Cpu::new();
-        cpu.ram[0x000A..].copy_from_slice(&rom);
-
-        let mut emu = Emu {
-            bus,
-            cpu,
-            ppu: Ppu::new(),
-            mapper: Nrom {
-                prg_rom: vec![].into_boxed_slice(),
-                prg_ram: vec![].into_boxed_slice(),
-                chr_rom: vec![].into_boxed_slice(),
-                mirroring: crate::mapper::Mirroring::Horizontal,
-            },
-        };
+        let mut emu = create_emu();
+        emu.cpu.ram[0x000A..].copy_from_slice(&rom);
 
         for _ in 0..6 {
             step(&mut emu);
@@ -292,7 +260,7 @@ mod tests {
         const IRQ_MASK: u8 = 0x1;
         const NMI_MASK: u8 = 0x2;
 
-        fn new_ram_write_handler(emu: &mut Emu, addr: u16, data: u8) {
+        fn write_ram(emu: &mut Emu, addr: u16, data: u8) {
             if addr == 0xBFFC {
                 let prev_data = emu.cpu.ram[addr as usize];
                 let prev_nmi = prev_data & NMI_MASK != 0;
@@ -305,23 +273,9 @@ mod tests {
             emu.cpu.ram[addr as usize] = data;
         }
 
-        let mut bus = Bus::new();
-        bus.register(ram_read_handler, new_ram_write_handler, 0x0000..=0xFFFF);
-
-        let mut cpu = Cpu::new();
-        cpu.ram[0x000A..].copy_from_slice(&rom);
-
-        let mut emu = Emu {
-            bus,
-            cpu,
-            ppu: Ppu::new(),
-            mapper: Nrom {
-                prg_rom: vec![].into_boxed_slice(),
-                prg_ram: vec![].into_boxed_slice(),
-                chr_rom: vec![].into_boxed_slice(),
-                mirroring: crate::mapper::Mirroring::Horizontal,
-            },
-        };
+        let mut emu = create_emu();
+        emu.bus.set(0x0000..=0xFFFF, None, Some(write_ram));
+        emu.cpu.ram[0x000A..].copy_from_slice(&rom);
 
         for _ in 0..6 {
             step(&mut emu);
