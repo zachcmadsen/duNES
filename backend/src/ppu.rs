@@ -3,6 +3,8 @@ mod control;
 mod mask;
 mod status;
 
+use common::Writer;
+
 use crate::{
     mapper::Mirroring,
     ppu::{address::Address, control::Control, mask::Mask, status::Status},
@@ -25,6 +27,13 @@ const TILE_SIZE: usize = 16;
 const TILE_PLANE_SIZE: usize = 8;
 /// The size of OAM in bytes.
 const OAM_SIZE: usize = 256;
+
+/// The width of the PPU image in pixels.
+pub const WIDTH: usize = 256;
+/// The height of the PPU image in pixels.
+pub const HEIGHT: usize = 240;
+/// The size of the PPU's buffer in bytes.
+pub const BUFFER_SIZE: usize = WIDTH * HEIGHT * 4;
 
 pub struct Ppu {
     // Data
@@ -64,13 +73,22 @@ pub struct Ppu {
 
     oam_address: u8,
 
-    scratch_frame: Vec<(u8, u8)>,
-    pub frame: Vec<(u8, u8)>,
-    pub is_frame_ready: bool,
+    palette: Box<[u32]>,
+    buffer: Writer<Box<[u8; BUFFER_SIZE]>>,
 }
 
 impl Ppu {
-    pub fn new() -> Ppu {
+    pub fn new(buffer: Writer<Box<[u8; BUFFER_SIZE]>>) -> Ppu {
+        let palette = include_bytes!("../ntscpalette.pal")
+            .chunks_exact(3)
+            .map(|chunk| {
+                let r = chunk[0];
+                let g = chunk[1];
+                let b = chunk[2];
+                u32::from_le_bytes([r, g, b, 0xFF])
+            })
+            .collect();
+
         Ppu {
             nametables: vec![0; 2 * NAMETABLE_SIZE].try_into().unwrap(),
             palettes: vec![0; PALETTES_SIZE].try_into().unwrap(),
@@ -103,9 +121,8 @@ impl Ppu {
 
             oam_address: 0,
 
-            scratch_frame: vec![(0, 0); 240 * 256],
-            frame: vec![(0, 0); 240 * 256],
-            is_frame_ready: false,
+            buffer,
+            palette,
         }
     }
 
@@ -231,10 +248,18 @@ impl Ppu {
         }
 
         if emu.ppu.rendering_enabled() && emu.ppu.on_screen() {
-            let (pixel, palette) = emu.ppu.fetch_pixel();
-            emu.ppu.scratch_frame
-                [emu.ppu.scanline as usize * 256 + emu.ppu.cycle as usize] =
-                (pixel, palette);
+            let (pixel_value, palette) = emu.ppu.fetch_pixel();
+            let palette_index = Ppu::read_data(
+                emu,
+                0x3f00 + (palette * 4) as u16 + pixel_value as u16,
+            );
+
+            let buffer_index = emu.ppu.scanline as usize * 256 * 4
+                + (emu.ppu.cycle as usize) * 4;
+            emu.ppu.buffer.get_mut()[buffer_index..(buffer_index + 4)]
+                .copy_from_slice(
+                    &emu.ppu.palette[palette_index as usize].to_le_bytes(),
+                );
         }
 
         emu.ppu.cycle = (emu.ppu.cycle + 1) % 341;
@@ -242,8 +267,7 @@ impl Ppu {
             emu.ppu.scanline = (emu.ppu.scanline + 1) % 262;
 
             if emu.ppu.on_prerender_scanline() {
-                emu.ppu.is_frame_ready = true;
-                emu.ppu.frame.copy_from_slice(&emu.ppu.scratch_frame);
+                emu.ppu.buffer.swap();
             }
         }
     }
