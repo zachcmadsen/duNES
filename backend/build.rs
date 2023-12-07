@@ -11,7 +11,6 @@ fn main() {
         .include("Nes_Snd_Emu")
         .include("Nes_Snd_Emu/nes_apu")
         .include("include")
-        // TODO: Add the cpp files programmatically?
         .file("Nes_Snd_Emu/nes_apu/apu_snapshot.cpp")
         .file("Nes_Snd_Emu/nes_apu/Blip_Buffer.cpp")
         .file("Nes_Snd_Emu/nes_apu/Multi_Buffer.cpp")
@@ -27,6 +26,8 @@ fn main() {
         .flag_if_supported("-Wno-overflow")
         .flag_if_supported("-Wno-unused-parameter")
         .flag_if_supported("-Wno-unused-value")
+        // Disable assert
+        .flag_if_supported("-DNDEBUG")
         .compile("nes_snd_emu");
 
     println!("cargo:rerun-if-changed=Nes_Snd_Emu");
