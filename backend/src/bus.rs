@@ -1,57 +1,46 @@
 use std::ops::RangeInclusive;
 
-use crate::Emu;
-
-type ReadHandler = fn(&mut Emu, u16) -> u8;
-type WriteHandler = fn(&mut Emu, u16, u8);
-
-#[derive(Clone)]
-struct Handler {
-    read: ReadHandler,
-    write: WriteHandler,
-}
+use crate::emu::Emu;
 
 pub struct Bus<const N: usize> {
-    handlers: Box<[Handler; N]>,
+    readers: Box<[fn(&mut Emu, u16) -> u8; N]>,
+    writers: Box<[fn(&mut Emu, u16, u8); N]>,
 
-    // The last address and data values on the bus.
+    /// The last address value on the bus.
     addr: u16,
+    /// The last data value on the bus.
     data: u8,
 }
 
 impl<const N: usize> Bus<N> {
     pub fn new() -> Bus<N> {
-        fn default_read_handler(emu: &mut Emu, _: u16) -> u8 {
+        fn read_default(emu: &mut Emu, _: u16) -> u8 {
             emu.bus.data
         }
 
-        fn default_write_handler(_: &mut Emu, _: u16, _: u8) {}
+        fn write_default(_: &mut Emu, _: u16, _: u8) {}
 
-        let default_handler = Handler {
-            read: default_read_handler,
-            write: default_write_handler,
-        };
-        let Ok(handlers) = vec![default_handler; N].try_into() else {
-            panic!("the conversion to a boxed array failed")
-        };
+        // TODO: Use the box keyword to avoid the array stack allocations?
+        let readers =
+            Box::<[fn(&mut Emu, u16) -> u8; N]>::new([read_default; N]);
+        let writers =
+            Box::<[fn(&mut Emu, u16, u8); N]>::new([write_default; N]);
 
-        Bus { handlers, addr: 0, data: 0 }
+        Bus { readers, writers, addr: 0, data: 0 }
     }
 
     pub fn set(
         &mut self,
         range: RangeInclusive<u16>,
-        read: Option<ReadHandler>,
-        write: Option<WriteHandler>,
+        reader: Option<fn(&mut Emu, u16) -> u8>,
+        writer: Option<fn(&mut Emu, u16, u8)>,
     ) {
-        for handler in &mut self.handlers
-            [(*range.start() as usize)..=(*range.end() as usize)]
-        {
-            if let Some(read) = read {
-                handler.read = read;
+        for addr in range {
+            if let Some(reader) = reader {
+                self.readers[addr as usize] = reader;
             }
-            if let Some(write) = write {
-                handler.write = write;
+            if let Some(writer) = writer {
+                self.writers[addr as usize] = writer;
             }
         }
     }
@@ -68,7 +57,7 @@ impl<const N: usize> Bus<N> {
 }
 
 pub fn read_byte(emu: &mut Emu, addr: u16) -> u8 {
-    let data = (emu.bus.handlers[addr as usize].read)(emu, addr);
+    let data = (emu.bus.readers[addr as usize])(emu, addr);
     emu.bus.addr = addr;
     emu.bus.data = data;
     data
@@ -77,5 +66,5 @@ pub fn read_byte(emu: &mut Emu, addr: u16) -> u8 {
 pub fn write_byte(emu: &mut Emu, addr: u16, data: u8) {
     emu.bus.addr = addr;
     emu.bus.data = data;
-    (emu.bus.handlers[addr as usize].write)(emu, addr, data);
+    (emu.bus.writers[addr as usize])(emu, addr, data);
 }
