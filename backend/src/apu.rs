@@ -1,8 +1,8 @@
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, time::Duration};
 
 use cxx::UniquePtr;
 
-use crate::Emu;
+use crate::emu::Emu;
 
 #[cxx::bridge]
 mod ffi {
@@ -18,7 +18,7 @@ mod ffi {
         fn sample_rate(
             self: Pin<&mut BlipBuffer>,
             sample_rate: i64,
-            len: i32,
+            buffer_len: i32,
         ) -> *const c_char;
         fn clock_rate(self: Pin<&mut BlipBuffer>, clock_rate: i64);
         fn end_frame(self: Pin<&mut BlipBuffer>, cycles: i64);
@@ -46,6 +46,9 @@ mod ffi {
     }
 }
 
+const CLOCK_RATE: u32 = 1789773;
+const SAMPLE_RATE: u32 = 44100;
+
 pub struct Apu {
     blip_buffer: UniquePtr<ffi::BlipBuffer>,
     nes_apu: UniquePtr<ffi::NesApu>,
@@ -54,9 +57,11 @@ pub struct Apu {
 impl Apu {
     pub fn new() -> Apu {
         let mut blip_buffer = ffi::new_blip_buffer();
-        // TODO: Use constants for the numbers, and explain the 1000 value.
-        blip_buffer.pin_mut().sample_rate(44100, 1000);
-        blip_buffer.pin_mut().clock_rate(1789773);
+        blip_buffer.pin_mut().sample_rate(
+            SAMPLE_RATE as i64,
+            Duration::from_secs(1).as_millis() as i32,
+        );
+        blip_buffer.pin_mut().clock_rate(CLOCK_RATE as i64);
 
         let mut nes_apu = ffi::new_nes_apu();
         let blip_buffer_ptr = blip_buffer.into_raw();
