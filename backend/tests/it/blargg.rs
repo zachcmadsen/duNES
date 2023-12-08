@@ -48,3 +48,9 @@ fn run(dir: &str) {
 fn instr() {
     run("../roms/instr_test-v5/")
 }
+
+#[test]
+fn apu() {
+    // TODO: Add the rest of the apu_test ROMs once APU IRQs are handled.
+    run("../roms/apu_test/")
+}
