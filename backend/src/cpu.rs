@@ -4,7 +4,14 @@ mod mode;
 
 use proc_bitfield::bitfield;
 
-use crate::{bus, cpu::lut::OPC_LUT, emu::Emu};
+use crate::{
+    bus::{self, Bus},
+    cpu::lut::OPC_LUT,
+    emu::Emu,
+};
+
+/// The size of the CPU address space in bytes.
+pub const ADDR_SPACE_SIZE: usize = 0x10000;
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -41,14 +48,16 @@ pub struct Cpu {
     pending_nmi: bool,
     pending_irq: bool,
 
+    pub(crate) bus: Bus,
+
     // Some CPU tests assume 64 KB of RAM.
     #[cfg(test)]
-    ram: Box<[u8; crate::emu::CPU_ADDR_SPACE_SIZE]>,
+    ram: Box<[u8; ADDR_SPACE_SIZE]>,
 }
 
 impl Cpu {
     /// Constructs a new `Cpu` in a power up state.
-    pub fn new() -> Cpu {
+    pub fn new(bus: Bus) -> Cpu {
         Cpu {
             a: 0,
             x: 0,
@@ -71,8 +80,10 @@ impl Cpu {
             pending_nmi: false,
             pending_irq: false,
 
+            bus,
+
             #[cfg(test)]
-            ram: vec![0; crate::emu::CPU_ADDR_SPACE_SIZE].try_into().unwrap(),
+            ram: vec![0; ADDR_SPACE_SIZE].try_into().unwrap(),
         }
     }
 }
@@ -103,7 +114,6 @@ mod tests {
 
         use crate::{
             apu::Apu,
-            bus::Bus,
             emu::RAM_SIZE,
             mapper::{Mirroring, Nrom},
             ppu::{self, Ppu},
@@ -125,8 +135,7 @@ mod tests {
 
         Emu {
             apu: Apu::new(),
-            bus,
-            cpu: Cpu::new(),
+            cpu: Cpu::new(bus),
             ppu: Ppu::new(writer),
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
@@ -203,8 +212,8 @@ mod tests {
                 // TODO: Assert read/write cycles.
                 for &(addr, data, _) in test.cycles.iter() {
                     tick(&mut emu);
-                    assert_eq!(emu.bus.addr(), addr);
-                    assert_eq!(emu.bus.data(), data);
+                    assert_eq!(emu.cpu.bus.addr(), addr);
+                    assert_eq!(emu.cpu.bus.data(), data);
                 }
 
                 assert_eq!(emu.cpu.a, test.r#final.a);
@@ -283,7 +292,7 @@ mod tests {
                 fs::read("../roms/klaus/6502_interrupt_test.bin").unwrap();
 
             let mut emu = make_test_emu();
-            emu.bus.set(0x0000..=0xFFFF, None, Some(write_ram));
+            emu.cpu.bus.set(0x0000..=0xFFFF, None, Some(write_ram));
             emu.cpu.ram[0x000A..].copy_from_slice(&rom);
 
             run(&mut emu, 0x06F5);

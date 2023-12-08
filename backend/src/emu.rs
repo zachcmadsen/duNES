@@ -5,16 +5,13 @@ use crate::{
     bus::{self, Bus},
     cpu::{self, Cpu},
     mapper::{self, Nrom},
-    ppu::{self, Ppu, BUFFER_SIZE},
+    ppu::{Ppu, BUFFER_SIZE},
 };
 
 /// The size of the RAM in bytes.
 pub(crate) const RAM_SIZE: usize = 2048;
-/// The size of the CPU address space in bytes;
-pub(crate) const CPU_ADDR_SPACE_SIZE: usize = 0x10000;
 
 pub struct Emu {
-    pub(crate) bus: Bus<CPU_ADDR_SPACE_SIZE>,
     pub apu: Apu,
     pub cpu: Cpu,
     pub ppu: Ppu,
@@ -48,8 +45,7 @@ impl Emu {
 
         Emu {
             apu: Apu::new(),
-            bus,
-            cpu: Cpu::new(),
+            cpu: Cpu::new(bus),
             ppu: Ppu::new(buffer),
             mapper: Nrom::new(rom),
 

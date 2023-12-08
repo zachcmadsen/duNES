@@ -1,10 +1,10 @@
 use std::ops::RangeInclusive;
 
-use crate::emu::Emu;
+use crate::{cpu::ADDR_SPACE_SIZE, emu::Emu};
 
-pub struct Bus<const N: usize> {
-    readers: Box<[fn(&mut Emu, u16) -> u8; N]>,
-    writers: Box<[fn(&mut Emu, u16, u8); N]>,
+pub struct Bus {
+    readers: Box<[fn(&mut Emu, u16) -> u8; ADDR_SPACE_SIZE]>,
+    writers: Box<[fn(&mut Emu, u16, u8); ADDR_SPACE_SIZE]>,
 
     /// The last address value on the bus.
     addr: u16,
@@ -12,19 +12,21 @@ pub struct Bus<const N: usize> {
     data: u8,
 }
 
-impl<const N: usize> Bus<N> {
-    pub fn new() -> Bus<N> {
+impl Bus {
+    pub fn new() -> Bus {
         fn read_default(emu: &mut Emu, _: u16) -> u8 {
-            emu.bus.data
+            emu.cpu.bus.data
         }
 
         fn write_default(_: &mut Emu, _: u16, _: u8) {}
 
         // TODO: Use the box keyword to avoid the array stack allocations?
-        let readers =
-            Box::<[fn(&mut Emu, u16) -> u8; N]>::new([read_default; N]);
-        let writers =
-            Box::<[fn(&mut Emu, u16, u8); N]>::new([write_default; N]);
+        let readers = Box::<[fn(&mut Emu, u16) -> u8; ADDR_SPACE_SIZE]>::new(
+            [read_default; ADDR_SPACE_SIZE],
+        );
+        let writers = Box::<[fn(&mut Emu, u16, u8); ADDR_SPACE_SIZE]>::new(
+            [write_default; ADDR_SPACE_SIZE],
+        );
 
         Bus { readers, writers, addr: 0, data: 0 }
     }
@@ -57,14 +59,14 @@ impl<const N: usize> Bus<N> {
 }
 
 pub fn read_byte(emu: &mut Emu, addr: u16) -> u8 {
-    let data = (emu.bus.readers[addr as usize])(emu, addr);
-    emu.bus.addr = addr;
-    emu.bus.data = data;
+    let data = (emu.cpu.bus.readers[addr as usize])(emu, addr);
+    emu.cpu.bus.addr = addr;
+    emu.cpu.bus.data = data;
     data
 }
 
 pub fn write_byte(emu: &mut Emu, addr: u16, data: u8) {
-    emu.bus.addr = addr;
-    emu.bus.data = data;
-    (emu.bus.writers[addr as usize])(emu, addr, data);
+    emu.cpu.bus.addr = addr;
+    emu.cpu.bus.data = data;
+    (emu.cpu.bus.writers[addr as usize])(emu, addr, data);
 }
