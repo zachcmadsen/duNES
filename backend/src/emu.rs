@@ -5,11 +5,11 @@ use crate::{
     bus::{self, Bus},
     cpu::{self, Cpu},
     mapper::{self, Nrom},
-    ppu::{self, Ppu},
+    ppu::{self, Ppu, BUFFER_SIZE},
 };
 
-/// The size of the CPU RAM in bytes.
-pub(crate) const CPU_RAM_SIZE: usize = 2048;
+/// The size of the RAM in bytes.
+pub(crate) const RAM_SIZE: usize = 2048;
 /// The size of the CPU address space in bytes;
 pub(crate) const CPU_ADDR_SPACE_SIZE: usize = 0x10000;
 
@@ -20,14 +20,11 @@ pub struct Emu {
     pub ppu: Ppu,
     pub(crate) mapper: Nrom,
 
-    pub(crate) ram: Box<[u8; CPU_RAM_SIZE]>,
+    pub(crate) ram: Box<[u8; RAM_SIZE]>,
 }
 
 impl Emu {
-    pub fn new(
-        rom: &[u8],
-        buffer: Writer<Box<[u8; ppu::BUFFER_SIZE]>>,
-    ) -> Emu {
+    pub fn new(rom: &[u8], buffer: Writer<Box<[u8; BUFFER_SIZE]>>) -> Emu {
         let mut bus = Bus::new();
         bus.set(0x0000..=0x1FFF, Some(read_ram), Some(write_ram));
         bus.set(
@@ -56,12 +53,12 @@ impl Emu {
             ppu: Ppu::new(buffer),
             mapper: Nrom::new(rom),
 
-            ram: vec![0; CPU_RAM_SIZE].try_into().unwrap(),
+            ram: vec![0; RAM_SIZE].try_into().unwrap(),
         }
     }
 
     pub fn step(&mut self) {
-        cpu::step(self);
+        cpu::tick(self);
         // TODO: Update emu.cpu.nmi directly in the PPU?
         Ppu::tick(self);
         self.cpu.nmi = self.ppu.nmi;
