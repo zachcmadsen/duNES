@@ -4,7 +4,10 @@ mod mode;
 
 use proc_bitfield::bitfield;
 
-use crate::{bus, cpu::lut::OPC_LUT, Emu};
+use crate::{bus, cpu::lut::OPC_LUT, emu::Emu};
+
+/// The size of the CPU address space in bytes;
+pub const ADDR_SPACE_SIZE: usize = 0x10000;
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -43,7 +46,7 @@ pub struct Cpu {
 
     // Some CPU tests assume 64 KB of RAM.
     #[cfg(test)]
-    ram: Box<[u8; crate::emu::CPU_ADDR_SPACE_SIZE]>,
+    ram: Box<[u8; ADDR_SPACE_SIZE]>,
 }
 
 impl Cpu {
@@ -72,18 +75,18 @@ impl Cpu {
             pending_irq: false,
 
             #[cfg(test)]
-            ram: vec![0; crate::emu::CPU_ADDR_SPACE_SIZE].try_into().unwrap(),
+            ram: vec![0; ADDR_SPACE_SIZE].try_into().unwrap(),
         }
     }
 }
 
-pub fn step(emu: &mut Emu) {
+pub fn tick(emu: &mut Emu) {
     emu.cpu.cyc += 1;
     OPC_LUT[emu.cpu.opc as usize][emu.cpu.cyc as usize](emu);
 
     emu.cpu.pending_nmi |= !emu.cpu.prev_nmi && emu.cpu.nmi;
     emu.cpu.prev_nmi = emu.cpu.nmi;
-    emu.cpu.pending_irq = emu.cpu.irq && !emu.cpu.p.i();
+    emu.cpu.pending_irq = !emu.cpu.p.i() && emu.cpu.irq;
 }
 
 fn next_byte(emu: &mut Emu) -> u8 {
@@ -96,21 +99,19 @@ fn next_byte(emu: &mut Emu) -> u8 {
 mod tests {
     use std::fs;
 
-    use common::TripleBuffer;
-    use rkyv::Archive;
-
-    use crate::{
-        apu::Apu,
-        bus::Bus,
-        emu::CPU_RAM_SIZE,
-        mapper::{Mirroring, Nrom},
-        ppu::{self, Ppu},
-        Emu,
-    };
-
     use super::*;
 
-    fn create_emu() -> Emu {
+    fn make_test_emu() -> Emu {
+        use common::TripleBuffer;
+
+        use crate::{
+            apu::Apu,
+            bus::Bus,
+            emu::RAM_SIZE,
+            mapper::{Mirroring, Nrom},
+            ppu::{self, Ppu},
+        };
+
         fn read_ram(emu: &mut Emu, addr: u16) -> u8 {
             emu.cpu.ram[addr as usize]
         }
@@ -136,12 +137,14 @@ mod tests {
                 chr_rom: vec![].into_boxed_slice(),
                 mirroring: Mirroring::Horizontal,
             },
-            ram: vec![0; CPU_RAM_SIZE].try_into().unwrap(),
+            ram: vec![0; RAM_SIZE].try_into().unwrap(),
         }
     }
 
     #[test]
     fn processor_tests() {
+        use rkyv::Archive;
+
         #[derive(Archive)]
         struct Test {
             initial: CpuState,
@@ -167,10 +170,10 @@ mod tests {
             Write,
         }
 
-        let mut emu = create_emu();
+        let mut emu = make_test_emu();
 
         for _ in 0..6 {
-            step(&mut emu);
+            tick(&mut emu);
         }
 
         // Skip ANE, JAM, and LXA opcodes.
@@ -200,9 +203,9 @@ mod tests {
                     emu.cpu.ram[addr as usize] = data;
                 }
 
-                // TODO(zach): Assert read/write cycles.
+                // TODO: Assert read/write cycles.
                 for &(addr, data, _) in test.cycles.iter() {
-                    step(&mut emu);
+                    tick(&mut emu);
                     assert_eq!(emu.bus.addr(), addr);
                     assert_eq!(emu.bus.data(), data);
                 }
@@ -220,86 +223,73 @@ mod tests {
         }
     }
 
-    #[test]
-    fn klaus_functional() {
-        let rom = fs::read("../roms/klaus/6502_functional_test.bin").unwrap();
+    mod klaus {
+        use super::*;
 
-        let mut emu = create_emu();
-        emu.cpu.ram[0x000A..].copy_from_slice(&rom);
+        fn run(emu: &mut Emu, success_addr: u16) {
+            for _ in 0..6 {
+                tick(emu);
+            }
 
-        for _ in 0..6 {
-            step(&mut emu);
-        }
+            emu.cpu.pc = 0x0400;
+            let mut prev_pc = emu.cpu.pc;
 
-        emu.cpu.pc = 0x0400;
-        let mut prev_pc = emu.cpu.pc;
+            loop {
+                tick(emu);
 
-        loop {
-            step(&mut emu);
+                let is_start_of_instr = emu.cpu.cyc as usize
+                    == OPC_LUT[emu.cpu.opc as usize].len() - 2;
+                if is_start_of_instr {
+                    if prev_pc == emu.cpu.pc {
+                        if emu.cpu.pc == success_addr {
+                            break;
+                        }
 
-            let is_start_of_instr = emu.cpu.cyc as usize
-                == OPC_LUT[emu.cpu.opc as usize].len() - 2;
-            if is_start_of_instr {
-                if prev_pc == emu.cpu.pc {
-                    if emu.cpu.pc == 0x336D {
-                        break;
+                        panic!("trapped at 0x{:04X}", emu.cpu.pc);
                     }
 
-                    panic!("trapped at 0x{:04X}", emu.cpu.pc);
+                    prev_pc = emu.cpu.pc;
+                }
+            }
+        }
+
+        #[test]
+        fn functional() {
+            let rom =
+                fs::read("../roms/klaus/6502_functional_test.bin").unwrap();
+
+            let mut emu = make_test_emu();
+            emu.cpu.ram[0x000A..].copy_from_slice(&rom);
+
+            run(&mut emu, 0x336D);
+        }
+
+        #[test]
+        fn interrupt() {
+            fn write_ram(emu: &mut Emu, addr: u16, data: u8) {
+                const IRQ_MASK: u8 = 0b00000001;
+                const NMI_MASK: u8 = 0b00000010;
+
+                if addr == 0xBFFC {
+                    let prev_data = emu.cpu.ram[addr as usize];
+                    let prev_nmi = prev_data & NMI_MASK != 0;
+                    let new_nmi = data & NMI_MASK != 0;
+
+                    emu.cpu.irq = data & IRQ_MASK != 0;
+                    emu.cpu.nmi = !prev_nmi && new_nmi;
                 }
 
-                prev_pc = emu.cpu.pc;
-            }
-        }
-    }
-
-    #[test]
-    fn klaus_interrupt() {
-        let rom = fs::read("../roms/klaus/6502_interrupt_test.bin").unwrap();
-
-        const IRQ_MASK: u8 = 0x1;
-        const NMI_MASK: u8 = 0x2;
-
-        fn write_ram(emu: &mut Emu, addr: u16, data: u8) {
-            if addr == 0xBFFC {
-                let prev_data = emu.cpu.ram[addr as usize];
-                let prev_nmi = prev_data & NMI_MASK != 0;
-                let new_nmi = data & NMI_MASK != 0;
-
-                emu.cpu.irq = data & IRQ_MASK != 0;
-                emu.cpu.nmi = !prev_nmi && new_nmi;
+                emu.cpu.ram[addr as usize] = data;
             }
 
-            emu.cpu.ram[addr as usize] = data;
-        }
+            let rom =
+                fs::read("../roms/klaus/6502_interrupt_test.bin").unwrap();
 
-        let mut emu = create_emu();
-        emu.bus.set(0x0000..=0xFFFF, None, Some(write_ram));
-        emu.cpu.ram[0x000A..].copy_from_slice(&rom);
+            let mut emu = make_test_emu();
+            emu.bus.set(0x0000..=0xFFFF, None, Some(write_ram));
+            emu.cpu.ram[0x000A..].copy_from_slice(&rom);
 
-        for _ in 0..6 {
-            step(&mut emu);
-        }
-
-        emu.cpu.pc = 0x0400;
-        let mut prev_pc = emu.cpu.pc;
-
-        loop {
-            step(&mut emu);
-
-            let is_start_of_instr = emu.cpu.cyc as usize
-                == OPC_LUT[emu.cpu.opc as usize].len() - 2;
-            if is_start_of_instr {
-                if prev_pc == emu.cpu.pc {
-                    if emu.cpu.pc == 0x06F5 {
-                        break;
-                    }
-
-                    panic!("trapped at 0x{:04X}", emu.cpu.pc);
-                }
-
-                prev_pc = emu.cpu.pc;
-            }
+            run(&mut emu, 0x06F5);
         }
     }
 }
