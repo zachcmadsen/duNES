@@ -59,13 +59,9 @@ impl Emu {
 
     pub fn step(&mut self) {
         cpu::tick(self);
-        // TODO: Update emu.cpu.nmi directly in the PPU?
         Ppu::tick(self);
-        self.cpu.nmi = self.ppu.nmi;
         Ppu::tick(self);
-        self.cpu.nmi = self.ppu.nmi;
         Ppu::tick(self);
-        self.cpu.nmi = self.ppu.nmi;
         self.apu.tick();
     }
 

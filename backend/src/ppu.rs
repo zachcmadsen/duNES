@@ -208,7 +208,7 @@ impl Ppu {
                 emu.ppu.status.set_sprite_overflow(false);
                 emu.ppu.status.set_sprite_0_hit(false);
                 emu.ppu.status.set_vblank(false);
-                emu.ppu.nmi = false;
+                emu.cpu.nmi = false;
             }
 
             // The vertical scroll bits are reloaded during pixels 280 to 304,
@@ -244,7 +244,7 @@ impl Ppu {
 
         if emu.ppu.start_of_vblank() {
             emu.ppu.status.set_vblank(true);
-            emu.ppu.nmi = emu.ppu.control.nmi();
+            emu.cpu.nmi = emu.ppu.control.nmi();
         }
 
         if emu.ppu.rendering_enabled() && emu.ppu.on_screen() {
