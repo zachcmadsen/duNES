@@ -6,9 +6,6 @@ use proc_bitfield::bitfield;
 
 use crate::{bus, cpu::lut::OPC_LUT, emu::Emu};
 
-/// The size of the CPU address space in bytes;
-pub const ADDR_SPACE_SIZE: usize = 0x10000;
-
 bitfield! {
     #[derive(Clone, Copy)]
     pub struct Status(pub u8) {
@@ -46,7 +43,7 @@ pub struct Cpu {
 
     // Some CPU tests assume 64 KB of RAM.
     #[cfg(test)]
-    ram: Box<[u8; ADDR_SPACE_SIZE]>,
+    ram: Box<[u8; crate::emu::CPU_ADDR_SPACE_SIZE]>,
 }
 
 impl Cpu {
@@ -75,7 +72,7 @@ impl Cpu {
             pending_irq: false,
 
             #[cfg(test)]
-            ram: vec![0; ADDR_SPACE_SIZE].try_into().unwrap(),
+            ram: vec![0; crate::emu::CPU_ADDR_SPACE_SIZE].try_into().unwrap(),
         }
     }
 }
