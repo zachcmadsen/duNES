@@ -59,6 +59,8 @@ impl Emu {
         self.apu.tick();
     }
 
+    // TODO: Find a better solution for peeking memory. Some read handlers have
+    // side effects.
     pub fn read(&mut self, addr: u16) -> u8 {
         bus::read_byte(self, addr)
     }
