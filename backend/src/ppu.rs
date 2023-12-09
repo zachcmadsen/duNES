@@ -126,156 +126,7 @@ impl Ppu {
         }
     }
 
-    pub fn read_register(emu: &mut Emu, address: u16) -> u8 {
-        match address {
-            0x2002 => {
-                // TODO: Using the read buffer here isn't accurate. It should
-                // be the data bus, which isn't emulated yet.
-                let data = emu.ppu.status.0 | (emu.ppu.read_buffer & 0x1f);
-                // TODO: Should emu.ppu.nmi be set to false? Also, reading the
-                // status register within two cycles of vblank causes an NMI
-                // not to occur?
-                emu.ppu.status.set_vblank(false);
-                emu.ppu.w = false;
-
-                data
-            }
-            0x2004 => emu.ppu.oam[emu.ppu.oam_address as usize],
-            0x2007 => {
-                let data = if address < BASE_PALETTE_ADDRESS {
-                    emu.ppu.read_buffer
-                } else {
-                    Ppu::read_data(emu, address)
-                };
-
-                // TODO: The data in the buffer should be different when
-                // reading palette data.
-                emu.ppu.read_buffer = Ppu::read_data(emu, address);
-
-                emu.ppu.v.increment(emu.ppu.control.increment_mode());
-
-                data
-            }
-            _ => unimplemented!(),
-        }
-    }
-
-    pub fn write_register(emu: &mut Emu, address: u16, data: u8) {
-        match address {
-            0x2000 => {
-                emu.ppu.control = Control(data);
-                emu.ppu.t.set_nametable(emu.ppu.control.nametable());
-            }
-            0x2001 => emu.ppu.mask = Mask(data),
-            0x2003 => emu.ppu.oam_address = data,
-            0x2004 => {
-                emu.ppu.oam[emu.ppu.oam_address as usize] = data;
-                emu.ppu.oam_address = emu.ppu.oam_address.wrapping_add(1);
-            }
-            0x2005 => {
-                if !emu.ppu.w {
-                    emu.ppu.fine_x_scroll = data & 0x7;
-                    emu.ppu.t.set_coarse_x_scroll(data >> 3);
-                } else {
-                    emu.ppu.t.set_fine_y_scroll(data & 0x7);
-                    emu.ppu.t.set_coarse_y_scroll(data >> 3);
-                }
-
-                emu.ppu.w = !emu.ppu.w;
-            }
-            0x2006 => {
-                if !emu.ppu.w {
-                    emu.ppu.t.set_high(data & 0x3f);
-                } else {
-                    emu.ppu.t.set_low(data);
-                    emu.ppu.v = Address(emu.ppu.t.0);
-                }
-
-                emu.ppu.w = !emu.ppu.w;
-            }
-            0x2007 => {
-                // TODO: Should emu.ppu.v.0 be mirrored down?
-                Ppu::write_data(emu, emu.ppu.v.0, data);
-                emu.ppu.v.increment(emu.ppu.control.increment_mode());
-            }
-            _ => (),
-        }
-    }
-
-    pub fn tick(emu: &mut Emu) {
-        if emu.ppu.on_prerender_scanline() {
-            if emu.ppu.cycle == 1 {
-                emu.ppu.status.set_sprite_overflow(false);
-                emu.ppu.status.set_sprite_0_hit(false);
-                emu.ppu.status.set_vblank(false);
-                emu.cpu.nmi = false;
-            }
-
-            // The vertical scroll bits are reloaded during pixels 280 to 304,
-            // if rendering is enabled.
-            if emu.ppu.cycle >= 280
-                && emu.ppu.cycle <= 304
-                && emu.ppu.rendering_enabled()
-            {
-                emu.ppu.v.load_y_scroll(&emu.ppu.t);
-            }
-        }
-
-        if emu.ppu.on_visible_scanline() || emu.ppu.on_prerender_scanline() {
-            if (emu.ppu.cycle >= 1 && emu.ppu.cycle <= 256)
-                || (emu.ppu.cycle >= 321 && emu.ppu.cycle <= 337)
-            {
-                emu.ppu.shift_background_shifters();
-                Ppu::fetch_tile_data(emu);
-            }
-
-            if emu.ppu.cycle == 256 && emu.ppu.rendering_enabled() {
-                emu.ppu.v.increment_y_scroll();
-            }
-
-            if emu.ppu.cycle == 257 && emu.ppu.rendering_enabled() {
-                emu.ppu.v.load_x_scroll(&emu.ppu.t);
-            }
-
-            if emu.ppu.cycle == 339 {
-                emu.ppu.nametable_latch = Ppu::fetch_nametable_byte(emu);
-            }
-        }
-
-        if emu.ppu.start_of_vblank() {
-            emu.ppu.status.set_vblank(true);
-            emu.cpu.nmi = emu.ppu.control.nmi();
-        }
-
-        if emu.ppu.rendering_enabled() && emu.ppu.on_screen() {
-            let (pixel_value, palette) = emu.ppu.fetch_pixel();
-            let palette_index = Ppu::read_data(
-                emu,
-                0x3f00 + (palette * 4) as u16 + pixel_value as u16,
-            );
-
-            let buffer_index = emu.ppu.scanline as usize * 256 * 4
-                + (emu.ppu.cycle as usize) * 4;
-            emu.ppu.buffer.get_mut()[buffer_index..(buffer_index + 4)]
-                .copy_from_slice(
-                    &emu.ppu.palette[palette_index as usize].to_le_bytes(),
-                );
-        }
-
-        emu.ppu.cycle = (emu.ppu.cycle + 1) % 341;
-        if emu.ppu.cycle == 0 {
-            emu.ppu.scanline = (emu.ppu.scanline + 1) % 262;
-
-            if emu.ppu.on_prerender_scanline() {
-                emu.ppu.buffer.swap();
-            }
-        }
-    }
-
-    // TODO: Make this private, and provide other public functions for accessing
-    // sections of PPU memory all at once, e.g.,
-    // fn pattern_tables(&self) -> &[u8] { ... }
-    pub fn read_data(emu: &Emu, address: u16) -> u8 {
+    fn read_data(emu: &Emu, address: u16) -> u8 {
         match address {
             0x0000..=0x1fff => emu.mapper.read_chr(address),
             0x2000..=0x3eff => {
@@ -468,5 +319,151 @@ impl Ppu {
             (self.attribute_shifter_low << 1) | (self.attribute_latch & 1);
         self.attribute_shifter_high = (self.attribute_shifter_high << 1)
             | ((self.attribute_latch & 0x2) >> 1);
+    }
+}
+
+pub fn tick(emu: &mut Emu) {
+    if emu.ppu.on_prerender_scanline() {
+        if emu.ppu.cycle == 1 {
+            emu.ppu.status.set_sprite_overflow(false);
+            emu.ppu.status.set_sprite_0_hit(false);
+            emu.ppu.status.set_vblank(false);
+            emu.cpu.nmi = false;
+        }
+
+        // The vertical scroll bits are reloaded during pixels 280 to 304,
+        // if rendering is enabled.
+        if emu.ppu.cycle >= 280
+            && emu.ppu.cycle <= 304
+            && emu.ppu.rendering_enabled()
+        {
+            emu.ppu.v.load_y_scroll(&emu.ppu.t);
+        }
+    }
+
+    if emu.ppu.on_visible_scanline() || emu.ppu.on_prerender_scanline() {
+        if (emu.ppu.cycle >= 1 && emu.ppu.cycle <= 256)
+            || (emu.ppu.cycle >= 321 && emu.ppu.cycle <= 337)
+        {
+            emu.ppu.shift_background_shifters();
+            Ppu::fetch_tile_data(emu);
+        }
+
+        if emu.ppu.cycle == 256 && emu.ppu.rendering_enabled() {
+            emu.ppu.v.increment_y_scroll();
+        }
+
+        if emu.ppu.cycle == 257 && emu.ppu.rendering_enabled() {
+            emu.ppu.v.load_x_scroll(&emu.ppu.t);
+        }
+
+        if emu.ppu.cycle == 339 {
+            emu.ppu.nametable_latch = Ppu::fetch_nametable_byte(emu);
+        }
+    }
+
+    if emu.ppu.start_of_vblank() {
+        emu.ppu.status.set_vblank(true);
+        emu.cpu.nmi = emu.ppu.control.nmi();
+    }
+
+    if emu.ppu.rendering_enabled() && emu.ppu.on_screen() {
+        let (pixel_value, palette) = emu.ppu.fetch_pixel();
+        let palette_index = Ppu::read_data(
+            emu,
+            0x3f00 + (palette * 4) as u16 + pixel_value as u16,
+        );
+
+        let buffer_index =
+            emu.ppu.scanline as usize * 256 * 4 + (emu.ppu.cycle as usize) * 4;
+        emu.ppu.buffer.get_mut()[buffer_index..(buffer_index + 4)]
+            .copy_from_slice(
+                &emu.ppu.palette[palette_index as usize].to_le_bytes(),
+            );
+    }
+
+    emu.ppu.cycle = (emu.ppu.cycle + 1) % 341;
+    if emu.ppu.cycle == 0 {
+        emu.ppu.scanline = (emu.ppu.scanline + 1) % 262;
+
+        if emu.ppu.on_prerender_scanline() {
+            emu.ppu.buffer.swap();
+        }
+    }
+}
+
+pub fn read_register(emu: &mut Emu, address: u16) -> u8 {
+    match address {
+        0x2002 => {
+            // TODO: Using the read buffer here isn't accurate. It should
+            // be the data bus, which isn't emulated yet.
+            let data = emu.ppu.status.0 | (emu.ppu.read_buffer & 0x1f);
+            // TODO: Should emu.ppu.nmi be set to false? Also, reading the
+            // status register within two cycles of vblank causes an NMI
+            // not to occur?
+            emu.ppu.status.set_vblank(false);
+            emu.ppu.w = false;
+
+            data
+        }
+        0x2004 => emu.ppu.oam[emu.ppu.oam_address as usize],
+        0x2007 => {
+            let data = if address < BASE_PALETTE_ADDRESS {
+                emu.ppu.read_buffer
+            } else {
+                Ppu::read_data(emu, address)
+            };
+
+            // TODO: The data in the buffer should be different when
+            // reading palette data.
+            emu.ppu.read_buffer = Ppu::read_data(emu, address);
+
+            emu.ppu.v.increment(emu.ppu.control.increment_mode());
+
+            data
+        }
+        _ => unimplemented!(),
+    }
+}
+
+pub fn write_register(emu: &mut Emu, address: u16, data: u8) {
+    match address {
+        0x2000 => {
+            emu.ppu.control = Control(data);
+            emu.ppu.t.set_nametable(emu.ppu.control.nametable());
+        }
+        0x2001 => emu.ppu.mask = Mask(data),
+        0x2003 => emu.ppu.oam_address = data,
+        0x2004 => {
+            emu.ppu.oam[emu.ppu.oam_address as usize] = data;
+            emu.ppu.oam_address = emu.ppu.oam_address.wrapping_add(1);
+        }
+        0x2005 => {
+            if !emu.ppu.w {
+                emu.ppu.fine_x_scroll = data & 0x7;
+                emu.ppu.t.set_coarse_x_scroll(data >> 3);
+            } else {
+                emu.ppu.t.set_fine_y_scroll(data & 0x7);
+                emu.ppu.t.set_coarse_y_scroll(data >> 3);
+            }
+
+            emu.ppu.w = !emu.ppu.w;
+        }
+        0x2006 => {
+            if !emu.ppu.w {
+                emu.ppu.t.set_high(data & 0x3f);
+            } else {
+                emu.ppu.t.set_low(data);
+                emu.ppu.v = Address(emu.ppu.t.0);
+            }
+
+            emu.ppu.w = !emu.ppu.w;
+        }
+        0x2007 => {
+            // TODO: Should emu.ppu.v.0 be mirrored down?
+            Ppu::write_data(emu, emu.ppu.v.0, data);
+            emu.ppu.v.increment(emu.ppu.control.increment_mode());
+        }
+        _ => (),
     }
 }

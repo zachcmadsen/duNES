@@ -5,7 +5,7 @@ use crate::{
     bus::{self, Bus},
     cpu::{self, Cpu},
     mapper::{self, Nrom},
-    ppu::{Ppu, BUFFER_SIZE},
+    ppu::{self, Ppu, BUFFER_SIZE},
 };
 
 /// The size of the RAM in bytes.
@@ -26,8 +26,8 @@ impl Emu {
         bus.set(0x0000..=0x1FFF, Some(read_ram), Some(write_ram));
         bus.set(
             0x2000..=0x2007,
-            Some(Ppu::read_register),
-            Some(Ppu::write_register),
+            Some(ppu::read_register),
+            Some(ppu::write_register),
         );
         bus.set(0x4000..=0x4014, None, Some(apu::write));
         bus.set(0x4015..=0x4015, Some(apu::read), Some(apu::write));
@@ -55,9 +55,9 @@ impl Emu {
 
     pub fn step(&mut self) {
         cpu::tick(self);
-        Ppu::tick(self);
-        Ppu::tick(self);
-        Ppu::tick(self);
+        ppu::tick(self);
+        ppu::tick(self);
+        ppu::tick(self);
         self.apu.tick();
     }
 
