@@ -1,6 +1,6 @@
 use std::fs;
 
-use backend::{ppu, Emu};
+use backend::{Emu, BUFFER_SIZE};
 use common::TripleBuffer;
 
 const STATUS_ADDR: u16 = 0x6000;
@@ -10,11 +10,12 @@ const RUNNING_STATUS: u8 = 0x80;
 fn run(dir: &str) {
     for entry in fs::read_dir(dir).unwrap() {
         let entry = entry.unwrap();
-
         let rom = fs::read(entry.path()).unwrap();
-        let buffer: Box<[u8; ppu::BUFFER_SIZE]> =
-            vec![0u8; ppu::BUFFER_SIZE].try_into().unwrap();
+
+        let buffer: Box<[u8; BUFFER_SIZE]> =
+            vec![0u8; BUFFER_SIZE].try_into().unwrap();
         let (writer, _) = TripleBuffer::new(buffer);
+
         // TODO: Reuse the same emulator instance across the ROMs to test
         // resets and loading new ROMs.
         let mut emu = Emu::new(&rom, writer);

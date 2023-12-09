@@ -28,9 +28,9 @@ const TILE_PLANE_SIZE: usize = 8;
 /// The size of OAM in bytes.
 const OAM_SIZE: usize = 256;
 
-/// The width of the PPU image in pixels.
+/// The width of the screen in pixels.
 pub const WIDTH: usize = 256;
-/// The height of the PPU image in pixels.
+/// The height of the screen in pixels.
 pub const HEIGHT: usize = 240;
 /// The size of the PPU's buffer in bytes.
 pub const BUFFER_SIZE: usize = WIDTH * HEIGHT * 4;

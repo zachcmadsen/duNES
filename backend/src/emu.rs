@@ -8,7 +8,7 @@ use crate::{
     ppu::{self, Ppu, BUFFER_SIZE},
 };
 
-/// The size of the RAM in bytes.
+/// The size of RAM in bytes.
 pub(crate) const RAM_SIZE: usize = 2048;
 
 pub struct Emu {
@@ -16,7 +16,6 @@ pub struct Emu {
     pub cpu: Cpu,
     pub ppu: Ppu,
     pub(crate) mapper: Nrom,
-
     pub(crate) ram: Box<[u8; RAM_SIZE]>,
 }
 
@@ -48,7 +47,6 @@ impl Emu {
             cpu: Cpu::new(bus),
             ppu: Ppu::new(buffer),
             mapper: Nrom::new(rom),
-
             ram: vec![0; RAM_SIZE].try_into().unwrap(),
         }
     }

@@ -3,8 +3,8 @@ mod bit;
 mod bus;
 mod cpu;
 mod emu;
-mod header;
 mod mapper;
-pub mod ppu;
+mod ppu;
 
 pub use emu::Emu;
+pub use ppu::{BUFFER_SIZE, HEIGHT, WIDTH};
