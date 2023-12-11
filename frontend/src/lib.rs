@@ -8,6 +8,7 @@ use cpal::{
 };
 use pixels::{Pixels, SurfaceTexture};
 use rtrb::{chunks::ChunkError, RingBuffer};
+use tracing::warn;
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
@@ -52,6 +53,8 @@ pub fn run(rom: Vec<u8>) {
                     emu.apu.fill(first);
                     emu.apu.fill(second);
                     unsafe { chunk.commit_all() };
+                    // TODO: Call request_redraw in the PPU when it finishes a
+                    // frame.
                     window.request_redraw();
                 }
 
@@ -71,21 +74,21 @@ pub fn run(rom: Vec<u8>) {
         .build_output_stream(
             &config,
             move |data: &mut [i16], _| {
-                match consumer.read_chunk(data.len()) {
-                    Ok(chunk) => {
-                        let (first, second) = chunk.as_slices();
-                        let mid = first.len();
-                        data[..mid].copy_from_slice(first);
-                        data[mid..].copy_from_slice(second);
-                        chunk.commit_all();
-                    }
+                let chunk = match consumer.read_chunk(data.len()) {
+                    Ok(chunk) => chunk,
                     Err(ChunkError::TooFewSlots(n)) => {
-                        println!("ring buffer didn't have enough samples, wanted: {}, got: {}", data.len(), n);
+                        warn!("not enough samples to fill the buffer");
                         let chunk = consumer.read_chunk(n).unwrap();
-                        chunk.commit_all();
-                        data.fill(0);
+                        chunk
                     }
-                }
+                };
+
+                let (first, second) = chunk.as_slices();
+                let mid = first.len();
+                let end = chunk.len();
+                data[..mid].copy_from_slice(first);
+                data[mid..end].copy_from_slice(second);
+                chunk.commit_all();
 
                 emu_thread.thread().unpark();
             },

@@ -1,7 +1,17 @@
-use pixels_frontend::run;
 use std::{env, fs};
+use tracing::Level;
+
+use frontend::run;
+use tracing_subscriber::FmtSubscriber;
 
 fn main() {
+    let subscriber = FmtSubscriber::builder()
+        .without_time()
+        .with_target(false)
+        .with_max_level(Level::WARN)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
     let mut args = env::args();
     // Skip the executable path.
     args.next();
