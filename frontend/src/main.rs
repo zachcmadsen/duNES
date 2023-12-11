@@ -20,7 +20,7 @@ fn main() {
         eprintln!("duNES: error: expected a ROM file");
         return;
     };
-    let rom = fs::read(&file_path).unwrap();
+    let rom = fs::read(file_path).unwrap();
 
     run(rom);
 }

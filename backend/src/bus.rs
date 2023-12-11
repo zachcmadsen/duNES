@@ -2,9 +2,12 @@ use std::ops::RangeInclusive;
 
 use crate::{cpu::ADDR_SPACE_SIZE, emu::Emu};
 
+type Reader = fn(&mut Emu, u16) -> u8;
+type Writer = fn(&mut Emu, u16, u8);
+
 pub struct Bus {
-    readers: Box<[fn(&mut Emu, u16) -> u8; ADDR_SPACE_SIZE]>,
-    writers: Box<[fn(&mut Emu, u16, u8); ADDR_SPACE_SIZE]>,
+    readers: Box<[Reader; ADDR_SPACE_SIZE]>,
+    writers: Box<[Writer; ADDR_SPACE_SIZE]>,
 
     /// The last address value on the bus.
     addr: u16,
@@ -34,8 +37,8 @@ impl Bus {
     pub fn set(
         &mut self,
         range: RangeInclusive<u16>,
-        reader: Option<fn(&mut Emu, u16) -> u8>,
-        writer: Option<fn(&mut Emu, u16, u8)>,
+        reader: Option<Reader>,
+        writer: Option<Writer>,
     ) {
         for addr in range {
             if let Some(reader) = reader {

@@ -415,26 +415,15 @@ pub fn sei(emu: &mut Emu) {
 }
 
 pub fn sha(emu: &mut Emu) {
-    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
-    let data = emu.cpu.a
-        & emu.cpu.x
-        & (high as u8).wrapping_add(!emu.cpu.carry as u8);
-    let high = if emu.cpu.carry { data } else { high };
-    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
+    sh_inner(emu, emu.cpu.a & emu.cpu.x);
 }
 
 pub fn shx(emu: &mut Emu) {
-    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
-    let data = emu.cpu.x & (high as u8).wrapping_add(!emu.cpu.carry as u8);
-    let high = if emu.cpu.carry { data } else { high };
-    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
+    sh_inner(emu, emu.cpu.x);
 }
 
 pub fn shy(emu: &mut Emu) {
-    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
-    let data = emu.cpu.y & (high as u8).wrapping_add(!emu.cpu.carry as u8);
-    let high = if emu.cpu.carry { data } else { high };
-    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
+    sh_inner(emu, emu.cpu.y);
 }
 
 pub fn slo(emu: &mut Emu) {
@@ -468,11 +457,8 @@ pub fn sty(emu: &mut Emu) {
 }
 
 pub fn tas(emu: &mut Emu) {
-    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
     emu.cpu.s = emu.cpu.a & emu.cpu.x;
-    let data = emu.cpu.s & (high as u8).wrapping_add(!emu.cpu.carry as u8);
-    let high = if emu.cpu.carry { data } else { high };
-    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
+    sh_inner(emu, emu.cpu.s);
 }
 
 pub fn tax(emu: &mut Emu) {
@@ -605,4 +591,11 @@ pub fn peek_and_dec_s_and_set_i(emu: &mut Emu) {
     bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
     emu.cpu.p.set_i(true);
+}
+
+fn sh_inner(emu: &mut Emu, reg: u8) {
+    let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
+    let data = reg & high.wrapping_add(!emu.cpu.carry as u8);
+    let high = if emu.cpu.carry { data } else { high };
+    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
