@@ -5,11 +5,11 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-cxx = "1.0"
-proc-bitfield = "0.3"
+cxx = "1.0.110"
+proc-bitfield = "0.3.0"
 
 [dev-dependencies]
 rkyv = "0.7.42"
 
 [build-dependencies]
-cxx-build = "1.0"
+cxx-build = "1.0.110"

@@ -1,25 +1,16 @@
+use pixels_frontend::run;
 use std::{env, fs};
-
-use frontend::DuNes;
 
 fn main() {
     let mut args = env::args();
     // Skip the executable path.
     args.next();
-    let Some(filepath) = args.next() else {
-        eprintln!("duNES: error: a ROM filepath was not provided");
+
+    let Some(file_path) = args.next() else {
+        eprintln!("duNES: error: expected a ROM file");
         return;
     };
+    let rom = fs::read(&file_path).unwrap();
 
-    let Ok(rom) = fs::read(&filepath) else {
-        eprintln!("duNES: error: could not read from {}", &filepath);
-        return;
-    };
-
-    eframe::run_native(
-        "duNES",
-        eframe::NativeOptions::default(),
-        Box::new(move |cc| Box::new(DuNes::new(&rom, cc))),
-    )
-    .unwrap();
+    run(rom);
 }
