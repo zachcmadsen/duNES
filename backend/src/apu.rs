@@ -47,7 +47,7 @@ mod ffi {
 }
 
 const CLOCK_RATE: u32 = 1789773;
-const SAMPLE_RATE: u32 = 44100;
+pub const SAMPLE_RATE: u32 = 44100;
 
 pub struct Apu {
     blip_buffer: UniquePtr<ffi::BlipBuffer>,
