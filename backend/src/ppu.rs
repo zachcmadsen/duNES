@@ -28,13 +28,6 @@ const TILE_PLANE_SIZE: usize = 8;
 /// The size of OAM in bytes.
 const OAM_SIZE: usize = 256;
 
-/// The width of the screen in pixels.
-pub const WIDTH: usize = 256;
-/// The height of the screen in pixels.
-pub const HEIGHT: usize = 240;
-/// The size of the PPU's buffer in bytes.
-pub const BUFFER_SIZE: usize = WIDTH * HEIGHT * 4;
-
 pub struct Ppu {
     // Data
     nametables: Box<[u8; 2 * NAMETABLE_SIZE]>,
@@ -74,11 +67,11 @@ pub struct Ppu {
     oam_address: u8,
 
     palette: Box<[u32]>,
-    buffer: Writer<Box<[u8; BUFFER_SIZE]>>,
+    writer: Writer,
 }
 
 impl Ppu {
-    pub fn new(buffer: Writer<Box<[u8; BUFFER_SIZE]>>) -> Ppu {
+    pub fn new(writer: Writer) -> Ppu {
         let palette = include_bytes!("../ntscpalette.pal")
             .chunks_exact(3)
             .map(|chunk| {
@@ -121,7 +114,7 @@ impl Ppu {
 
             oam_address: 0,
 
-            buffer,
+            writer,
             palette,
         }
     }
@@ -376,7 +369,7 @@ pub fn tick(emu: &mut Emu) {
 
         let buffer_index =
             emu.ppu.scanline as usize * 256 * 4 + (emu.ppu.cycle as usize) * 4;
-        emu.ppu.buffer.get_mut()[buffer_index..(buffer_index + 4)]
+        emu.ppu.writer.get_mut()[buffer_index..(buffer_index + 4)]
             .copy_from_slice(
                 &emu.ppu.palette[palette_index as usize].to_le_bytes(),
             );
@@ -387,7 +380,7 @@ pub fn tick(emu: &mut Emu) {
         emu.ppu.scanline = (emu.ppu.scanline + 1) % 262;
 
         if emu.ppu.on_prerender_scanline() {
-            emu.ppu.buffer.swap();
+            emu.ppu.writer.swap();
         }
     }
 }

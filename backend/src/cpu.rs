@@ -114,9 +114,9 @@ mod tests {
 
         use crate::{
             apu::Apu,
-            emu::RAM_SIZE,
+            emu::{FRAMEBUFFER_SIZE, RAM_SIZE},
             mapper::{Mirroring, Nrom},
-            ppu::{self, Ppu},
+            ppu::Ppu,
         };
 
         fn read_ram(emu: &mut Emu, addr: u16) -> u8 {
@@ -130,8 +130,7 @@ mod tests {
         let mut bus = Bus::new();
         bus.set(0x0000..=0xFFFF, Some(read_ram), Some(write_ram));
 
-        let buffer = vec![0u8; ppu::BUFFER_SIZE].try_into().unwrap();
-        let (writer, _) = TripleBuffer::new(buffer);
+        let (writer, _) = TripleBuffer::new(FRAMEBUFFER_SIZE);
 
         Emu {
             apu: Apu::new(),

@@ -6,5 +6,5 @@ mod emu;
 mod mapper;
 mod ppu;
 
-pub use emu::Emu;
-pub use ppu::{BUFFER_SIZE, HEIGHT, WIDTH};
+pub use apu::SAMPLE_RATE;
+pub use emu::{Emu, FRAMEBUFFER_SIZE, HEIGHT, WIDTH};
