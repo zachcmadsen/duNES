@@ -18,6 +18,9 @@ pub struct TripleBuffer {
     back_index: AtomicU8,
 }
 
+unsafe impl Send for TripleBuffer {}
+unsafe impl Sync for TripleBuffer {}
+
 impl Drop for TripleBuffer {
     fn drop(&mut self) {
         for buffer in &self.buffers {
@@ -64,8 +67,6 @@ pub struct Writer {
     index: u8,
 }
 
-unsafe impl Send for Writer {}
-
 impl Writer {
     pub fn get_mut(&mut self) -> &mut [u8] {
         unsafe {
@@ -91,8 +92,6 @@ pub struct Reader {
     tb: Arc<TripleBuffer>,
     index: Cell<u8>,
 }
-
-unsafe impl Send for Reader {}
 
 impl Reader {
     pub fn get(&self) -> &[u8] {
