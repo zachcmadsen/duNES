@@ -114,7 +114,7 @@ pub fn run(rom: Vec<u8>) {
             Event::WindowEvent {
                 event: WindowEvent::RedrawRequested, ..
             } => {
-                pixels.frame_mut().copy_from_slice(&reader.get());
+                pixels.frame_mut().copy_from_slice(reader.get());
                 window.pre_present_notify();
                 pixels.render().unwrap();
             }

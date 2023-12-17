@@ -16,6 +16,7 @@ pub struct Bus {
 }
 
 impl Bus {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Bus {
         fn read_default(emu: &mut Emu, _: u16) -> u8 {
             emu.cpu.bus.data

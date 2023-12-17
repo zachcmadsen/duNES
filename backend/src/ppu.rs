@@ -73,10 +73,13 @@ pub struct Ppu {
 
     palette: Box<[u32]>,
     buffer: Box<[u8; FRAMEBUFFER_SIZE]>,
+
+    #[allow(clippy::type_complexity)]
     on_frame: Option<Box<dyn FnMut(&[u8])>>,
 }
 
 impl Ppu {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Ppu {
         let palette = include_bytes!("../ntscpalette.pal")
             .chunks_exact(3)
@@ -184,7 +187,7 @@ impl Ppu {
             // The third and fourth nametables map to the first and second
             // nametables, respectively.
             Mirroring::Vertical => match address {
-                0x2800..=0x2bff | 0x2c00..=0x2fff => address - 0x0800,
+                0x2800..=0x2fff => address - 0x0800,
                 _ => address,
             },
         }

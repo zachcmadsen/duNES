@@ -55,6 +55,7 @@ pub struct Apu {
 }
 
 impl Apu {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Apu {
         let mut blip_buffer = ffi::new_blip_buffer();
         blip_buffer.pin_mut().sample_rate(
