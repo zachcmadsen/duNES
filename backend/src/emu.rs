@@ -27,7 +27,7 @@ pub struct Emu {
 }
 
 impl Emu {
-    pub fn new(rom: &[u8], writer: Writer) -> Emu {
+    pub fn new(rom: &[u8], writer: Writer<[u8; FRAMEBUFFER_SIZE]>) -> Emu {
         let mut bus = Bus::new();
         bus.set(0x0000..=0x1FFF, Some(read_ram), Some(write_ram));
         bus.set(

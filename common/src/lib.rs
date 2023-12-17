@@ -1,3 +1,3 @@
 mod buffer;
 
-pub use buffer::{Reader, TripleBuffer, Writer};
+pub use buffer::{triple_buffer, Reader, Writer};

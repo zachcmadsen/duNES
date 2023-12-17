@@ -1,113 +1,129 @@
-use std::{
-    cell::{Cell, UnsafeCell},
-    mem::ManuallyDrop,
-    slice,
-    sync::{
-        atomic::{AtomicU8, Ordering},
-        Arc,
-    },
-};
+mod sync {
+    #[cfg(loom)]
+    pub use loom::cell::{Cell, UnsafeCell};
+    #[cfg(loom)]
+    pub use loom::sync::{atomic::AtomicU8, Arc};
+
+    #[cfg(not(loom))]
+    pub use std::cell::{Cell, UnsafeCell};
+    #[cfg(not(loom))]
+    pub use std::sync::{atomic::AtomicU8, Arc};
+}
+
+use std::sync::atomic::Ordering;
+
+use sync::{Arc, AtomicU8, Cell, UnsafeCell};
 
 const INDEX_MASK: u8 = 0b00000011;
-const UPDATE_FLAG_MASK: u8 = 0b00000100;
+const UPDATE_FLAG: u8 = 0b00000100;
 
-// TODO: Add unit tests (with loom?).
-pub struct TripleBuffer {
-    buffers: [UnsafeCell<*mut u8>; 3],
-    capacity: usize,
+struct TripleBuffer<T> {
+    buffers: [UnsafeCell<T>; 3],
     back_index: AtomicU8,
 }
 
-unsafe impl Send for TripleBuffer {}
-unsafe impl Sync for TripleBuffer {}
+unsafe impl<T> Sync for TripleBuffer<T> where T: Send {}
 
-impl Drop for TripleBuffer {
-    fn drop(&mut self) {
-        for buffer in &self.buffers {
-            let ptr = unsafe { *buffer.get() };
-            unsafe {
-                Vec::from_raw_parts(ptr, 0, self.capacity);
-            }
-        }
-    }
-}
-
-impl TripleBuffer {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new(capacity: usize) -> (Writer, Reader) {
-        const INIT_BACK_INDEX: u8 = 0;
-        const INIT_WRITE_INDEX: u8 = 1;
-        const INIT_READ_INDEX: u8 = 2;
-
-        let tb = Arc::new(TripleBuffer {
-            buffers: [
-                UnsafeCell::new(
-                    ManuallyDrop::new(vec![0; capacity]).as_mut_ptr(),
-                ),
-                UnsafeCell::new(
-                    ManuallyDrop::new(vec![0; capacity]).as_mut_ptr(),
-                ),
-                UnsafeCell::new(
-                    ManuallyDrop::new(vec![0; capacity]).as_mut_ptr(),
-                ),
-            ],
-            capacity,
-            back_index: AtomicU8::new(INIT_BACK_INDEX),
-        });
-
-        (
-            Writer { tb: tb.clone(), index: INIT_WRITE_INDEX },
-            Reader { tb, index: Cell::new(INIT_READ_INDEX) },
-        )
-    }
-}
-
-pub struct Writer {
-    tb: Arc<TripleBuffer>,
+pub struct Writer<T> {
+    tb: Arc<TripleBuffer<T>>,
     index: u8,
 }
 
-impl Writer {
-    pub fn get_mut(&mut self) -> &mut [u8] {
-        unsafe {
-            slice::from_raw_parts_mut(
-                *self.tb.buffers[self.index as usize].get(),
-                self.tb.capacity,
-            )
-        }
+impl<T> Writer<T> {
+    #[cfg(not(loom))]
+    pub fn get_mut(&mut self) -> &mut T {
+        unsafe { &mut *self.tb.buffers[self.index as usize].get() }
     }
 
     pub fn swap(&mut self) {
-        let new_back_index = self.index | UPDATE_FLAG_MASK;
-        // TODO: Figure out better memory orderings for the swaps. They're all
-        // SeqCst because it's probably correct, but I'm leaving performance on
-        // the table.
+        let new_back_index = self.index | UPDATE_FLAG;
         let old_back_index =
-            self.tb.back_index.swap(new_back_index, Ordering::SeqCst);
+            self.tb.back_index.swap(new_back_index, Ordering::AcqRel);
         self.index = old_back_index & INDEX_MASK;
+    }
+
+    #[cfg(loom)]
+    pub fn with_mut<F, R>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut T) -> R,
+    {
+        unsafe {
+            self.tb.buffers[self.index as usize].with_mut(|p| f(&mut *p))
+        }
     }
 }
 
-pub struct Reader {
-    tb: Arc<TripleBuffer>,
+pub struct Reader<T> {
+    tb: Arc<TripleBuffer<T>>,
     index: Cell<u8>,
 }
 
-impl Reader {
-    pub fn get(&self) -> &[u8] {
-        // Swap the read and back buffers if there's an update.
-        if self.tb.back_index.load(Ordering::SeqCst) & UPDATE_FLAG_MASK != 0 {
+impl<T> Reader<T> {
+    #[cfg(not(loom))]
+    pub fn get(&self) -> &T {
+        self.maybe_swap();
+        unsafe { &*self.tb.buffers[self.index.get() as usize].get() }
+    }
+
+    /// Swaps the read and back buffers if the back buffer was updated.
+    fn maybe_swap(&self) {
+        if self.tb.back_index.load(Ordering::Relaxed) & UPDATE_FLAG != 0 {
             let new_back_index = self.index.get();
             let old_back_index =
-                self.tb.back_index.swap(new_back_index, Ordering::SeqCst);
+                self.tb.back_index.swap(new_back_index, Ordering::AcqRel);
             self.index.set(old_back_index & INDEX_MASK);
         }
+    }
 
-        unsafe {
-            slice::from_raw_parts(
-                *self.tb.buffers[self.index.get() as usize].get(),
-                self.tb.capacity,
-            )
-        }
+    #[cfg(loom)]
+    pub fn with<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&T) -> R,
+    {
+        self.maybe_swap();
+        unsafe { self.tb.buffers[self.index.get() as usize].with(|p| f(&*p)) }
+    }
+}
+
+pub fn triple_buffer<T: Clone>(buffer: T) -> (Writer<T>, Reader<T>) {
+    const INIT_BACK_INDEX: u8 = 0;
+    const INIT_WRITE_INDEX: u8 = 1;
+    const INIT_READ_INDEX: u8 = 2;
+
+    let tb = Arc::new(TripleBuffer {
+        buffers: [
+            UnsafeCell::new(buffer.clone()),
+            UnsafeCell::new(buffer.clone()),
+            UnsafeCell::new(buffer),
+        ],
+        back_index: AtomicU8::new(INIT_BACK_INDEX),
+    });
+
+    (
+        Writer { tb: tb.clone(), index: INIT_WRITE_INDEX },
+        Reader { tb, index: Cell::new(INIT_READ_INDEX) },
+    )
+}
+
+#[cfg(loom)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn concurrent_read_and_write() {
+        loom::model(|| {
+            let (mut writer, reader) = triple_buffer(0u8);
+
+            let writer_thread = loom::thread::spawn(move || {
+                writer.with_mut(|val| *val = 1);
+                writer.swap();
+            });
+
+            let val = reader.with(|&val| val);
+            assert!(val <= 1);
+
+            writer_thread.join().unwrap();
+        });
     }
 }

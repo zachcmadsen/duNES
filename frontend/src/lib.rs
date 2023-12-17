@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use backend::{Emu, HEIGHT, SAMPLE_RATE, WIDTH};
-use common::TripleBuffer;
+use common::triple_buffer;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     StreamConfig,
@@ -32,7 +32,8 @@ pub fn run(rom: Vec<u8>) {
     let mut pixels =
         Pixels::new(size.width, size.height, surface_texture).unwrap();
 
-    let (writer, reader) = TripleBuffer::new(pixels.frame().len());
+    let buffer = vec![0; pixels.frame().len()].try_into().unwrap();
+    let (writer, reader) = triple_buffer(buffer);
     let (mut producer, mut consumer) = RingBuffer::new(2048);
 
     let emu_thread = std::thread::spawn({

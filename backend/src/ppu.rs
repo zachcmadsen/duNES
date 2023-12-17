@@ -8,7 +8,7 @@ use common::Writer;
 use crate::{
     mapper::Mirroring,
     ppu::{address::Address, control::Control, mask::Mask, status::Status},
-    Emu,
+    Emu, FRAMEBUFFER_SIZE,
 };
 
 /// The size of a nametable in bytes.
@@ -67,11 +67,11 @@ pub struct Ppu {
     oam_address: u8,
 
     palette: Box<[u32]>,
-    writer: Writer,
+    writer: Writer<[u8; FRAMEBUFFER_SIZE]>,
 }
 
 impl Ppu {
-    pub fn new(writer: Writer) -> Ppu {
+    pub fn new(writer: Writer<[u8; FRAMEBUFFER_SIZE]>) -> Ppu {
         let palette = include_bytes!("../ntscpalette.pal")
             .chunks_exact(3)
             .map(|chunk| {
