@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 backend = { path = "../backend" }
-common = { path = "../common" }
 cpal = "0.15.2"
 pixels = "0.13.0"
 # Remove raw-window-handle and rhw_05 feature once wpgu (and pixels) update to
@@ -15,3 +14,6 @@ rtrb = "0.3.0"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 winit = { version = "0.29.4", features = ["rwh_05"] }
+
+[target.'cfg(loom)'.dependencies]
+loom = "0.7.1"

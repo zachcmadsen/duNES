@@ -1,7 +1,8 @@
+mod tb;
+
 use std::sync::Arc;
 
 use backend::{Emu, HEIGHT, SAMPLE_RATE, WIDTH};
-use common::triple_buffer;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     StreamConfig,
@@ -15,6 +16,8 @@ use winit::{
     event_loop::EventLoop,
     window::WindowBuilder,
 };
+
+use crate::tb::triple_buffer;
 
 pub fn run(rom: Vec<u8>) {
     let event_loop = EventLoop::new().unwrap();

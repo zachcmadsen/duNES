@@ -173,7 +173,6 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "backend"
 version = "0.1.0"
 dependencies = [
- "common",
  "cxx",
  "cxx-build",
  "proc-bitfield",
@@ -417,13 +416,6 @@ checksum = "35ed6e9d84f0b51a7f52daf1c7d71dd136fd7a3f41a8462b8cdb8c78d920fad4"
 dependencies = [
  "bytes",
  "memchr",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "loom",
 ]
 
 [[package]]
@@ -680,8 +672,8 @@ name = "frontend"
 version = "0.1.0"
 dependencies = [
  "backend",
- "common",
  "cpal",
+ "loom",
  "pixels",
  "raw-window-handle 0.5.2",
  "rtrb",

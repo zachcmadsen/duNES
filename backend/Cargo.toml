@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common = { path = "../common" }
 cxx = "1.0.110"
 proc-bitfield = "0.3.0"
 
