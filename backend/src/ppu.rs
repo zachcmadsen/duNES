@@ -3,12 +3,10 @@ mod control;
 mod mask;
 mod status;
 
-use common::Writer;
-
 use crate::{
     mapper::Mirroring,
     ppu::{address::Address, control::Control, mask::Mask, status::Status},
-    Emu, FRAMEBUFFER_SIZE,
+    Emu,
 };
 
 /// The size of a nametable in bytes.
@@ -27,6 +25,13 @@ const TILE_SIZE: usize = 16;
 const TILE_PLANE_SIZE: usize = 8;
 /// The size of OAM in bytes.
 const OAM_SIZE: usize = 256;
+
+/// The width of the screen in pixels.
+pub const WIDTH: u32 = 256;
+/// The height of the screen in pixels.
+pub const HEIGHT: u32 = 240;
+/// The size of the framebuffer in bytes.
+const FRAMEBUFFER_SIZE: usize = 4 * WIDTH as usize * HEIGHT as usize;
 
 pub struct Ppu {
     // Data
@@ -67,11 +72,12 @@ pub struct Ppu {
     oam_address: u8,
 
     palette: Box<[u32]>,
-    writer: Writer<[u8; FRAMEBUFFER_SIZE]>,
+    buffer: Box<[u8; FRAMEBUFFER_SIZE]>,
+    on_frame: Option<Box<dyn FnMut(&[u8])>>,
 }
 
 impl Ppu {
-    pub fn new(writer: Writer<[u8; FRAMEBUFFER_SIZE]>) -> Ppu {
+    pub fn new() -> Ppu {
         let palette = include_bytes!("../ntscpalette.pal")
             .chunks_exact(3)
             .map(|chunk| {
@@ -114,9 +120,15 @@ impl Ppu {
 
             oam_address: 0,
 
-            writer,
+            buffer: vec![0; FRAMEBUFFER_SIZE].try_into().unwrap(),
             palette,
+
+            on_frame: None,
         }
+    }
+
+    pub fn on_frame(&mut self, f: impl FnMut(&[u8]) + 'static) {
+        self.on_frame = Some(Box::new(f));
     }
 
     fn read_data(emu: &Emu, address: u16) -> u8 {
@@ -369,10 +381,9 @@ pub fn tick(emu: &mut Emu) {
 
         let buffer_index =
             emu.ppu.scanline as usize * 256 * 4 + (emu.ppu.cycle as usize) * 4;
-        emu.ppu.writer.get_mut()[buffer_index..(buffer_index + 4)]
-            .copy_from_slice(
-                &emu.ppu.palette[palette_index as usize].to_le_bytes(),
-            );
+        emu.ppu.buffer[buffer_index..(buffer_index + 4)].copy_from_slice(
+            &emu.ppu.palette[palette_index as usize].to_le_bytes(),
+        );
     }
 
     emu.ppu.cycle = (emu.ppu.cycle + 1) % 341;
@@ -380,7 +391,9 @@ pub fn tick(emu: &mut Emu) {
         emu.ppu.scanline = (emu.ppu.scanline + 1) % 262;
 
         if emu.ppu.on_prerender_scanline() {
-            emu.ppu.writer.swap();
+            if let Some(on_frame) = &mut emu.ppu.on_frame {
+                on_frame(emu.ppu.buffer.as_ref());
+            }
         }
     }
 }

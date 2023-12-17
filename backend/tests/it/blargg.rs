@@ -1,7 +1,6 @@
 use std::fs;
 
-use backend::{Emu, FRAMEBUFFER_SIZE};
-use common::TripleBuffer;
+use backend::Emu;
 
 fn run(dir: &str) {
     const STATUS_ADDR: u16 = 0x6000;
@@ -12,10 +11,9 @@ fn run(dir: &str) {
         let entry = entry.unwrap();
         let rom = fs::read(entry.path()).unwrap();
 
-        let (writer, _) = TripleBuffer::new(FRAMEBUFFER_SIZE);
         // TODO: Reuse the same emulator instance across the ROMs to test
         // resets and loading new ROMs.
-        let mut emu = Emu::new(&rom, writer);
+        let mut emu = Emu::new(&rom);
 
         let mut status = emu.read(STATUS_ADDR);
         while status != RUNNING_STATUS {

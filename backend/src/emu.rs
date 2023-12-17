@@ -1,5 +1,3 @@
-use common::Writer;
-
 use crate::{
     apu::{self, Apu},
     bus::{self, Bus},
@@ -7,13 +5,6 @@ use crate::{
     mapper::{self, Nrom},
     ppu::{self, Ppu},
 };
-
-/// The width of the screen in pixels.
-pub const WIDTH: u32 = 256;
-/// The height of the screen in pixels.
-pub const HEIGHT: u32 = 240;
-/// The size of the framebuffer in bytes.
-pub const FRAMEBUFFER_SIZE: usize = 4 * WIDTH as usize * HEIGHT as usize;
 
 /// The size of RAM in bytes.
 pub(crate) const RAM_SIZE: usize = 2048;
@@ -27,7 +18,7 @@ pub struct Emu {
 }
 
 impl Emu {
-    pub fn new(rom: &[u8], writer: Writer<[u8; FRAMEBUFFER_SIZE]>) -> Emu {
+    pub fn new(rom: &[u8]) -> Emu {
         let mut bus = Bus::new();
         bus.set(0x0000..=0x1FFF, Some(read_ram), Some(write_ram));
         bus.set(
@@ -52,7 +43,7 @@ impl Emu {
         Emu {
             apu: Apu::new(),
             cpu: Cpu::new(bus),
-            ppu: Ppu::new(writer),
+            ppu: Ppu::new(),
             mapper: Nrom::new(rom),
             ram: vec![0; RAM_SIZE].try_into().unwrap(),
         }

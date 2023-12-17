@@ -32,14 +32,19 @@ pub fn run(rom: Vec<u8>) {
     let mut pixels =
         Pixels::new(size.width, size.height, surface_texture).unwrap();
 
-    let buffer = vec![0; pixels.frame().len()].try_into().unwrap();
-    let (writer, reader) = triple_buffer(buffer);
+    let buffer = vec![0; pixels.frame().len()].into_boxed_slice();
+    let (mut writer, reader) = triple_buffer(buffer);
     let (mut producer, mut consumer) = RingBuffer::new(2048);
 
     let emu_thread = std::thread::spawn({
         let window = window.clone();
         move || {
-            let mut emu = Emu::new(&rom, writer);
+            let mut emu = Emu::new(&rom);
+            emu.ppu.on_frame(move |buffer| {
+                writer.get_mut().copy_from_slice(buffer);
+                writer.swap();
+                window.request_redraw();
+            });
 
             loop {
                 let slots = producer.slots();
@@ -54,9 +59,6 @@ pub fn run(rom: Vec<u8>) {
                     emu.apu.fill(first);
                     emu.apu.fill(second);
                     unsafe { chunk.commit_all() };
-                    // TODO: Call request_redraw in the PPU when it finishes a
-                    // frame.
-                    window.request_redraw();
                 }
 
                 std::thread::park();
@@ -109,7 +111,7 @@ pub fn run(rom: Vec<u8>) {
             Event::WindowEvent {
                 event: WindowEvent::RedrawRequested, ..
             } => {
-                pixels.frame_mut().copy_from_slice(reader.get());
+                pixels.frame_mut().copy_from_slice(&reader.get());
                 window.pre_present_notify();
                 pixels.render().unwrap();
             }

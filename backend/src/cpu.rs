@@ -110,11 +110,9 @@ mod tests {
     use super::*;
 
     fn make_test_emu() -> Emu {
-        use common::TripleBuffer;
-
         use crate::{
             apu::Apu,
-            emu::{FRAMEBUFFER_SIZE, RAM_SIZE},
+            emu::RAM_SIZE,
             mapper::{Mirroring, Nrom},
             ppu::Ppu,
         };
@@ -130,12 +128,10 @@ mod tests {
         let mut bus = Bus::new();
         bus.set(0x0000..=0xFFFF, Some(read_ram), Some(write_ram));
 
-        let (writer, _) = TripleBuffer::new(FRAMEBUFFER_SIZE);
-
         Emu {
             apu: Apu::new(),
             cpu: Cpu::new(bus),
-            ppu: Ppu::new(writer),
+            ppu: Ppu::new(),
             mapper: Nrom {
                 prg_rom: vec![].into_boxed_slice(),
                 prg_ram: vec![].into_boxed_slice(),
