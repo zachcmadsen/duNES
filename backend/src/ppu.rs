@@ -1,11 +1,11 @@
 mod address;
-mod control;
+mod ctrl;
 mod mask;
 mod status;
 
 use crate::{
     mapper::Mirroring,
-    ppu::{address::Address, control::Control, mask::Mask, status::Status},
+    ppu::{address::Address, ctrl::Ctrl, mask::Mask, status::Status},
     Emu,
 };
 
@@ -38,17 +38,28 @@ pub struct Ppu {
     nametables: Box<[u8; 2 * NAMETABLE_SIZE]>,
     palettes: Box<[u8; PALETTES_SIZE]>,
     read_buffer: u8,
-    oam: Box<[u8; OAM_SIZE]>,
 
-    // Registers
-    control: Control,
+    primary_oam: Box<[u8; OAM_SIZE]>,
+
+    /// The I/O bus.
+    io_bus: u8,
+
+    // TODO: Set/unset this in the right places.
+    vblank: bool,
+
+    /// The control register.
+    ctrl: Ctrl,
+    /// The mask register.
     mask: Mask,
+    /// The status register.
     status: Status,
 
-    // Scrolling
+    /// VRAM address.
     v: Address,
+    /// Temporary VRAM address.
     t: Address,
     fine_x_scroll: u8,
+    /// A write toggle shared by the scroll and address registers.
     w: bool,
 
     // State
@@ -69,7 +80,7 @@ pub struct Ppu {
     attribute_shifter_low: u8,
     attribute_shifter_high: u8,
 
-    oam_address: u8,
+    oam_addr: u8,
 
     palette: Box<[u32]>,
     buffer: Box<[u8; FRAMEBUFFER_SIZE]>,
@@ -95,9 +106,12 @@ impl Ppu {
             nametables: vec![0; 2 * NAMETABLE_SIZE].try_into().unwrap(),
             palettes: vec![0; PALETTES_SIZE].try_into().unwrap(),
             read_buffer: 0,
-            oam: vec![0; OAM_SIZE].try_into().unwrap(),
+            primary_oam: vec![0; OAM_SIZE].try_into().unwrap(),
 
-            control: Control(0),
+            io_bus: 0,
+            vblank: false,
+
+            ctrl: Ctrl(0),
             mask: Mask(0),
             status: Status(0),
 
@@ -121,7 +135,7 @@ impl Ppu {
             attribute_shifter_low: 0,
             attribute_shifter_high: 0,
 
-            oam_address: 0,
+            oam_addr: 0,
 
             buffer: vec![0; FRAMEBUFFER_SIZE].try_into().unwrap(),
             palette,
@@ -212,7 +226,7 @@ impl Ppu {
         // Divide the coarse offsets by four since each attribute byte applies
         // to a 4x4 group of tiles.
         let attribute_address = BASE_ATTRIBUTE_ADDRESS
-            | ((emu.ppu.v.nametable() as u16) << 10)
+            | ((emu.ppu.v.nt() as u16) << 10)
             | (((emu.ppu.v.coarse_y_scroll() as u16) / 4) << 3)
             | ((emu.ppu.v.coarse_x_scroll() as u16) / 4);
         let mut attribute_byte = Ppu::read_data(emu, attribute_address);
@@ -234,7 +248,7 @@ impl Ppu {
     }
 
     fn background_pattern_table_address(&self) -> u16 {
-        if self.control.background_pattern_table() {
+        if self.ctrl.bg_pt_addr() {
             0x1000
         } else {
             0x0000
@@ -293,7 +307,7 @@ impl Ppu {
     }
 
     fn rendering_enabled(&self) -> bool {
-        self.mask.show_background() || self.mask.show_sprites()
+        self.mask.show_bg() || self.mask.show_sprites()
     }
 
     fn fetch_pixel(&self) -> (u8, u8) {
@@ -372,7 +386,7 @@ pub fn tick(emu: &mut Emu) {
 
     if emu.ppu.start_of_vblank() {
         emu.ppu.status.set_vblank(true);
-        emu.cpu.nmi = emu.ppu.control.nmi();
+        emu.cpu.nmi = emu.ppu.ctrl.nmi();
     }
 
     if emu.ppu.rendering_enabled() && emu.ppu.on_screen() {
@@ -403,19 +417,6 @@ pub fn tick(emu: &mut Emu) {
 
 pub fn read_register(emu: &mut Emu, address: u16) -> u8 {
     match address {
-        0x2002 => {
-            // TODO: Using the read buffer here isn't accurate. It should
-            // be the data bus, which isn't emulated yet.
-            let data = emu.ppu.status.0 | (emu.ppu.read_buffer & 0x1f);
-            // TODO: Should emu.ppu.nmi be set to false? Also, reading the
-            // status register within two cycles of vblank causes an NMI
-            // not to occur?
-            emu.ppu.status.set_vblank(false);
-            emu.ppu.w = false;
-
-            data
-        }
-        0x2004 => emu.ppu.oam[emu.ppu.oam_address as usize],
         0x2007 => {
             let data = if address < BASE_PALETTE_ADDRESS {
                 emu.ppu.read_buffer
@@ -427,7 +428,7 @@ pub fn read_register(emu: &mut Emu, address: u16) -> u8 {
             // reading palette data.
             emu.ppu.read_buffer = Ppu::read_data(emu, address);
 
-            emu.ppu.v.increment(emu.ppu.control.increment_mode());
+            emu.ppu.v.increment(emu.ppu.ctrl.vram_addr_incr());
 
             data
         }
@@ -437,42 +438,98 @@ pub fn read_register(emu: &mut Emu, address: u16) -> u8 {
 
 pub fn write_register(emu: &mut Emu, address: u16, data: u8) {
     match address {
-        0x2000 => {
-            emu.ppu.control = Control(data);
-            emu.ppu.t.set_nametable(emu.ppu.control.nametable());
-        }
-        0x2001 => emu.ppu.mask = Mask(data),
-        0x2003 => emu.ppu.oam_address = data,
-        0x2004 => {
-            emu.ppu.oam[emu.ppu.oam_address as usize] = data;
-            emu.ppu.oam_address = emu.ppu.oam_address.wrapping_add(1);
-        }
-        0x2005 => {
-            if !emu.ppu.w {
-                emu.ppu.fine_x_scroll = data & 0x7;
-                emu.ppu.t.set_coarse_x_scroll(data >> 3);
-            } else {
-                emu.ppu.t.set_fine_y_scroll(data & 0x7);
-                emu.ppu.t.set_coarse_y_scroll(data >> 3);
-            }
-
-            emu.ppu.w = !emu.ppu.w;
-        }
-        0x2006 => {
-            if !emu.ppu.w {
-                emu.ppu.t.set_high(data & 0x3f);
-            } else {
-                emu.ppu.t.set_low(data);
-                emu.ppu.v = Address(emu.ppu.t.0);
-            }
-
-            emu.ppu.w = !emu.ppu.w;
-        }
         0x2007 => {
             // TODO: Should emu.ppu.v.0 be mirrored down?
             Ppu::write_data(emu, emu.ppu.v.0, data);
-            emu.ppu.v.increment(emu.ppu.control.increment_mode());
+            emu.ppu.v.increment(emu.ppu.ctrl.vram_addr_incr());
         }
-        _ => (),
+        _ => unimplemented!(),
     }
+}
+
+pub fn read_bus(emu: &mut Emu, _: u16) -> u8 {
+    emu.ppu.io_bus
+}
+
+pub fn write_bus(emu: &mut Emu, _: u16, data: u8) {
+    emu.ppu.io_bus = data;
+}
+
+pub fn write_ctrl(emu: &mut Emu, _: u16, data: u8) {
+    let prev_ctrl = emu.ppu.ctrl;
+    emu.ppu.ctrl = Ctrl(data);
+    emu.ppu.t.set_nt(emu.ppu.ctrl.base_nt_addr());
+
+    // Flipping the NMI flag to true when the PPU is in vblank and the status
+    // register's vblank flag is set raises an NMI.
+    if emu.ppu.vblank
+        && emu.ppu.status.vblank()
+        && (!prev_ctrl.nmi() && emu.ppu.ctrl.nmi())
+    {
+        // TODO: Trigger an NMI.
+    }
+
+    emu.ppu.io_bus = data;
+}
+
+pub fn write_mask(emu: &mut Emu, _: u16, data: u8) {
+    // TODO: Use the mask register to control rendering and colors.
+    emu.ppu.mask = Mask(data);
+    emu.ppu.io_bus = data;
+}
+
+pub fn read_status(emu: &mut Emu, _: u16) -> u8 {
+    emu.ppu.io_bus = (emu.ppu.io_bus & 0x1F) | emu.ppu.status.0;
+    // TODO: Reading the status register within two cycles of the start of
+    // vblank has special behavior.
+    emu.ppu.status.set_vblank(false);
+
+    emu.ppu.w = false;
+
+    emu.ppu.io_bus
+}
+
+pub fn write_oam_addr(emu: &mut Emu, _: u16, data: u8) {
+    // TODO: Do I need to set oam_addr during rendering? Does it matter?
+    emu.ppu.oam_addr = data;
+    emu.ppu.io_bus = data;
+}
+
+pub fn read_oam_data(emu: &mut Emu, _: u16) -> u8 {
+    emu.ppu.io_bus = emu.ppu.primary_oam[emu.ppu.oam_addr as usize];
+    emu.ppu.io_bus
+}
+
+pub fn write_oam_data(emu: &mut Emu, _: u16, data: u8) {
+    emu.ppu.primary_oam[emu.ppu.oam_addr as usize] = data;
+    emu.ppu.oam_addr = emu.ppu.oam_addr.wrapping_add(1);
+}
+
+pub fn write_scroll(emu: &mut Emu, _: u16, data: u8) {
+    const COARSE_SCROLL_MASK: u8 = 0xF8;
+    const FINE_SCROLL_MASK: u8 = 0x07;
+    if !emu.ppu.w {
+        emu.ppu.t.set_coarse_x_scroll((data & COARSE_SCROLL_MASK) >> 3);
+        emu.ppu.fine_x_scroll = data & FINE_SCROLL_MASK;
+        emu.ppu.w = true;
+    } else {
+        emu.ppu.t.set_coarse_y_scroll((data & COARSE_SCROLL_MASK) >> 3);
+        emu.ppu.t.set_fine_y_scroll(data & FINE_SCROLL_MASK);
+        emu.ppu.w = false;
+    }
+
+    emu.ppu.io_bus = data;
+}
+
+pub fn write_addr(emu: &mut Emu, _: u16, data: u8) {
+    if !emu.ppu.w {
+        emu.ppu.t.set_high(data & 0x3F);
+        emu.ppu.w = true;
+    } else {
+        emu.ppu.t.set_low(data);
+        emu.ppu.v = Address(emu.ppu.t.0);
+        emu.ppu.w = false;
+    }
+
+    emu.ppu.io_bus = data;
 }

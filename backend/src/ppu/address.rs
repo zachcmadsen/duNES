@@ -11,7 +11,7 @@ bitfield! {
     pub struct Address(pub u16) {
         pub coarse_x_scroll: u8 @ 0..5,
         pub coarse_y_scroll: u8 @ 5..10,
-        pub nametable: u8 @ 10..12,
+        pub nt: u8 @ 10..12,
         pub fine_y_scroll: u8 @ 12..15,
 
         nametable_x: bool @ 10,
