@@ -53,7 +53,7 @@ pub fn run(rom: Vec<u8>) {
                 let slots = producer.slots();
                 if slots > 0 {
                     while emu.apu.samples() < slots as u64 {
-                        emu.step();
+                        emu.tick();
                     }
 
                     let mut chunk =

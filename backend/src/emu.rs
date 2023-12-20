@@ -67,7 +67,7 @@ impl Emu {
         }
     }
 
-    pub fn step(&mut self) {
+    pub fn tick(&mut self) {
         cpu::tick(self);
         ppu::tick(self);
         ppu::tick(self);

@@ -17,12 +17,12 @@ fn run(dir: &str) {
 
         let mut status = emu.read(STATUS_ADDR);
         while status != RUNNING_STATUS {
-            emu.step();
+            emu.tick();
             status = emu.read(STATUS_ADDR);
         }
 
         while status == RUNNING_STATUS {
-            emu.step();
+            emu.tick();
             status = emu.read(STATUS_ADDR);
         }
 
