@@ -1,38 +1,31 @@
 use std::ops::RangeInclusive;
 
-use crate::{cpu::ADDR_SPACE_SIZE, emu::Emu};
+use crate::emu::Emu;
 
 type Reader = fn(&mut Emu, u16) -> u8;
 type Writer = fn(&mut Emu, u16, u8);
 
-pub struct Bus {
-    readers: Box<[Reader; ADDR_SPACE_SIZE]>,
-    writers: Box<[Writer; ADDR_SPACE_SIZE]>,
-
-    /// The last address value on the bus.
-    addr: u16,
-    /// The last data value on the bus.
-    data: u8,
+pub struct Bus<const N: usize> {
+    readers: Box<[Reader; N]>,
+    writers: Box<[Writer; N]>,
 }
 
-impl Bus {
+impl<const N: usize> Bus<N> {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Bus {
-        fn read_default(emu: &mut Emu, _: u16) -> u8 {
-            emu.cpu.bus.data
+    pub fn new() -> Bus<N> {
+        fn read_default(_: &mut Emu, _: u16) -> u8 {
+            u8::default()
         }
 
         fn write_default(_: &mut Emu, _: u16, _: u8) {}
 
         // TODO: Use the box keyword to avoid the array stack allocations?
-        let readers = Box::<[fn(&mut Emu, u16) -> u8; ADDR_SPACE_SIZE]>::new(
-            [read_default; ADDR_SPACE_SIZE],
-        );
-        let writers = Box::<[fn(&mut Emu, u16, u8); ADDR_SPACE_SIZE]>::new(
-            [write_default; ADDR_SPACE_SIZE],
-        );
+        let readers =
+            Box::<[fn(&mut Emu, u16) -> u8; N]>::new([read_default; N]);
+        let writers =
+            Box::<[fn(&mut Emu, u16, u8); N]>::new([write_default; N]);
 
-        Bus { readers, writers, addr: 0, data: 0 }
+        Bus { readers, writers }
     }
 
     pub fn set(
@@ -51,26 +44,11 @@ impl Bus {
         }
     }
 
-    #[cfg(test)]
-    pub fn addr(&self) -> u16 {
-        self.addr
+    pub fn reader(&self, addr: u16) -> Reader {
+        self.readers[addr as usize]
     }
 
-    #[cfg(test)]
-    pub fn data(&self) -> u8 {
-        self.data
+    pub fn writer(&self, addr: u16) -> Writer {
+        self.writers[addr as usize]
     }
-}
-
-pub fn read_byte(emu: &mut Emu, addr: u16) -> u8 {
-    let data = (emu.cpu.bus.readers[addr as usize])(emu, addr);
-    emu.cpu.bus.addr = addr;
-    emu.cpu.bus.data = data;
-    data
-}
-
-pub fn write_byte(emu: &mut Emu, addr: u16, data: u8) {
-    emu.cpu.bus.addr = addr;
-    emu.cpu.bus.data = data;
-    (emu.cpu.bus.writers[addr as usize])(emu, addr, data);
 }

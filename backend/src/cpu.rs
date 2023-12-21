@@ -4,14 +4,10 @@ mod mode;
 
 use proc_bitfield::bitfield;
 
-use crate::{
-    bus::{self, Bus},
-    cpu::lut::OPC_LUT,
-    emu::Emu,
-};
+use crate::{bus::Bus, cpu::lut::OPC_LUT, emu::Emu};
 
 /// The size of the CPU address space in bytes.
-pub const ADDR_SPACE_SIZE: usize = 0x10000;
+const ADDR_SPACE_SIZE: usize = 0x10000;
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -48,7 +44,14 @@ pub struct Cpu {
     pending_nmi: bool,
     pending_irq: bool,
 
-    pub(crate) bus: Bus,
+    pub(crate) bus: Bus<ADDR_SPACE_SIZE>,
+    // The processor tests assert the bus contents for every cycle.
+    #[cfg(test)]
+    /// The last address value on the bus.
+    bus_addr: u16,
+    #[cfg(test)]
+    /// The last data value on the bus.
+    bus_data: u8,
 
     // Some CPU tests assume 64 KB of RAM.
     #[cfg(test)]
@@ -57,7 +60,7 @@ pub struct Cpu {
 
 impl Cpu {
     /// Constructs a new `Cpu` in a power up state.
-    pub fn new(bus: Bus) -> Cpu {
+    pub fn new(bus: Bus<ADDR_SPACE_SIZE>) -> Cpu {
         Cpu {
             a: 0,
             x: 0,
@@ -66,7 +69,7 @@ impl Cpu {
             s: 0xFD,
             p: Status(0x34),
 
-            // TODO(zach): Explain the initial values of `opc` and `cyc`.
+            // TODO: Explain the initial values of `opc` and `cyc`.
             opc: 0x100,
             cyc: -1,
             addr: 0,
@@ -81,6 +84,10 @@ impl Cpu {
             pending_irq: false,
 
             bus,
+            #[cfg(test)]
+            bus_addr: 0,
+            #[cfg(test)]
+            bus_data: 0,
 
             #[cfg(test)]
             ram: vec![0; ADDR_SPACE_SIZE].try_into().unwrap(),
@@ -97,10 +104,31 @@ pub fn tick(emu: &mut Emu) {
     emu.cpu.pending_irq = !emu.cpu.p.i() && emu.cpu.irq;
 }
 
-fn next_byte(emu: &mut Emu) -> u8 {
-    let byte = bus::read_byte(emu, emu.cpu.pc);
+pub fn read(emu: &mut Emu, addr: u16) -> u8 {
+    let reader = emu.cpu.bus.reader(addr);
+    let data = reader(emu, addr);
+    #[cfg(test)]
+    {
+        emu.cpu.bus_addr = addr;
+        emu.cpu.bus_data = data;
+    };
+    data
+}
+
+fn write(emu: &mut Emu, addr: u16, data: u8) {
+    #[cfg(test)]
+    {
+        emu.cpu.bus_addr = addr;
+        emu.cpu.bus_data = data;
+    };
+    let writer = emu.cpu.bus.writer(addr);
+    writer(emu, addr, data);
+}
+
+fn next(emu: &mut Emu) -> u8 {
+    let data = read(emu, emu.cpu.pc);
     emu.cpu.pc = emu.cpu.pc.wrapping_add(1);
-    byte
+    data
 }
 
 #[cfg(test)]
@@ -207,8 +235,8 @@ mod tests {
                 // TODO: Assert read/write cycles.
                 for &(addr, data, _) in test.cycles.iter() {
                     tick(&mut emu);
-                    assert_eq!(emu.cpu.bus.addr(), addr);
-                    assert_eq!(emu.cpu.bus.data(), data);
+                    assert_eq!(emu.cpu.bus_addr, addr);
+                    assert_eq!(emu.cpu.bus_data, data);
                 }
 
                 assert_eq!(emu.cpu.a, test.r#final.a);

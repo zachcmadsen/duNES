@@ -1,7 +1,6 @@
 use crate::{
     bit::BitPos,
-    bus,
-    cpu::{next_byte, Status},
+    cpu::{self, Status},
     Emu,
 };
 
@@ -15,7 +14,7 @@ macro_rules! set_zn {
 }
 
 pub fn adc(emu: &mut Emu) {
-    let val = bus::read_byte(emu, emu.cpu.addr);
+    let val = cpu::read(emu, emu.cpu.addr);
     add(emu, val);
 }
 
@@ -26,7 +25,7 @@ pub fn adc_imm(emu: &mut Emu) {
 
 pub fn alr(emu: &mut Emu) {
     imm(emu);
-    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a &= cpu::read(emu, emu.cpu.addr);
     let carry = emu.cpu.a.lsb();
     emu.cpu.a >>= 1;
     emu.cpu.p.set_c(carry);
@@ -35,13 +34,13 @@ pub fn alr(emu: &mut Emu) {
 
 pub fn anc(emu: &mut Emu) {
     imm(emu);
-    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a &= cpu::read(emu, emu.cpu.addr);
     emu.cpu.p.set_c(emu.cpu.a & 0x80 != 0);
     set_zn!(emu, a);
 }
 
 pub fn and(emu: &mut Emu) {
-    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a &= cpu::read(emu, emu.cpu.addr);
     set_zn!(emu, a);
 }
 
@@ -52,9 +51,9 @@ pub fn and_imm(emu: &mut Emu) {
 
 pub fn arr(emu: &mut Emu) {
     imm(emu);
-    emu.cpu.a &= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a &= cpu::read(emu, emu.cpu.addr);
     emu.cpu.a = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.a >> 1) & 0x7F);
-    // TODO(zach): Explain how the flags are set.
+    // TODO: Explain how the flags are set.
     emu.cpu.p.set_c(emu.cpu.a & 0x40 != 0);
     emu.cpu.p.set_v(((emu.cpu.p.c() as u8) ^ ((emu.cpu.a >> 5) & 0x01)) != 0);
     set_zn!(emu, a);
@@ -63,13 +62,13 @@ pub fn arr(emu: &mut Emu) {
 pub fn asl(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x80 != 0;
     emu.cpu.data <<= 1;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, data);
 }
 
 pub fn asl_a(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x80 != 0;
     emu.cpu.a <<= 1;
     emu.cpu.p.set_c(carry);
@@ -89,7 +88,7 @@ pub fn beq(emu: &mut Emu) {
 }
 
 pub fn bit(emu: &mut Emu) {
-    let data = bus::read_byte(emu, emu.cpu.addr);
+    let data = cpu::read(emu, emu.cpu.addr);
     let status = Status(data);
     emu.cpu.p.set_z(emu.cpu.a & data == 0);
     emu.cpu.p.set_v(status.v());
@@ -117,22 +116,22 @@ pub fn bvs(emu: &mut Emu) {
 }
 
 pub fn clc(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_c(false);
 }
 
 pub fn cld(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_d(false);
 }
 
 pub fn cli(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_i(false);
 }
 
 pub fn clv(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_v(false);
 }
 
@@ -165,30 +164,30 @@ pub fn cpy_imm(emu: &mut Emu) {
 
 pub fn dec(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_sub(1);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     set_zn!(emu, data);
 }
 
 pub fn dcp(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_sub(1);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     compare(emu, emu.cpu.a);
 }
 
 pub fn dex(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.x = emu.cpu.x.wrapping_sub(1);
     set_zn!(emu, x);
 }
 
 pub fn dey(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.y = emu.cpu.y.wrapping_sub(1);
     set_zn!(emu, y);
 }
 
 pub fn eor(emu: &mut Emu) {
-    emu.cpu.a ^= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a ^= cpu::read(emu, emu.cpu.addr);
     set_zn!(emu, a);
 }
 
@@ -199,43 +198,43 @@ pub fn eor_imm(emu: &mut Emu) {
 
 pub fn inc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     set_zn!(emu, data);
 }
 
 pub fn inx(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.x = emu.cpu.x.wrapping_add(1);
     set_zn!(emu, x);
 }
 
 pub fn iny(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.y = emu.cpu.y.wrapping_add(1);
     set_zn!(emu, y);
 }
 
 pub fn isc(emu: &mut Emu) {
     emu.cpu.data = emu.cpu.data.wrapping_add(1);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     add(emu, emu.cpu.data ^ 0xFF);
 }
 
 pub fn las(emu: &mut Emu) {
-    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr) & emu.cpu.s;
+    emu.cpu.a = cpu::read(emu, emu.cpu.addr) & emu.cpu.s;
     emu.cpu.x = emu.cpu.a;
     emu.cpu.s = emu.cpu.a;
     set_zn!(emu, s);
 }
 
 pub fn lax(emu: &mut Emu) {
-    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a = cpu::read(emu, emu.cpu.addr);
     emu.cpu.x = emu.cpu.a;
     set_zn!(emu, x);
 }
 
 pub fn lda(emu: &mut Emu) {
-    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a = cpu::read(emu, emu.cpu.addr);
     set_zn!(emu, a);
 }
 
@@ -245,7 +244,7 @@ pub fn lda_imm(emu: &mut Emu) {
 }
 
 pub fn ldx(emu: &mut Emu) {
-    emu.cpu.x = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.x = cpu::read(emu, emu.cpu.addr);
     set_zn!(emu, x);
 }
 
@@ -255,7 +254,7 @@ pub fn ldx_imm(emu: &mut Emu) {
 }
 
 pub fn ldy(emu: &mut Emu) {
-    emu.cpu.y = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.y = cpu::read(emu, emu.cpu.addr);
     set_zn!(emu, y);
 }
 
@@ -267,13 +266,13 @@ pub fn ldy_imm(emu: &mut Emu) {
 pub fn lsr(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x01 != 0;
     emu.cpu.data >>= 1;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, data);
 }
 
 pub fn lsr_a(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x01 != 0;
     emu.cpu.a >>= 1;
     emu.cpu.p.set_c(carry);
@@ -282,13 +281,13 @@ pub fn lsr_a(emu: &mut Emu) {
 
 pub fn lxa(emu: &mut Emu) {
     imm(emu);
-    emu.cpu.a = bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a = cpu::read(emu, emu.cpu.addr);
     emu.cpu.x = emu.cpu.a;
     set_zn!(emu, x);
 }
 
 pub fn nop(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.addr);
+    cpu::read(emu, emu.cpu.addr);
 }
 
 pub fn nop_imm(emu: &mut Emu) {
@@ -297,11 +296,11 @@ pub fn nop_imm(emu: &mut Emu) {
 }
 
 pub fn nop_imp(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
 }
 
 pub fn ora(emu: &mut Emu) {
-    emu.cpu.a |= bus::read_byte(emu, emu.cpu.addr);
+    emu.cpu.a |= cpu::read(emu, emu.cpu.addr);
     set_zn!(emu, a);
 }
 
@@ -330,7 +329,7 @@ pub fn plp(emu: &mut Emu) {
 pub fn rla(emu: &mut Emu) {
     let carry = emu.cpu.data.msb();
     emu.cpu.data = ((emu.cpu.data << 1) & 0xFE) | emu.cpu.p.c() as u8;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.a &= emu.cpu.data;
     emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
@@ -339,13 +338,13 @@ pub fn rla(emu: &mut Emu) {
 pub fn rol(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x80 != 0;
     emu.cpu.data = ((emu.cpu.data << 1) & 0xfe) | emu.cpu.p.c() as u8;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, data);
 }
 
 pub fn rol_a(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x80 != 0;
     emu.cpu.a = ((emu.cpu.a << 1) & 0xfe) | emu.cpu.p.c() as u8;
     emu.cpu.p.set_c(carry);
@@ -355,13 +354,13 @@ pub fn rol_a(emu: &mut Emu) {
 pub fn ror(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x01 != 0;
     emu.cpu.data = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.data >> 1) & 0x7F);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, data);
 }
 
 pub fn ror_a(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     let carry = emu.cpu.a & 0x01 != 0;
     emu.cpu.a = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.a >> 1) & 0x7F);
     emu.cpu.p.set_c(carry);
@@ -371,17 +370,17 @@ pub fn ror_a(emu: &mut Emu) {
 pub fn rra(emu: &mut Emu) {
     let carry = emu.cpu.data.lsb();
     emu.cpu.data = (emu.cpu.p.c() as u8) << 7 | ((emu.cpu.data >> 1) & 0x7F);
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     add(emu, emu.cpu.data);
 }
 
 pub fn sax(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.a & emu.cpu.x);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.a & emu.cpu.x);
 }
 
 pub fn sbc(emu: &mut Emu) {
-    let val = bus::read_byte(emu, emu.cpu.addr);
+    let val = cpu::read(emu, emu.cpu.addr);
     add(emu, val ^ 0xFF);
 }
 
@@ -392,7 +391,7 @@ pub fn sbc_imm(emu: &mut Emu) {
 
 pub fn sbx(emu: &mut Emu) {
     imm(emu);
-    let data = bus::read_byte(emu, emu.cpu.addr);
+    let data = cpu::read(emu, emu.cpu.addr);
     let carry = (emu.cpu.a & emu.cpu.x) >= data;
     emu.cpu.x = (emu.cpu.a & emu.cpu.x).wrapping_sub(data);
     emu.cpu.p.set_c(carry);
@@ -400,17 +399,17 @@ pub fn sbx(emu: &mut Emu) {
 }
 
 pub fn sec(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_c(true);
 }
 
 pub fn sed(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_d(true);
 }
 
 pub fn sei(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.p.set_i(true);
 }
 
@@ -430,7 +429,7 @@ pub fn slo(emu: &mut Emu) {
     let carry = emu.cpu.data & 0x80 != 0;
     emu.cpu.data <<= 1;
     emu.cpu.a |= emu.cpu.data;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
 }
@@ -438,22 +437,22 @@ pub fn slo(emu: &mut Emu) {
 pub fn sre(emu: &mut Emu) {
     let carry = emu.cpu.data.lsb();
     emu.cpu.data >>= 1;
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.data);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.data);
     emu.cpu.a ^= emu.cpu.data;
     emu.cpu.p.set_c(carry);
     set_zn!(emu, a);
 }
 
 pub fn sta(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.a);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.a);
 }
 
 pub fn stx(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.x);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.x);
 }
 
 pub fn sty(emu: &mut Emu) {
-    bus::write_byte(emu, emu.cpu.addr, emu.cpu.y);
+    cpu::write(emu, emu.cpu.addr, emu.cpu.y);
 }
 
 pub fn tas(emu: &mut Emu) {
@@ -462,42 +461,42 @@ pub fn tas(emu: &mut Emu) {
 }
 
 pub fn tax(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.x = emu.cpu.a;
     set_zn!(emu, x);
 }
 
 pub fn tay(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.y = emu.cpu.a;
     set_zn!(emu, y);
 }
 
 pub fn tsx(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.x = emu.cpu.s;
     set_zn!(emu, x);
 }
 
 pub fn txa(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.a = emu.cpu.x;
     set_zn!(emu, a);
 }
 
 pub fn txs(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.s = emu.cpu.x;
 }
 
 pub fn tya(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
     emu.cpu.a = emu.cpu.y;
     set_zn!(emu, a);
 }
 
 pub fn read_pc_and_inc_pc(emu: &mut Emu) {
-    next_byte(emu);
+    cpu::next(emu);
 }
 
 pub fn push_pcl(emu: &mut Emu) {
@@ -525,16 +524,16 @@ pub fn pull_pch(emu: &mut Emu) {
 }
 
 pub fn set_pcl<const V: u16>(emu: &mut Emu) {
-    emu.cpu.pc = bus::read_byte(emu, V) as u16;
+    emu.cpu.pc = cpu::read(emu, V) as u16;
     emu.cpu.p.set_i(true);
 }
 
 pub fn set_pch<const V: u16>(emu: &mut Emu) {
-    emu.cpu.pc |= (bus::read_byte(emu, V + 1) as u16) << 8;
+    emu.cpu.pc |= (cpu::read(emu, V + 1) as u16) << 8;
 }
 
 pub fn read_pc(emu: &mut Emu) {
-    bus::read_byte(emu, emu.cpu.pc);
+    cpu::read(emu, emu.cpu.pc);
 }
 
 fn add(emu: &mut Emu, val: u8) {
@@ -549,14 +548,14 @@ fn add(emu: &mut Emu, val: u8) {
 }
 
 fn branch(emu: &mut Emu, cond: bool) {
-    emu.cpu.data = next_byte(emu);
+    emu.cpu.data = cpu::next(emu);
     if !cond {
         emu.cpu.cyc += 2;
     }
 }
 
 fn compare(emu: &mut Emu, reg: u8) {
-    let data = bus::read_byte(emu, emu.cpu.addr);
+    let data = cpu::read(emu, emu.cpu.addr);
     let (res, carry) = reg.overflowing_sub(data);
     emu.cpu.p.set_c(!carry);
     emu.cpu.p.set_z(res == 0);
@@ -569,26 +568,26 @@ fn imm(emu: &mut Emu) {
 }
 
 fn push(emu: &mut Emu, data: u8) {
-    bus::write_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16, data);
+    cpu::write(emu, STACK_BASE_ADDR + emu.cpu.s as u16, data);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
 }
 
 fn pop(emu: &mut Emu) -> u8 {
     emu.cpu.s = emu.cpu.s.wrapping_add(1);
-    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16)
+    cpu::read(emu, STACK_BASE_ADDR + emu.cpu.s as u16)
 }
 
 pub fn peek(emu: &mut Emu) {
-    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
+    cpu::read(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
 }
 
 pub fn peek_and_dec_s(emu: &mut Emu) {
-    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
+    cpu::read(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
 }
 
 pub fn peek_and_dec_s_and_set_i(emu: &mut Emu) {
-    bus::read_byte(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
+    cpu::read(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
     emu.cpu.p.set_i(true);
 }
@@ -597,5 +596,5 @@ fn sh_inner(emu: &mut Emu, reg: u8) {
     let high = ((emu.cpu.addr & 0xFF00) >> 8) as u8;
     let data = reg & high.wrapping_add(!emu.cpu.carry as u8);
     let high = if emu.cpu.carry { data } else { high };
-    bus::write_byte(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
+    cpu::write(emu, emu.cpu.addr & 0x00FF | (high as u16) << 8, data);
 }
