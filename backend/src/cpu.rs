@@ -28,12 +28,12 @@ bitfield! {
 }
 
 pub struct Cpu {
-    pub a: u8,
-    pub x: u8,
-    pub y: u8,
-    pub pc: u16,
-    pub s: u8,
-    pub p: Status,
+    a: u8,
+    x: u8,
+    y: u8,
+    pc: u16,
+    s: u8,
+    p: Status,
 
     opc: u16,
     cyc: i8,
