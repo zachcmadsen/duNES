@@ -31,16 +31,12 @@ impl<const N: usize> Bus<N> {
     pub fn set(
         &mut self,
         range: RangeInclusive<u16>,
-        reader: Option<Reader>,
-        writer: Option<Writer>,
+        reader: Reader,
+        writer: Writer,
     ) {
         for addr in range {
-            if let Some(reader) = reader {
-                self.readers[addr as usize] = reader;
-            }
-            if let Some(writer) = writer {
-                self.writers[addr as usize] = writer;
-            }
+            self.readers[addr as usize] = reader;
+            self.writers[addr as usize] = writer;
         }
     }
 

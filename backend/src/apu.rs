@@ -98,7 +98,7 @@ impl Apu {
     }
 }
 
-pub fn read(emu: &mut Emu, _: u16) -> u8 {
+pub fn read_status(emu: &mut Emu, _: u16) -> u8 {
     emu.apu.nes_apu.pin_mut().read_status(1) as u8
 }
 

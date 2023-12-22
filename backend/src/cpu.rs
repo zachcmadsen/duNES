@@ -145,16 +145,12 @@ mod tests {
             ppu::Ppu,
         };
 
-        fn read_ram(emu: &mut Emu, addr: u16) -> u8 {
-            emu.cpu.ram[addr as usize]
-        }
-
-        fn write_ram(emu: &mut Emu, addr: u16, data: u8) {
-            emu.cpu.ram[addr as usize] = data;
-        }
-
         let mut bus = Bus::new();
-        bus.set(0x0000..=0xFFFF, Some(read_ram), Some(write_ram));
+        bus.set(
+            0x0000..=0xFFFF,
+            |emu, addr| emu.cpu.ram[addr as usize],
+            |emu, addr, data| emu.cpu.ram[addr as usize] = data,
+        );
 
         Emu {
             apu: Apu::new(),
@@ -295,27 +291,29 @@ mod tests {
 
         #[test]
         fn interrupt() {
-            fn write_ram(emu: &mut Emu, addr: u16, data: u8) {
-                const IRQ_MASK: u8 = 0b00000001;
-                const NMI_MASK: u8 = 0b00000010;
-
-                if addr == 0xBFFC {
-                    let prev_data = emu.cpu.ram[addr as usize];
-                    let prev_nmi = prev_data & NMI_MASK != 0;
-                    let new_nmi = data & NMI_MASK != 0;
-
-                    emu.cpu.irq = data & IRQ_MASK != 0;
-                    emu.cpu.nmi = !prev_nmi && new_nmi;
-                }
-
-                emu.cpu.ram[addr as usize] = data;
-            }
-
             let rom =
                 fs::read("../roms/klaus/6502_interrupt_test.bin").unwrap();
 
             let mut emu = make_test_emu();
-            emu.cpu.bus.set(0x0000..=0xFFFF, None, Some(write_ram));
+            emu.cpu.bus.set(
+                0x0000..=0xFFFF,
+                |emu, addr| emu.cpu.ram[addr as usize],
+                |emu, addr, data| {
+                    const IRQ_MASK: u8 = 0b00000001;
+                    const NMI_MASK: u8 = 0b00000010;
+
+                    if addr == 0xBFFC {
+                        let prev_data = emu.cpu.ram[addr as usize];
+                        let prev_nmi = prev_data & NMI_MASK != 0;
+                        let new_nmi = data & NMI_MASK != 0;
+
+                        emu.cpu.irq = data & IRQ_MASK != 0;
+                        emu.cpu.nmi = !prev_nmi && new_nmi;
+                    }
+
+                    emu.cpu.ram[addr as usize] = data;
+                },
+            );
             emu.cpu.ram[0x000A..].copy_from_slice(&rom);
 
             run(&mut emu, 0x06F5);
