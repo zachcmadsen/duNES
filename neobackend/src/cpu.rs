@@ -3,6 +3,7 @@
 mod bus;
 mod instruction;
 mod mode;
+mod stack;
 
 #[cfg(test)]
 #[path = "cpu/tests/bus.rs"]
@@ -13,8 +14,6 @@ mod tests;
 use proc_bitfield::bitfield;
 
 use crate::{cpu::bus::Bus, emu::Emu};
-
-const STACK_BASE_ADDR: u16 = 0x0100;
 
 const RESET_VECTOR: u16 = 0xFFFC;
 const IRQ_VECTOR: u16 = 0xFFFE;
@@ -341,13 +340,17 @@ pub fn step(emu: &mut Emu) {
     };
 }
 
+pub fn peek(emu: &mut Emu, addr: u16) -> Option<u8> {
+    bus::peek(emu, addr)
+}
+
 pub fn reset(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    peek(emu);
+    stack::peek(emu);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
-    peek(emu);
+    stack::peek(emu);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
-    peek(emu);
+    stack::peek(emu);
     emu.cpu.s = emu.cpu.s.wrapping_sub(1);
     emu.cpu.p.set_i(true);
     let pcl = bus::read(emu, RESET_VECTOR);
@@ -368,18 +371,4 @@ fn eat_word(emu: &mut Emu) -> u16 {
     let high = bus::read(emu, emu.cpu.pc.wrapping_add(1));
     emu.cpu.pc = emu.cpu.pc.wrapping_add(2);
     low as u16 | (high as u16) << 8
-}
-
-fn peek(emu: &mut Emu) {
-    bus::read(emu, STACK_BASE_ADDR + emu.cpu.s as u16);
-}
-
-fn pop(emu: &mut Emu) -> u8 {
-    emu.cpu.s = emu.cpu.s.wrapping_add(1);
-    bus::read(emu, STACK_BASE_ADDR + emu.cpu.s as u16)
-}
-
-fn push(emu: &mut Emu, data: u8) {
-    bus::write(emu, STACK_BASE_ADDR + emu.cpu.s as u16, data);
-    emu.cpu.s = emu.cpu.s.wrapping_sub(1);
 }

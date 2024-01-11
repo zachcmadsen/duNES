@@ -6,6 +6,7 @@ use crate::{
     cpu::{self, Cpu, Status},
     emu::Emu,
     nrom::Nrom,
+    scheduler::Scheduler,
 };
 
 macro_rules! processor_test {
@@ -46,6 +47,7 @@ fn run(opc: u8) {
     let mut emu = Emu {
         cpu,
         nrom: Nrom { prg_ram: Box::new([]), prg_rom: Box::new([]) },
+        scheduler: Scheduler::new(),
     };
 
     for test in tests {

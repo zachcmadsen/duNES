@@ -1,7 +1,9 @@
 use proc_bitfield::Bit;
 
-use crate::cpu::IRQ_VECTOR;
-use crate::{cpu, cpu::bus, cpu::Status, emu::Emu};
+use crate::{
+    cpu::{self, bus, stack, Status, IRQ_VECTOR},
+    emu::Emu,
+};
 
 pub fn adc(emu: &mut Emu) {
     let data = bus::read(emu, emu.cpu.addr);
@@ -91,9 +93,9 @@ pub fn bpl(emu: &mut Emu) {
 
 pub fn brk(emu: &mut Emu) {
     cpu::eat_byte(emu);
-    cpu::push(emu, (emu.cpu.pc >> 8) as u8);
-    cpu::push(emu, emu.cpu.pc as u8);
-    cpu::push(emu, emu.cpu.p.with_b(true).0);
+    stack::push(emu, (emu.cpu.pc >> 8) as u8);
+    stack::push(emu, emu.cpu.pc as u8);
+    stack::push(emu, emu.cpu.p.with_b(true).0);
     emu.cpu.p.set_i(true);
     let pcl = bus::read(emu, IRQ_VECTOR);
     let pch = bus::read(emu, IRQ_VECTOR + 1);
@@ -210,9 +212,9 @@ pub fn jmp(emu: &mut Emu) {
 
 pub fn jsr(emu: &mut Emu) {
     let pcl = cpu::eat_byte(emu);
-    cpu::peek(emu);
-    cpu::push(emu, (emu.cpu.pc >> 8) as u8);
-    cpu::push(emu, emu.cpu.pc as u8);
+    stack::peek(emu);
+    stack::push(emu, (emu.cpu.pc >> 8) as u8);
+    stack::push(emu, emu.cpu.pc as u8);
     let pch = cpu::eat_byte(emu);
     emu.cpu.pc = pcl as u16 | (pch as u16) << 8;
 }
@@ -264,7 +266,7 @@ pub fn lsr_a(emu: &mut Emu) {
 }
 
 pub fn lxa(_: &mut Emu) {
-    todo!();
+    todo!("lxa");
 }
 
 pub fn nop(emu: &mut Emu) {
@@ -278,26 +280,26 @@ pub fn ora(emu: &mut Emu) {
 
 pub fn pha(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    cpu::push(emu, emu.cpu.a);
+    stack::push(emu, emu.cpu.a);
 }
 
 pub fn php(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    cpu::push(emu, emu.cpu.p.with_b(true).with_u(true).0);
+    stack::push(emu, emu.cpu.p.with_b(true).with_u(true).0);
 }
 
 pub fn pla(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    cpu::peek(emu);
-    emu.cpu.a = cpu::pop(emu);
+    stack::peek(emu);
+    emu.cpu.a = stack::pop(emu);
     emu.cpu.p.set_z_and_n(emu.cpu.a);
 }
 
 pub fn plp(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    cpu::peek(emu);
+    stack::peek(emu);
     emu.cpu.p =
-        Status(cpu::pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
+        Status(stack::pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
 }
 
 pub fn rla(emu: &mut Emu) {
@@ -359,19 +361,19 @@ pub fn rra(emu: &mut Emu) {
 
 pub fn rti(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    cpu::peek(emu);
+    stack::peek(emu);
     emu.cpu.p =
-        Status(cpu::pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
-    let pcl = cpu::pop(emu);
-    let pch = cpu::pop(emu);
+        Status(stack::pop(emu)).with_b(emu.cpu.p.b()).with_u(emu.cpu.p.u());
+    let pcl = stack::pop(emu);
+    let pch = stack::pop(emu);
     emu.cpu.pc = pcl as u16 | (pch as u16) << 8;
 }
 
 pub fn rts(emu: &mut Emu) {
     bus::read(emu, emu.cpu.pc);
-    cpu::peek(emu);
-    let pcl = cpu::pop(emu);
-    let pch = cpu::pop(emu);
+    stack::peek(emu);
+    let pcl = stack::pop(emu);
+    let pch = stack::pop(emu);
     emu.cpu.pc = pcl as u16 | (pch as u16) << 8;
     cpu::eat_byte(emu);
 }

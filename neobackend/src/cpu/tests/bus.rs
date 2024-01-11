@@ -30,3 +30,7 @@ pub fn write(emu: &mut Emu, addr: u16, data: u8) {
     emu.cpu.bus.ram[addr as usize] = data;
     emu.cpu.bus.cycles.push((addr, data, "write"));
 }
+
+pub fn peek(_: &mut Emu, _: u16) -> Option<u8> {
+    unimplemented!("CPU tests don't use peek")
+}

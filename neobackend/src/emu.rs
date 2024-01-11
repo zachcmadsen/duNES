@@ -21,10 +21,11 @@ impl Emu {
     }
 
     pub fn step(&mut self) {
-        if scheduler::ready(self) {
-            scheduler::handle(self);
-        }
-
+        scheduler::handle_events(self);
         cpu::step(self);
+    }
+
+    pub fn peek(&mut self, addr: u16) -> Option<u8> {
+        cpu::peek(self, addr)
     }
 }
