@@ -4,6 +4,8 @@ const PRG_ROM_BANK_SIZE: u16 = 16384;
 const PRG_RAM_SIZE: u16 = 8192;
 
 pub struct Nrom {
+    // These are pub(crate) since the CPU tests need to make an empty version
+    // of Nrom.
     pub(crate) prg_ram: Box<[u8]>,
     pub(crate) prg_rom: Box<[u8]>,
 }
