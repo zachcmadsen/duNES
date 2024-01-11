@@ -2,10 +2,10 @@ use std::{fs, ptr};
 
 use serde::Deserialize;
 
-use crate::nrom::Nrom;
 use crate::{
     cpu::{self, Cpu, Status},
     emu::Emu,
+    nrom::Nrom,
 };
 
 macro_rules! processor_test {
@@ -84,8 +84,7 @@ fn run(opc: u8) {
     }
 }
 
-// Jam 12
-// 2 others
+// JAM, ANE (8B), and LXA (AB) are excluded.
 processor_test!(opc_00, 0x00);
 processor_test!(opc_01, 0x01);
 processor_test!(opc_03, 0x03);
@@ -217,7 +216,6 @@ processor_test!(opc_87, 0x87);
 processor_test!(opc_88, 0x88);
 processor_test!(opc_89, 0x89);
 processor_test!(opc_8a, 0x8A);
-// processor_test!(opc_8b, 0x8B);
 processor_test!(opc_8c, 0x8C);
 processor_test!(opc_8d, 0x8D);
 processor_test!(opc_8e, 0x8E);
@@ -248,7 +246,6 @@ processor_test!(opc_a7, 0xA7);
 processor_test!(opc_a8, 0xA8);
 processor_test!(opc_a9, 0xA9);
 processor_test!(opc_aa, 0xAA);
-// processor_test!(opc_ab, 0xAB);
 processor_test!(opc_ac, 0xAC);
 processor_test!(opc_ad, 0xAD);
 processor_test!(opc_ae, 0xAE);
