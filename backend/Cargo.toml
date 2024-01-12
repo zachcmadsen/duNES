@@ -1,14 +1,11 @@
 [package]
-name = "backend"
+name = "neobackend"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cxx = "1.0.110"
-proc-bitfield = "0.3.0"
+proc-bitfield = "0.3"
 
 [dev-dependencies]
-rkyv = "0.7.42"
-
-[build-dependencies]
-cxx-build = "1.0.110"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
