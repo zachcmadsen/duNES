@@ -2,7 +2,7 @@ mod tb;
 
 use std::sync::Arc;
 
-use backend::{Emu, HEIGHT, SAMPLE_RATE, WIDTH};
+use backend::Emu;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     StreamConfig,
@@ -24,7 +24,7 @@ pub fn run(rom: Vec<u8>) {
     let window = Arc::new(
         WindowBuilder::new()
             .with_title("duNES")
-            .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
+            .with_inner_size(LogicalSize::new(0, 0))
             .build(&event_loop)
             .unwrap(),
     );
@@ -43,24 +43,24 @@ pub fn run(rom: Vec<u8>) {
         let window = window.clone();
         move || {
             let mut emu = Emu::new(&rom);
-            emu.ppu.on_frame(move |buffer| {
-                writer.get_mut().copy_from_slice(buffer);
-                writer.swap();
-                window.request_redraw();
-            });
+            // emu.ppu.on_frame(move |buffer| {
+            //     writer.get_mut().copy_from_slice(buffer);
+            //     writer.swap();
+            //     window.request_redraw();
+            // });
 
             loop {
                 let slots = producer.slots();
                 if slots > 0 {
-                    while emu.apu.samples() < slots as u64 {
-                        emu.tick();
-                    }
+                    // while emu.apu.samples() < slots as u64 {
+                    //     emu.tick();
+                    // }
 
                     let mut chunk =
                         producer.write_chunk_uninit(slots).unwrap();
                     let (first, second) = chunk.as_mut_slices();
-                    emu.apu.fill(first);
-                    emu.apu.fill(second);
+                    // emu.apu.fill(first);
+                    // emu.apu.fill(second);
                     unsafe { chunk.commit_all() };
                 }
 
@@ -73,7 +73,7 @@ pub fn run(rom: Vec<u8>) {
     let device = host.default_output_device().unwrap();
     let config = StreamConfig {
         channels: 1,
-        sample_rate: cpal::SampleRate(SAMPLE_RATE),
+        sample_rate: cpal::SampleRate(44100),
         buffer_size: cpal::BufferSize::Fixed(512),
     };
     let stream = device
