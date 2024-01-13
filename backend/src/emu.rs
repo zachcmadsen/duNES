@@ -1,10 +1,15 @@
-use crate::scheduler::{EventKind, Scheduler};
-use crate::{cpu, cpu::Cpu, nrom::Nrom, scheduler};
+use crate::{
+    apu::Apu,
+    cpu::{self, Cpu},
+    nrom::Nrom,
+    scheduler::{self, EventKind, Scheduler},
+};
 
 pub struct Emu {
     pub(crate) cpu: Cpu,
     pub(crate) nrom: Nrom,
     pub(crate) scheduler: Scheduler,
+    pub(crate) apu: Apu,
 }
 
 impl Emu {
@@ -13,6 +18,7 @@ impl Emu {
             cpu: Cpu::new(),
             nrom: Nrom::new(rom),
             scheduler: Scheduler::new(),
+            apu: Apu::new(),
         };
 
         scheduler::queue(&mut emu, EventKind::Reset, 0);

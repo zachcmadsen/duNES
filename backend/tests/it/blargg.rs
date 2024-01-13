@@ -1,8 +1,9 @@
+mod apu;
 mod instr;
 
 use std::fs;
 
-use neobackend::Emu;
+use backend::Emu;
 
 macro_rules! blargg_test {
     ($name:ident, $path:expr) => {

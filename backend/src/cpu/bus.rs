@@ -1,4 +1,4 @@
-use crate::{emu::Emu, scheduler};
+use crate::{apu, emu::Emu, scheduler};
 
 /// The size of the CPU's internal ram in bytes.
 const RAM_SIZE: u16 = 0x0800;
@@ -25,11 +25,14 @@ impl Bus {
 /// Reads the byte at address `addr`.
 pub fn read(emu: &mut Emu, addr: u16) -> u8 {
     scheduler::tick(emu);
+    apu::tick(emu);
 
     let data = match addr {
         // 0x0800-0x1FFF are mirrors of 0x0000-0x07FF.
         0x0000..=0x1FFF => emu.cpu.bus.ram[(addr & 0x07FF) as usize],
-        0x2000..=0x401F => 0,
+        0x2000..=0x4014 => 0,
+        0x4015 => apu::read(emu),
+        0x4016..=0x401F => 0,
         0x6000..=0x7FFF => emu.nrom.read_prg_ram(addr),
         0x8000..=0xFFFF => emu.nrom.read_prg_rom(addr),
         _ => todo!(),
@@ -42,13 +45,16 @@ pub fn read(emu: &mut Emu, addr: u16) -> u8 {
 /// Writes `data` to address `addr`.
 pub fn write(emu: &mut Emu, addr: u16, data: u8) {
     scheduler::tick(emu);
+    apu::tick(emu);
 
     emu.cpu.bus.addr = addr;
     emu.cpu.bus.data = data;
     match addr {
         // 0x0800-0x1FFF are mirrors of 0x0000-0x07FF.
         0x0000..=0x1FFF => emu.cpu.bus.ram[(addr & 0x07FF) as usize] = data,
-        0x2000..=0x401F => (),
+        0x2000..=0x3FFF => (),
+        0x4000..=0x4017 => apu::write(emu, addr, data),
+        0x4018..=0x401F => (),
         0x6000..=0x7FFF => emu.nrom.write_prg_ram(addr, data),
         0x8000..=0xFFFF => emu.nrom.write_prg_rom(addr, data),
         _ => todo!(),
