@@ -3,6 +3,7 @@ use std::{fs, ptr};
 use serde::Deserialize;
 
 use crate::{
+    apu::Apu,
     cpu::{self, Cpu, Status},
     emu::Emu,
     nrom::Nrom,
@@ -48,6 +49,7 @@ fn run(opc: u8) {
         cpu,
         nrom: Nrom { prg_ram: Box::new([]), prg_rom: Box::new([]) },
         scheduler: Scheduler::new(),
+        apu: Apu::new(),
     };
 
     for test in tests {
