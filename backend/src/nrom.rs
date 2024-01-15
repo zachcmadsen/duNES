@@ -1,3 +1,7 @@
+#![cfg_attr(test, allow(dead_code))]
+
+use crate::Emu;
+
 const HEADER_SIZE: u8 = 16;
 const PRG_ROM_BANK_SIZE: u16 = 16384;
 /// The size of PRG RAM in bytes.
@@ -19,20 +23,20 @@ impl Nrom {
             prg_rom: rom[..prg_rom_size as usize].into(),
         }
     }
+}
 
-    pub fn read_prg_ram(&self, addr: u16) -> u8 {
-        self.prg_ram[(addr - 0x6000) as usize]
-    }
+pub fn read_prg_ram(emu: &Emu, addr: u16) -> u8 {
+    emu.nrom.prg_ram[(addr - 0x6000) as usize]
+}
 
-    pub fn write_prg_ram(&mut self, addr: u16, data: u8) {
-        self.prg_ram[(addr - 0x6000) as usize] = data;
-    }
+pub fn write_prg_ram(emu: &mut Emu, addr: u16, data: u8) {
+    emu.nrom.prg_ram[(addr - 0x6000) as usize] = data;
+}
 
-    pub fn read_prg_rom(&self, addr: u16) -> u8 {
-        self.prg_rom[(addr - 0x8000) as usize % self.prg_rom.len()]
-    }
+pub fn read_prg_rom(emu: &Emu, addr: u16) -> u8 {
+    emu.nrom.prg_rom[(addr - 0x8000) as usize % emu.nrom.prg_rom.len()]
+}
 
-    pub fn write_prg_rom(&mut self, addr: u16, data: u8) {
-        self.prg_rom[(addr - 0x8000) as usize % self.prg_rom.len()] = data;
-    }
+pub fn write_prg_rom(emu: &mut Emu, addr: u16, data: u8) {
+    emu.nrom.prg_rom[(addr - 0x8000) as usize % emu.nrom.prg_rom.len()] = data;
 }

@@ -1,4 +1,4 @@
-use crate::{apu, emu::Emu, scheduler};
+use crate::{apu, emu::Emu, nrom, scheduler};
 
 /// The size of the CPU's internal ram in bytes.
 const RAM_SIZE: u16 = 0x0800;
@@ -33,8 +33,8 @@ pub fn read(emu: &mut Emu, addr: u16) -> u8 {
         0x2000..=0x4014 => 0,
         0x4015 => apu::read(emu),
         0x4016..=0x401F => 0,
-        0x6000..=0x7FFF => emu.nrom.read_prg_ram(addr),
-        0x8000..=0xFFFF => emu.nrom.read_prg_rom(addr),
+        0x6000..=0x7FFF => nrom::read_prg_ram(emu, addr),
+        0x8000..=0xFFFF => nrom::read_prg_rom(emu, addr),
         _ => todo!(),
     };
     emu.cpu.bus.addr = addr;
@@ -55,8 +55,8 @@ pub fn write(emu: &mut Emu, addr: u16, data: u8) {
         0x2000..=0x3FFF => (),
         0x4000..=0x4017 => apu::write(emu, addr, data),
         0x4018..=0x401F => (),
-        0x6000..=0x7FFF => emu.nrom.write_prg_ram(addr, data),
-        0x8000..=0xFFFF => emu.nrom.write_prg_rom(addr, data),
+        0x6000..=0x7FFF => nrom::write_prg_ram(emu, addr, data),
+        0x8000..=0xFFFF => nrom::write_prg_rom(emu, addr, data),
         _ => todo!(),
     };
 }
@@ -68,8 +68,8 @@ pub fn peek(emu: &mut Emu, addr: u16) -> Option<u8> {
         // TODO: Do any mappers have side effects on reads? If they do, we need
         // to call out to a peek method on the mappers that disables side
         // effects.
-        0x6000..=0x7FFF => Some(emu.nrom.read_prg_ram(addr)),
-        0x8000..=0xFFFF => Some(emu.nrom.read_prg_rom(addr)),
+        0x6000..=0x7FFF => Some(nrom::read_prg_ram(emu, addr)),
+        0x8000..=0xFFFF => Some(nrom::read_prg_rom(emu, addr)),
         _ => None,
     }
 }
