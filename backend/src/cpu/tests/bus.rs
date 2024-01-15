@@ -2,7 +2,7 @@
 
 use crate::emu::Emu;
 
-/// The size of the CPU's internal ram in bytes.
+/// The size of the CPU's address space in bytes.
 const ADDR_SPACE_SIZE: u32 = 0x10000;
 
 pub struct Bus {
