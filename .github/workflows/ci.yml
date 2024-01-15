@@ -29,6 +29,6 @@ jobs:
       - uses: azure/CLI@v1
         with:
           inlineScript: |
-            az storage blob download --account-name dunesroms --container-name roms --name roms.tar.gz --file roms.tar.gz --auth-mode key
+            az storage blob download --account-name dunesroms --container-name roms --name roms.tar.gz --file roms.tar.gz --auth-mode login
       - run: tar -xzvf roms.tar.gz
       - run: cargo test -p backend
