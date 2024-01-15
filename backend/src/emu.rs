@@ -1,5 +1,7 @@
+use std::mem::MaybeUninit;
+
 use crate::{
-    apu::Apu,
+    apu::{self, Apu},
     cpu::{self, Cpu},
     nrom::Nrom,
     scheduler::{self, EventKind, Scheduler},
@@ -33,5 +35,9 @@ impl Emu {
 
     pub fn peek(&mut self, addr: u16) -> Option<u8> {
         cpu::peek(self, addr)
+    }
+
+    pub fn fill(&mut self, dst: &mut [MaybeUninit<i16>]) {
+        apu::fill(self, dst);
     }
 }

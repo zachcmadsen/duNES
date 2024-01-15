@@ -1,4 +1,8 @@
-use std::{ffi::c_void, mem, time::Duration};
+use std::{
+    ffi::c_void,
+    mem::{self, MaybeUninit},
+    time::Duration,
+};
 
 use cxx::{type_id, UniquePtr};
 
@@ -102,4 +106,20 @@ pub fn read(emu: &mut Emu) -> u8 {
 
 pub fn write(emu: &mut Emu, addr: u16, data: u8) {
     emu.apu.nes_apu.pin_mut().write_register(0, addr, data);
+}
+
+/// Fills `dst` with samples.
+pub fn fill(emu: &mut Emu, dst: &mut [MaybeUninit<i16>]) {
+    if dst.is_empty() {
+        return;
+    }
+
+    unsafe {
+        // TODO: Check that the number of samples read equals dst.len().
+        emu.apu.buffer.pin_mut().read_samples(
+            dst.as_mut_ptr() as *mut _,
+            dst.len() as i32,
+            false,
+        );
+    };
 }
