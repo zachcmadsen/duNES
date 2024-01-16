@@ -2,13 +2,7 @@ use std::{fs, ptr};
 
 use serde::Deserialize;
 
-use crate::{
-    apu::Apu,
-    cpu::{self, Cpu, Status},
-    emu::Emu,
-    nrom::Nrom,
-    scheduler::Scheduler,
-};
+use crate::cpu::{self, tests, Status};
 
 macro_rules! processor_test {
     ($name:ident, $opc:expr) => {
@@ -44,13 +38,7 @@ fn run(opc: u8) {
         fs::read(format!("../roms/processor_tests/{:02x}.json", opc)).unwrap();
     let tests: Vec<Test> = serde_json::from_slice(&contents).unwrap();
 
-    let cpu = Cpu::new();
-    let mut emu = Emu {
-        cpu,
-        nrom: Nrom { prg_ram: Box::new([]), prg_rom: Box::new([]) },
-        scheduler: Scheduler::new(),
-        apu: Apu::new(),
-    };
+    let mut emu = tests::make_emu();
 
     for test in tests {
         emu.cpu.a = test.initial.a;
