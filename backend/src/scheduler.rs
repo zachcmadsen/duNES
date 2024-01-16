@@ -1,3 +1,5 @@
+// TODO: Figure out a way to remove the allow(dead_code) attributes in all of
+// the files.
 #![cfg_attr(test, allow(dead_code))]
 
 use crate::{cpu, Emu};
