@@ -9,21 +9,22 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
 
-# TODO: Run check and test on the whole workspace.
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get install libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check -p backend
+      - run: cargo check
 
   test:
     needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get install libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@nextest
@@ -35,4 +36,4 @@ jobs:
           inlineScript: |
             az storage blob download --account-name dunesroms --container-name roms --name roms.tar.gz --file roms.tar.gz --auth-mode login
       - run: tar -xzvf roms.tar.gz
-      - run: cargo nextest run -p backend
+      - run: cargo nextest run
