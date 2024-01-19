@@ -285,7 +285,7 @@ pub fn step(emu: &mut Emu) {
         0xC8 => {                      instruction::iny(emu); }
         0xC9 => { mode::imm(emu);      instruction::cmp(emu); }
         0xCA => {                      instruction::dex(emu); }
-        0xCB => { mode::imm(emu);      instruction::sbx(emu); },
+        0xCB => { mode::imm(emu);      instruction::sbx(emu); }
         0xCC => { mode::abs(emu);      instruction::cpy(emu); }
         0xCD => { mode::abs(emu);      instruction::cmp(emu); }
         0xCE => { mode::abs(emu);      instruction::dec(emu); }
@@ -336,7 +336,7 @@ pub fn step(emu: &mut Emu) {
         0xFD => { mode::abx::<R>(emu); instruction::sbc(emu); }
         0xFE => { mode::abx::<W>(emu); instruction::inc(emu); }
         0xFF => { mode::abx::<W>(emu); instruction::isc(emu); }
-        _ => unreachable!("unexpected opcode: 0x{:04X}", opc),
+        _ => unreachable!("unexpected opcode: 0x{:04X}", opc)
     };
 }
 
