@@ -36,13 +36,13 @@ pub fn run(rom: Vec<u8>) {
         Pixels::new(size.width, size.height, surface_texture).unwrap();
 
     let buffer = vec![0; pixels.frame().len()].into_boxed_slice();
-    let (mut writer, reader) = triple_buffer(buffer);
-    let (mut producer, mut consumer) = RingBuffer::new(2048);
+    let (mut _writer, reader) = triple_buffer(buffer);
+    let (mut _producer, mut consumer) = RingBuffer::new(2048);
 
     let emu_thread = std::thread::spawn({
-        let window = window.clone();
+        let _window = window.clone();
         move || {
-            let mut emu = Emu::new(&rom);
+            let mut _emu = Emu::new(&rom);
             // emu.ppu.on_frame(move |buffer| {
             //     writer.get_mut().copy_from_slice(buffer);
             //     writer.swap();
@@ -50,19 +50,19 @@ pub fn run(rom: Vec<u8>) {
             // });
 
             loop {
-                let slots = producer.slots();
-                if slots > 0 {
-                    // while emu.apu.samples() < slots as u64 {
-                    //     emu.tick();
-                    // }
+                // let slots = producer.slots();
+                // if slots > 0 {
+                // while emu.apu.samples() < slots as u64 {
+                //     emu.tick();
+                // }
 
-                    let mut chunk =
-                        producer.write_chunk_uninit(slots).unwrap();
-                    let (first, second) = chunk.as_mut_slices();
-                    // emu.apu.fill(first);
-                    // emu.apu.fill(second);
-                    unsafe { chunk.commit_all() };
-                }
+                // let mut chunk =
+                //     producer.write_chunk_uninit(slots).unwrap();
+                // let (first, second) = chunk.as_mut_slices();
+                // emu.apu.fill(first);
+                // emu.apu.fill(second);
+                // unsafe { chunk.commit_all() };
+                // }
 
                 std::thread::park();
             }

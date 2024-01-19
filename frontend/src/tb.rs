@@ -25,21 +25,21 @@ struct TripleBuffer<T> {
 unsafe impl<T> Sync for TripleBuffer<T> where T: Send {}
 
 pub struct Writer<T> {
-    tb: Arc<TripleBuffer<T>>,
-    index: u8,
+    _tb: Arc<TripleBuffer<T>>,
+    _index: u8,
 }
 
 impl<T> Writer<T> {
     #[cfg(not(loom))]
-    pub fn get_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.tb.buffers[self.index as usize].get() }
+    pub fn _get_mut(&mut self) -> &mut T {
+        unsafe { &mut *self._tb.buffers[self._index as usize].get() }
     }
 
-    pub fn swap(&mut self) {
-        let new_back_index = self.index | UPDATE_FLAG;
+    pub fn _swap(&mut self) {
+        let new_back_index = self._index | UPDATE_FLAG;
         let old_back_index =
-            self.tb.back_index.swap(new_back_index, Ordering::AcqRel);
-        self.index = old_back_index & INDEX_MASK;
+            self._tb.back_index.swap(new_back_index, Ordering::AcqRel);
+        self._index = old_back_index & INDEX_MASK;
     }
 
     #[cfg(loom)]
@@ -48,7 +48,7 @@ impl<T> Writer<T> {
         F: FnOnce(&mut T) -> R,
     {
         unsafe {
-            self.tb.buffers[self.index as usize].with_mut(|p| f(&mut *p))
+            self._tb.buffers[self._index as usize].with_mut(|p| f(&mut *p))
         }
     }
 }
@@ -100,7 +100,7 @@ pub fn triple_buffer<T: Clone>(buffer: T) -> (Writer<T>, Reader<T>) {
     });
 
     (
-        Writer { tb: tb.clone(), index: INIT_WRITE_INDEX },
+        Writer { _tb: tb.clone(), _index: INIT_WRITE_INDEX },
         Reader { tb, index: Cell::new(INIT_READ_INDEX) },
     )
 }
