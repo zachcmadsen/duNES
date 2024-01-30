@@ -5,7 +5,7 @@ tar -czf roms.tar.gz roms
 
 echo "Uploading roms.tar.gz..."
 az storage blob upload \
-    --account-name dunesroms \
+    --account-name $1 \
     --container-name roms \
     --name roms.tar.gz \
     --file roms.tar.gz \
