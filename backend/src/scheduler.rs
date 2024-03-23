@@ -14,6 +14,12 @@ struct Event {
     tick: u64,
 }
 
+// TODO: Store events unsorted and use absolute time for events (the current
+// already does that). Keep the soonest event cached (for fast checking). Then
+// all the operations become linear scans (can use swap_remove for deque).
+// Potential optimization: keep the local copy of the number of cycles until
+// the next event in the CPU loop so you don't have keep comparing to the scheduler time (then
+// the local copy needs to be updated whenever there's a reschedule).
 pub struct Scheduler {
     events: Vec<Event>,
     ticks: u64,
